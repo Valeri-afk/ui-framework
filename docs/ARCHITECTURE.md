@@ -453,14 +453,12 @@ ScopedMutationGuard
 Structural operations performed while a mutation scope is active are deferred
 instead of modifying the hierarchy immediately.
 
-This mechanism is used by runtime operations including:
+The mutation guard is used by traversal and by runtime operations that
+may invoke callbacks capable of mutating the tree, including event
+dispatch and update.
 
-traversal;
-event dispatch;
-update;
-rendering;
-layout;
-input processing.
+Rendering and other operations also use the guard where required by
+their current implementation.
 
 Deferred mutation is therefore one of the fundamental runtime invariants.
 
@@ -689,40 +687,43 @@ optional<Node::Id>
 
 This allows cached pointers to be validated against the current NodeTree.
 
-16. Hit Testing
+## 16. Hit Testing
 
-Hit testing is currently implemented by NodeTree.
+Hit testing is currently initiated by NodeTree.
 
-The process is:
+The current NodeTree::hitTest() implementation checks top-level overlays
+and roots in reverse order.
+
+For each candidate, Node::hitTest() is called.
+
+The current Node::hitTest() implementation performs a bounds check
+against the node itself and does not recursively traverse PanelNode
+children.
+
+Therefore the current hit-testing implementation should NOT be described
+as a complete recursive subtree hit-test system.
+
+The current structure is:
 
 InputManager
       |
       v
 NodeTree::hitTest()
       |
-      +-- topmost overlays
+      +-- reverse overlays
       |
-      +-- topmost roots
-      |
-      v
-hitTestSubtree()
+      +-- reverse roots
+             |
+             v
+        Node::hitTest()
 
-Child nodes are tested in reverse order so that later children are considered
-visually above earlier children.
+Modal input is restricted by passing the active modal root to
+NodeTree::hitTest().
 
-For an active modal root, hit testing is restricted to that subtree.
+Visibility and enabled state are checked by Node::hitTest().
 
-Visibility and enabled state are respected.
-
-Overflow::HIDDEN also affects hit testing.
-
-Input targeting is therefore currently shared between:
-
-NodeTree
-InputManager
-ModalManager
-
-rather than isolated in a dedicated hit-test subsystem.
+Recursive child hit-testing and clipping-aware hit-testing are not yet
+established as a complete current architectural contract.
 
 17. Focus
 
@@ -809,8 +810,15 @@ cleared.
 
 The storage uses event-type-indexed tables.
 
-The intended dispatch model uses a snapshot of handlers so that mutation of
-handlers during dispatch does not invalidate the active iteration.
+The current implementation creates a handler snapshot inside
+forEachHandler(), but the snapshot is currently not iterated and the
+provided callback is not invoked.
+
+Therefore the intended mutation-safe handler dispatch model is not fully
+implemented in the current source.
+
+This is a current implementation issue rather than a stabilized
+architectural invariant.
 
 21. EventDispatcher
 
