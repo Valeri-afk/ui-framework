@@ -33,33 +33,27 @@ The current high-level structure is:
 ```text
                          UIManager
                              |
-          +------------------+------------------+
-          |                  |                  |
-      NodeTree          InputManager      LayoutManager
-          |                  |                  |
-          |            EventDispatcher    StackPanelNode
-          |
-          +------ Node
-          |
-          +------ PanelNode
-          |
-          +------ traversal
-          |
-          +------ lifecycle
-          |
-          +------ mutation
-          |
-          +------ update
-          |
-          +------ layout invalidation
-          |
-          +------ hit-testing
-          |
-          +------ rendering
-          |
-          +------ overlays
-                         |
-                    ModalManager
+        +--------------------+--------------------+
+        |                    |                    |
+    NodeTree            InputManager        LayoutManager
+        |                    |                    |
+        |              EventDispatcher      StackPanelNode
+        |
+        +------ Node
+        +------ PanelNode
+        +------ lifecycle
+        +------ traversal
+        +------ mutation
+        +------ update
+        +------ layout invalidation
+        +------ hit-testing
+        +------ rendering
+        +------ overlays
+
+    ModalManager
+        |
+        +------ NodeTree
+        +------ InputManager
 
 
 This diagram is intentionally high-level.
@@ -1257,7 +1251,7 @@ Components
 
 A complete component architecture does not currently exist in the active core.
 
-34. Deferred Areas
+34. Areas Outside Current Runtime Stabilization
 
 The following areas exist in the repository or are represented by current
 types, but are not currently stabilized architectural layers:
@@ -1272,6 +1266,12 @@ rendering abstraction;
 backend abstraction;
 second rendering backend;
 resource abstraction.
+
+StackPanelNode is an existing layout implementation, but its behavior is not
+currently considered stabilized and will be revisited during Phase 2.
+
+ControlNode is an existing deferred type whose architectural role belongs to
+the Component Model phase.
 
 These areas are not necessarily architectural problems.
 
