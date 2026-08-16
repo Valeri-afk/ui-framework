@@ -5,6 +5,7 @@ This document defines the planned development order of the framework.
 The roadmap is intentionally high-level.
 
 It defines:
+
 - development phases;
 - architectural scope of each phase;
 - major dependencies between phases;
@@ -12,11 +13,36 @@ It defines:
 
 It does NOT define implementation details.
 
-The roadmap describes the intended development direction, not necessarily the
-current state of the source code.
+The roadmap describes the intended development direction and current
+development status, but does not define the current implementation state.
 
 Implementation decisions must be based on the current source code and discussed
 before changes are made.
+
+---
+
+## Current Development Status
+
+### Current Phase
+
+Phase 1 — Runtime
+
+### Status
+
+Not started.
+
+### Previous Completed Phase
+
+None.
+
+### Next Phase
+
+Phase 2 — Layout
+
+The current phase is the primary active development scope.
+
+Later phases may be analyzed when necessary to validate architectural decisions,
+but they should not be implemented prematurely.
 
 ---
 
@@ -40,7 +66,7 @@ Stabilize the runtime foundation of the framework.
 
 None.
 
-### Exit criteria
+### Exit Criteria
 
 - Node ownership and lifetime rules are clear.
 - NodeTree is the authoritative owner of live nodes.
@@ -75,7 +101,7 @@ Establish a predictable layout system on top of the stabilized runtime.
 
 - Phase 1
 
-### Exit criteria
+### Exit Criteria
 
 - Measure/Arrange contract is stable.
 - Content-box / border-box semantics are defined.
@@ -110,7 +136,7 @@ runtime and layout systems.
 - Phase 1
 - Phase 2
 
-### Exit criteria
+### Exit Criteria
 
 - Hit-testing semantics are defined.
 - Input state ownership is clear.
@@ -157,7 +183,7 @@ Existing component code may be legacy, incomplete, or outside the active
 development scope. Such code must not be treated as a stable architectural
 contract without verification against the current source.
 
-### Exit criteria
+### Exit Criteria
 
 - Component responsibilities are clearly separated.
 - Interactive behavior does not leak into unrelated nodes.
@@ -196,7 +222,7 @@ feature requires component-level behavior.
 Modal functionality may therefore be stabilized independently of the complete
 Component Model.
 
-### Exit criteria
+### Exit Criteria
 
 - Modal stack semantics are defined.
 - Overlay ownership and lifecycle are clear.
@@ -243,7 +269,7 @@ SDL is currently the rendering backend of the framework. SDL-specific code
 should remain outside the framework's core architectural contracts where
 practical.
 
-### Exit criteria
+### Exit Criteria
 
 - Rendering responsibilities are clearly separated from runtime ownership.
 - Clipping semantics are defined.
