@@ -12,7 +12,11 @@ It defines:
 
 It does NOT define implementation details.
 
-Implementation decisions must be based on the current source code and discussed before changes are made.
+The roadmap describes the intended development direction, not necessarily the
+current state of the source code.
+
+Implementation decisions must be based on the current source code and discussed
+before changes are made.
 
 ---
 
@@ -42,8 +46,8 @@ None.
 - NodeTree is the authoritative owner of live nodes.
 - Node identity / NodeId invariants are stable.
 - Traversal semantics are defined.
-- Mutation during traversal/callbacks is safe and predictable.
-- Node attach/detach/reparent behavior is defined.
+- Mutation during traversal and callbacks is safe and predictable.
+- Node attach, detach, and reparent behavior is defined.
 - UIManager and NodeTree responsibilities are clearly separated.
 - PanelNode follows the runtime contracts.
 - No unresolved runtime issue blocks later phases.
@@ -76,11 +80,12 @@ Establish a predictable layout system on top of the stabilized runtime.
 - Measure/Arrange contract is stable.
 - Content-box / border-box semantics are defined.
 - Parent-child layout constraints are predictable.
-- Layout invalidation is defined.
+- Layout invalidation semantics are defined.
 - StackPanel works correctly.
 - Grid works correctly.
 - Alignment and positioning semantics are defined.
 - Absolute positioning does not violate runtime ownership rules.
+- Layout does not bypass NodeTree lifecycle and mutation invariants.
 
 ---
 
@@ -97,7 +102,8 @@ Establish a predictable layout system on top of the stabilized runtime.
 
 ### Goal
 
-Establish a predictable input and event system on top of the stabilized runtime and layout systems.
+Establish a predictable input and event system on top of the stabilized
+runtime and layout systems.
 
 ### Dependencies
 
@@ -111,7 +117,7 @@ Establish a predictable input and event system on top of the stabilized runtime 
 - Focus semantics are stable.
 - Pointer capture semantics are stable.
 - Event propagation semantics are stable.
-- Mutation during event dispatch is safe.
+- Mutation during event dispatch is safe and predictable.
 - Keyboard input integrates with focus.
 - Input does not violate NodeTree lifecycle invariants.
 
@@ -131,7 +137,8 @@ Establish a predictable input and event system on top of the stabilized runtime 
 
 ### Goal
 
-Build reusable UI components on top of the stabilized runtime, layout, and input systems.
+Build reusable UI components on top of the stabilized runtime, layout, and
+input systems.
 
 ### Dependencies
 
@@ -143,14 +150,22 @@ Build reusable UI components on top of the stabilized runtime, layout, and input
 
 ControlNode must not be introduced merely for architectural symmetry.
 
-Its introduction must be justified by responsibilities that cannot be expressed cleanly by Node or existing component types.
+Its introduction must be justified by responsibilities that cannot be
+expressed cleanly by Node or existing component types.
+
+Existing component code may be legacy, incomplete, or outside the active
+development scope. Such code must not be treated as a stable architectural
+contract without verification against the current source.
 
 ### Exit criteria
 
 - Component responsibilities are clearly separated.
 - Interactive behavior does not leak into unrelated nodes.
 - ControlNode, if introduced, has a justified responsibility boundary.
-- Basic components use existing runtime/layout/input contracts without bypassing them.
+- Basic components use existing runtime, layout, and input contracts without
+  bypassing them.
+- Legacy component code has either been updated, replaced, or explicitly
+  excluded from the active component architecture.
 
 ---
 
@@ -172,7 +187,14 @@ Establish higher-level interaction and navigation semantics.
 - Phase 1
 - Phase 2
 - Phase 3
-- relevant parts of Phase 4
+
+### Notes
+
+Phase 4 is not a strict dependency unless a particular navigation or modal
+feature requires component-level behavior.
+
+Modal functionality may therefore be stabilized independently of the complete
+Component Model.
 
 ### Exit criteria
 
@@ -182,6 +204,7 @@ Establish higher-level interaction and navigation semantics.
 - Focus restoration is stable.
 - Modal interaction respects hit-testing and event boundaries.
 - Navigation does not introduce ownership inconsistencies.
+- Modal lifecycle does not bypass NodeTree mutation and lifetime rules.
 
 ---
 
@@ -203,14 +226,22 @@ Separate rendering concerns from the framework's core runtime where justified.
 
 - Phase 1
 - Phase 2
-- Phase 4
-- Phase 5 where rendering depends on overlays/modal behavior
+- Phase 4 where component rendering requires it
 
 ### Notes
 
+Rendering may depend on Phase 5 for specific overlay or modal rendering
+behavior, but Phase 5 is not a general prerequisite for the rendering
+architecture.
+
 RenderContext and a second backend are optional architectural directions.
 
-They must not be introduced unless the current rendering architecture demonstrates a concrete need for them.
+They must not be introduced unless the current rendering architecture
+demonstrates a concrete need for them.
+
+SDL is currently the rendering backend of the framework. SDL-specific code
+should remain outside the framework's core architectural contracts where
+practical.
 
 ### Exit criteria
 
@@ -218,4 +249,47 @@ They must not be introduced unless the current rendering architecture demonstrat
 - Clipping semantics are defined.
 - Resource lifetime is defined.
 - SDL-specific dependencies are isolated where practical.
+- Rendering does not bypass NodeTree lifecycle or ownership rules.
 - Additional rendering abstraction is introduced only where justified.
+
+---
+
+## Development Order
+
+The intended dependency order is:
+
+Phase 1 — Runtime
+        ↓
+Phase 2 — Layout
+        ↓
+Phase 3 — Input / Events
+        ↓
+Phase 4 — Component Model
+        ↓
+Phase 5 — Modal / Navigation
+        ↓
+Phase 6 — Rendering / Backend
+
+However, this is a dependency-oriented roadmap rather than a requirement to
+complete every phase strictly in isolation.
+
+A later phase may be partially investigated when necessary to validate an
+earlier architectural decision.
+
+Implementation work should remain focused on one primary architectural phase
+at a time.
+
+---
+
+## Active Development Principle
+
+The existence of a file or module does not imply that it is currently part of
+the active refactoring scope.
+
+Legacy, deprecated, experimental, or currently unused code must be verified
+against the source before being treated as an architectural contract.
+
+The current source code remains the source of truth for existing behavior.
+
+This roadmap defines where the framework is intended to go, not what the
+current source code is assumed to already implement.
