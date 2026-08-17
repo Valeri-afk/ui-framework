@@ -43,15 +43,15 @@ namespace ui
         Node *attachRoot(size_t index, std::unique_ptr<Node> node);
         Node *attachOverlay(size_t index, std::unique_ptr<Node> node);
 
-        void removeRoot(Node *node);
-        void removeOverlay(Node *node);
+        std::unique_ptr<Node> detachRoot(Node *node);
+        std::unique_ptr<Node> detachOverlay(Node *node);
 
         Node *attachChild(
             PanelNode &parent,
             std::unique_ptr<Node> child,
             size_t index = 0);
 
-        void removeChild(
+        std::unique_ptr<Node> detachChild(
             PanelNode &parent,
             Node &child);
 
@@ -305,7 +305,7 @@ namespace ui
             std::unique_ptr<Node> node,
             std::vector<std::unique_ptr<Node>> &container);
 
-        void removeFromContainer(
+        std::unique_ptr<Node> detachFromContainer(
             NodeId id,
             std::vector<std::unique_ptr<Node>> &container);
 
@@ -319,7 +319,7 @@ namespace ui
             std::unique_ptr<Node> node,
             std::vector<std::unique_ptr<Node>> &container);
 
-        void removeInternal(
+        std::unique_ptr<Node> detachInternal(
             NodeId id,
             std::vector<std::unique_ptr<Node>> &container);
 
@@ -328,7 +328,7 @@ namespace ui
             std::unique_ptr<Node> child,
             size_t index);
 
-        void removeChildInternal(
+        std::unique_ptr<Node> detachChildInternal(
             PanelNode &parent,
             Node &child);
 
