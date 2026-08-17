@@ -16,11 +16,12 @@ Before modifying code:
 
 1. Inspect the repository structure.
 2. Read the relevant documentation.
-3. Analyze the current source code.
-4. Reconstruct the current architecture.
-5. Identify module responsibilities and dependencies.
-6. Identify the current development phase.
-7. Identify known limitations and unfinished areas.
+3. Read `docs/FRAMEWORK_SCOPE.md` to understand why the framework exists, its target application class, responsibilities, and explicit scope boundaries.
+4. Analyze the current source code.
+5. Reconstruct the current architecture.
+6. Identify module responsibilities and dependencies.
+7. Identify the current development phase.
+8. Identify known limitations and unfinished areas.
 
 Do not modify code during this initial analysis.
 
@@ -62,7 +63,10 @@ The current phase is defined by ROADMAP.md.
 When the user specifies a phase:
 - use ROADMAP.md to determine its scope;
 - use ARCHITECTURE.md to understand its dependencies;
+- use `FRAMEWORK_SCOPE.md` to evaluate whether proposed capabilities belong in the framework;
 - inspect the actual source code before proposing changes.
+
+When deciding whether to introduce a new capability, prefer an explicit requirement from the supported application class over feature parity with another framework.
 
 ## 5. Before Architectural Changes
 
@@ -119,6 +123,8 @@ Update documentation only when the actual architecture changes.
 
 Do not document hypothetical architecture as existing architecture.
 
-ROADMAP describes future development.
+`ROADMAP.md` describes future development.
 
-ARCHITECTURE describes the current system.
+`ARCHITECTURE.md` describes the current system.
+
+`FRAMEWORK_SCOPE.md` describes the framework's purpose and intended scope.
