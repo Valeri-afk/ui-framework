@@ -1,34 +1,40 @@
 # Phase 1 — Runtime Design Decisions
 
-This document records the current design discussion around node removal, ownership transfer, and reparenting. It complements `docs/PHASE1_RUNTIME.md` and is intentionally focused on unresolved design alternatives rather than general runtime architecture.
+This document records the design decision around node ownership, removal, deferred mutation, and reparenting. It complements `docs/PHASE1_RUNTIME.md`.
 
-## 1. Current Question
+## 1. Decision
 
-The existing API uses ownership transfer for removal:
+The selected Phase 1 ownership model is:
 
 ```text
-attached node
-    |
-    | detach
-    v
-std::unique_ptr<Node> -> client
+add(std::unique_ptr<Node>)
+remove(Node&)
 ```
 
-The current implementation also has deferred structural mutation. When `detach()` is requested while a mutation scope is active, the operation is queued and the public function currently returns `nullptr`; the later `unique_ptr` produced by the queued operation is not returned to the caller.
+The framework owns every live node.
 
-This is the main unresolved Phase 1 API problem.
+A live node is destroyed by the framework when `remove()` is applied. Client code does not receive ownership of a live node after removal.
 
-## 2. Why Deferred Detach Is Difficult
+The public Phase 1 API therefore does **not** expose `detach()` as an ownership-transfer operation.
 
-A synchronous ownership-transfer API and a deferred structural mutation have conflicting requirements.
+## 2. Why `detach()` Is Rejected
 
-`detach()` returning `std::unique_ptr<Node>` means ownership has already left `NodeTree`/`PanelNode` when the function returns.
+The historical reason for `detach()` was reasonable: the framework originally relied on `unique_ptr`, did not have `NodeId` or a deferred mutation system, and returning ownership to the client avoided immediate destruction.
 
-Deferred mutation requires the runtime to retain control of the node until the current callback/traversal scope finishes.
+The runtime has since gained:
 
-Returning ownership immediately while still treating the node as fully runtime-owned would require an additional lifetime/handle model.
+- `NodeId` identity;
+- live-node registry;
+- deferred mutation;
+- nested mutation scopes;
+- traversal snapshots;
+- lifecycle management.
 
-The problem is especially important for self-detach:
+The original need for client-visible ownership transfer is therefore no longer established.
+
+More importantly, deferred structural mutation and synchronous ownership transfer conflict.
+
+Consider:
 
 ```cpp
 void MyNode::update(float)
@@ -38,149 +44,199 @@ void MyNode::update(float)
 }
 ```
 
-If ownership can be destroyed inside the currently executing member function, the function would continue executing after `this` has been destroyed. `NodeId` cannot make this safe.
+If the node can be destroyed while its member function is still executing, the callback continues with a destroyed `this`. `NodeId` cannot make that C++ lifetime situation safe.
 
-Therefore a simple "return unique_ptr immediately, then finish the detach later" implementation is not considered safe.
+Returning `unique_ptr` immediately while postponing the actual structural transition would require an additional lifetime/handle model. That complexity is not justified by a demonstrated framework requirement.
 
-## 3. Candidate Ownership Models
+## 3. Why `remove()` Is Better
+
+With framework-owned lifetime:
+
+```text
+remove(node)
+    |
+    | guarded callback
+    v
+queue NodeId
+    |
+    | callback completes
+    v
+flush
+    |
+    v
+resolve NodeId
+    |
+    v
+unmount
+    |
+    v
+unregister
+    |
+    v
+destroy framework-owned unique_ptr
+```
+
+This gives the runtime one ownership model for live nodes and makes deferred removal a natural mutation operation.
+
+It also makes self-removal safe:
+
+```cpp
+void MyNode::update(float)
+{
+    remove(*this);
+    // object remains alive until the guarded scope has completed.
+}
+```
+
+## 4. Consequences
+
+The client can no longer:
+
+- preserve a removed subtree through `unique_ptr`;
+- remove a node and later reattach the same object through ownership transfer;
+- use `detach + attach` as a synchronous reparenting mechanism.
+
+These are intentional consequences, not accidental limitations.
+
+The client can still construct arbitrary custom nodes and pass ownership into the framework through `add`/`attach`.
+
+Client-held `Node*` references remain non-owning and may become dangling after removal. This is the client's responsibility; the framework does not attempt to turn raw pointers into owning or automatically-updating handles.
+
+## 5. Reparenting Decision
+
+Reparenting is **not a Phase 1 public capability**.
+
+Reparenting is useful in richer UI systems, for example for:
+
+- drag-and-drop between containers;
+- tab/document movement;
+- docking/workspace movement;
+- moving an existing item while preserving its state;
+- some overlay/popup transitions.
+
+These are valid framework capabilities, but they are not requirements demonstrated by the current target chess application.
+
+If a concrete requirement appears later, reparenting should be implemented as a dedicated runtime operation:
+
+```cpp
+reparent(Node&, PanelNode&);
+```
+
+The operation should preserve framework ownership and queue safely when requested from callbacks. It should not restore client-visible `detach()` ownership transfer merely to implement movement.
+
+## 6. Alternatives Considered
 
 ### Model A — add / remove
 
 ```text
-add(std::unique_ptr<Node>)
-remove(Node&)
+add(unique_ptr)
+remove(node)
 ```
 
-The framework owns every live node until removal. `remove()` is deferred when required and the node is destroyed by framework-owned `unique_ptr` storage.
+**Selected.**
 
-Benefits:
+Advantages:
 
 - one owner for every live node;
-- no deferred ownership-transfer problem;
-- simple lifetime semantics;
-- simple deferred mutation semantics;
-- smaller public API;
-- fewer client lifetime responsibilities.
+- simple deferred lifetime semantics;
+- simple self-removal;
+- smaller API;
+- fewer client lifetime responsibilities;
+- existing `NodeId` and mutation machinery remain useful without additional lifetime handles.
 
-Cost:
+Disadvantages:
 
-- the client cannot preserve a detached subtree;
-- removing a node destroys its object and custom state;
-- existing node state cannot be reused by simply moving the node elsewhere.
+- removed objects are destroyed;
+- preserved subtree movement is unavailable without a future reparent capability.
 
 ### Model B — add / remove / reparent
 
 ```text
-add(std::unique_ptr<Node>)
-remove(Node&)
-reparent(Node&, PanelNode&)
+add(unique_ptr)
+remove(node)
+reparent(node, parent)
 ```
 
-The framework still owns every live node. `reparent()` moves an existing live node between parents without transferring ownership to the client.
+**Not selected for Phase 1, retained as a future capability.**
 
-Benefits:
-
-- retains the simpler framework-owned lifetime model;
-- preserves node identity and custom state during moves;
-- avoids exposing ownership transfer to normal client code;
-- deferred reparenting can be represented naturally as a queued runtime operation;
-- no separate detached-object lifetime state is required.
-
-Cost:
-
-- reparenting needs explicit semantics for lifecycle, layout, event ancestry, focus/capture and related runtime state;
-- public API is larger than add/remove alone.
+This is the preferred direction if the framework later proves that moving an existing node while preserving identity/state is required.
 
 ### Model C — add / detach / remove
 
 ```text
-add(std::unique_ptr<Node>)
-detach(Node&) -> std::unique_ptr<Node>
-remove(Node&)
+add(unique_ptr)
+detach(node) -> unique_ptr
+remove(node)
 ```
 
-`detach()` transfers ownership to the client; `remove()` destroys the node through deferred framework ownership.
+**Rejected.**
 
-Benefits:
+It creates two lifetime domains for live UI objects and preserves the deferred ownership-transfer problem without a demonstrated requirement that justifies the complexity.
 
-- maximum flexibility;
-- detached subtrees can be preserved and later reattached;
-- reparenting can be composed from detach + attach in synchronous contexts.
+## 7. API Direction
 
-Costs:
+Target Phase 1 public operations are:
 
-- two lifetime ownership domains;
-- more client responsibility;
-- more lifetime edge cases;
-- difficult deferred ownership transfer semantics;
-- more complex documentation and API surface.
+### `PanelNode`
 
-## 4. Current Assessment
+```cpp
+Node* add(std::unique_ptr<Node> child, size_t index);
+void remove(Node& child);
+```
 
-The original reason for `detach()` was historical and practical: the framework used `unique_ptr`, there was no `NodeId`, and transferring the `unique_ptr` back to the client avoided immediate destruction.
+### `NodeTree`
 
-The runtime has since gained:
+```cpp
+Node* attachRoot(size_t, std::unique_ptr<Node>);
+Node* attachOverlay(size_t, std::unique_ptr<Node>);
+void removeRoot(Node*);
+void removeOverlay(Node*);
+Node* attachChild(PanelNode&, std::unique_ptr<Node>, size_t);
+void removeChild(PanelNode&, Node&);
+```
 
-- `NodeId` identity;
-- live-node registry;
-- deferred mutation;
-- lifecycle management;
-- traversal snapshots;
-- stronger runtime ownership invariants.
+### `UIManager`
 
-This removes some of the original motivation for exposing ownership transfer to the client.
+```cpp
+Node* attachRoot(size_t, std::unique_ptr<Node>);
+Node* attachOverlay(size_t, std::unique_ptr<Node>);
+void removeRoot(Node*);
+void removeOverlay(Node*);
+```
 
-At present there is no demonstrated Phase 1 client requirement that a node removed from the UI must remain alive outside the framework.
+Exact overloads and convenience forms are implementation details to be reconciled with the current headers.
 
-Therefore Model C should not be retained merely because `detach()` has historically existed.
+## 8. What `NodeId` Does Not Do
 
-## 5. Reparenting Assessment
+`NodeId` and the mutation queue are complementary:
 
-Reparenting is a legitimate capability in mature retained-mode UI toolkits, but it is not a requirement for every UI application.
+```text
+NodeId
+    identifies / re-resolves the intended node
 
-Examples from established toolkits show that parent changes are a normal capability in richer UI systems, while ordinary UI composition often keeps elements attached to stable parents. Qt uses parent-child object trees and provides parent-changing capabilities; WPF exposes logical and visual tree concepts and APIs for tree manipulation; GTK provides child insertion/removal and child reordering operations. These examples demonstrate that reparenting is a valid capability, not that every framework must expose it in its minimal runtime.
+mutation queue
+    determines when structural/lifetime changes occur
+```
 
-For this framework, reparenting should therefore be justified by an actual client/runtime need rather than introduced for API symmetry.
+`NodeId` alone cannot make immediate destruction of `this` safe during a member callback. Deferred removal remains necessary.
 
-Potential future use cases include:
+## 9. Working Principle
 
-- drag-and-drop between containers;
-- tab/document transfer;
-- docking or workspace movement;
-- moving an existing item between panels while preserving its state;
-- overlay/popup transitions;
-- other cases where destroying and recreating a node would be undesirable.
+The framework should expose capabilities because they are responsibilities of the target UI runtime, not because they are technically possible or because another toolkit provides them.
 
-These are legitimate future capabilities but are not automatically Phase 1 requirements.
+For Phase 1 this means:
 
-## 6. Current Direction
+- framework owns live nodes;
+- `add` enters ownership;
+- `remove` ends ownership by framework destruction;
+- `Node*` is non-owning;
+- `NodeId` is internal identity/liveness support;
+- deferred mutation protects active callbacks/traversals;
+- `reparent` remains a future capability;
+- public client ownership transfer is not part of the runtime contract.
 
-Two models are now considered the strongest candidates:
+## 10. Implementation Gate
 
-### A. add / remove
+This decision authorizes design work toward the `add/remove` model but does **not** authorize arbitrary source modifications.
 
-Choose this if the framework does not need preserved live-node movement between parents and a removed node can simply be destroyed.
-
-### B. add / remove / reparent
-
-Choose this if preserving an existing node while moving it between parents is an important framework capability.
-
-The current `detach`-based ownership-transfer model is no longer preferred by default because its additional complexity has not yet been justified by a concrete client requirement.
-
-## 7. Remaining Design Question
-
-The key question is no longer:
-
-> How do we make deferred `detach()` return a `unique_ptr`?
-
-The more fundamental question is:
-
-> Does the framework need client-visible ownership transfer for live nodes at all, or should the framework remain the sole owner of live nodes and provide a dedicated `reparent()` capability when moving an existing node is required?
-
-Until this is resolved, `detach()`/`remove()` implementation changes should not be committed.
-
-## 8. Working Principle
-
-The runtime should not expose a capability solely because it is technically possible or because another toolkit has it.
-
-Every public lifecycle/ownership operation should correspond to a real responsibility of the UI framework and should minimize the number of lifetime models the client has to understand.
+Before implementation, the current headers and source must be reconciled against this contract and a file-by-file change plan must be reviewed.
