@@ -2,607 +2,425 @@
 
 ## 1. Purpose
 
-This document records the current Phase 1 runtime analysis, the runtime contracts derived from the current source code, known implementation problems, and the proposed direction for stabilizing the runtime.
+This document records the Phase 1 runtime contracts, identified problems, and implementation decisions derived from the current source code.
 
-It is a working design and implementation reference for Phase 1.
+It complements:
 
-It does not replace `ROADMAP.md` or `ARCHITECTURE.md`:
+- `ROADMAP.md` — phase scope and exit criteria;
+- `FRAMEWORK_SCOPE.md` — why the framework exists and which capabilities belong in it;
+- `ARCHITECTURE.md` — the implemented architecture;
+- `PHASE1_RUNTIME_DECISIONS.md` — focused design decisions and rejected alternatives.
 
-- `ROADMAP.md` defines the development scope and exit criteria.
-- `ARCHITECTURE.md` describes the implemented architecture.
-- this document records the Phase 1 stabilization decisions, unresolved questions, and implementation work derived from the current source.
-
-The current source code remains authoritative for existing behavior.
-
----
-
-## 2. Phase 1 Scope
-
-Phase 1 covers:
-
-- `NodeTree`
-- `UIManager`
-- `Node`
-- `PanelNode`
-- ownership
-- lifetime
-- `NodeId`
-- lifecycle
-- traversal
-- mutation
-- attach / detach / reparent semantics
-
-The following are outside the primary Phase 1 implementation scope:
-
-- Layout architecture and layout correctness
-- Input architecture
-- Event propagation architecture
-- Component architecture
-- Modal / navigation architecture
-- Rendering / backend architecture
-- legacy component directories
-
-Later subsystems may be inspected when necessary to validate runtime decisions, but they should not be redesigned as part of Phase 1.
+The current source remains authoritative for implemented behavior. This document describes the target Phase 1 runtime contract where it explicitly says a decision has been made.
 
 ---
 
-## 3. Current Runtime Model
+## 2. Scope
 
-The current runtime is already substantially implemented. Phase 1 is therefore a stabilization task, not a greenfield runtime implementation.
+Phase 1 stabilizes:
 
-The central ownership model is:
+- `NodeTree`;
+- `UIManager`;
+- `Node`;
+- `PanelNode`;
+- ownership and lifetime;
+- `NodeId`;
+- lifecycle;
+- traversal;
+- structural mutation;
+- attach/remove semantics.
+
+Phase 1 does not redesign layout, input, event propagation, rendering, modal architecture, higher-level controls, or legacy components except where those systems must be checked against the runtime contract.
+
+---
+
+## 3. Runtime Model
+
+The framework is a retained-mode UI runtime in which live nodes are owned by the framework:
 
 ```text
+Client
+  |
+  | std::unique_ptr<Node>
+  v
+add / attach
+  |
+  v
 NodeTree / PanelNode
-        |
-    unique_ptr<Node>
-        |
-       Node
+  |
+  | owns
+  v
+live Node
 ```
 
-`Node` stores non-owning references to its parent and owning `NodeTree`.
+The runtime maintains:
 
-`NodeTree` owns root and overlay nodes.
-
-`PanelNode` owns child nodes.
-
-`NodeTree` maintains a live-node registry:
-
-```text
-NodeId -> Node*
-```
-
-Structural mutation is protected by a deferred mutation queue and nested mutation scopes.
-
-Traversal uses `NodeId` snapshots and resolves nodes against the current structure before invoking callbacks.
+- owning `std::unique_ptr<Node>` containers;
+- `Node*` parent/owner references that are non-owning;
+- `NodeId -> Node*` live-node registry;
+- deferred mutation queue;
+- nested mutation scopes;
+- traversal snapshots.
 
 ---
 
 ## 4. Client Contract
 
-A framework client may:
+The client may:
 
-- construct `Node`, `PanelNode`, and derived node types;
-- create custom node types through inheritance;
-- override runtime hooks such as `update`, `draw`, `measure`, `arrange`, `onMount`, and `onUnmount`;
+- construct custom `Node` / `PanelNode` descendants;
+- override runtime and lifecycle callbacks;
 - change node state from callbacks;
-- change other nodes from callbacks when the public API permits it;
-- add or detach children from callbacks;
-- request structural mutations from lifecycle callbacks and event callbacks;
-- detach the current node from its own callback;
-- keep non-owning `Node*` references to other nodes.
+- add nodes from callbacks;
+- request removal from callbacks;
+- mutate other nodes through public APIs;
+- store non-owning `Node*` references.
 
-The framework does not attempt to prevent client code from performing legitimate public mutations merely because they occur inside a callback.
-
-The framework is responsible for protecting its internal ownership, lifetime, registry, and traversal invariants.
-
-The client does not directly own or mutate the following runtime structures:
-
-- `NodeTree::roots_`
-- `NodeTree::overlays_`
-- `NodeTree::liveNodes_`
-- `NodeTree::mutationQueue_`
-- `PanelNode::children_`
-- `Node::owner_`
-- `Node::parent_`
+The framework protects ownership, lifetime, lifecycle, live-node registration, traversal and mutation timing. Client callbacks are not assumed to be mutation-free.
 
 ---
 
 ## 5. Ownership and Lifetime Contract
 
-### 5.1 Ownership
+### 5.1 Framework-owned live nodes
 
-`std::unique_ptr<Node>` is the ownership mechanism.
+A live node has exactly one owner:
 
-A live node is owned by exactly one runtime/container location:
+- `NodeTree` for a root;
+- `NodeTree` for an overlay;
+- `PanelNode` for a child.
 
-- `NodeTree` as a root;
-- `NodeTree` as an overlay;
-- `PanelNode` as a child.
+The framework is the sole owner of live nodes.
 
-`Node::parent_` and `Node::owner_` are non-owning references.
+### 5.2 `Node*`
 
-### 5.2 Attached node
+`Node*` is a non-owning access reference. It does not extend lifetime.
 
-For a live node:
+After `remove()` destroys the node, previously stored client raw pointers become invalid.
 
-```text
-findNode(node.id()) == &node
-```
+### 5.3 `NodeId`
 
-must hold.
-
-Non-root nodes have a parent. Root/overlay nodes do not have a parent.
-
-The complete attached subtree is registered in `liveNodes_`.
-
-### 5.3 Detached node
-
-After a successful detach:
-
-```text
-owner_ == nullptr
-parent_ == nullptr
-node is absent from liveNodes_
-```
-
-The object may remain alive if the caller owns the returned `std::unique_ptr<Node>`.
-
-A detached subtree remains a valid object hierarchy and may later be attached again.
-
-### 5.4 Raw pointers
-
-`Node*` is a non-owning access reference.
-
-It does not extend the lifetime of a node and must not be treated as an ownership handle.
-
-The framework does not attempt to make arbitrary client-held raw pointers automatically safe after destruction.
-
-### 5.5 NodeId
-
-`NodeId` is an internal identity/liveness mechanism, not an ownership handle.
-
-Its roles include:
+`NodeId` is an identity/liveness token used internally for:
 
 - traversal snapshots;
 - deferred mutation resolution;
-- live-node validation;
+- event propagation;
 - cached pointer validation;
-- event propagation path tracking.
+- live registry lookup.
 
-`NodeId` does not replace `Node*` in the normal public client API.
+`NodeId` does not own or extend lifetime and does not replace `Node*` in the normal public client API.
+
+### 5.4 Detached object hierarchies
+
+A `PanelNode` that has never been attached to a `NodeTree` may still own children through ordinary C++ `unique_ptr` ownership.
+
+This standalone/detached object state is an ordinary construction state, not a second live-runtime ownership domain.
+
+Once a node becomes live, ownership belongs to the framework until destruction.
 
 ---
 
 ## 6. Lifecycle Contract
 
-The intended lifecycle is:
+The target lifecycle is:
 
 ```text
-Detached
-   |
-   | attach
-   v
-Owned + registered
-   |
-   | onMount (pre-order)
-   v
-Mounted / live
-   |
-   | detach
-   v
+client-created object
+        |
+        | add / attach
+        v
+framework-owned + registered
+        |
+        | onMount (pre-order)
+        v
+live
+        |
+        | remove
+        v
 onUnmount (post-order)
-   |
-   | unregister
-   v
-Detached
+        |
+        | unregister / owner clear
+        v
+unique_ptr destruction
 ```
 
-### Attach
+Lifecycle callbacks may request further mutations.
 
-The runtime establishes ownership, assigns subtree ownership, registers the subtree as live, and then runs `onMount()` in pre-order.
-
-Mutations requested from `onMount()` are deferred.
-
-### Detach
-
-The runtime runs `onUnmount()` in post-order, unregisters the subtree, clears ownership, and transfers the owning `unique_ptr` when the detach operation is an ownership-transfer operation.
-
-### Lifecycle callbacks
-
-Lifecycle callbacks are client code and may request further mutations.
-
-A lifecycle callback does not cancel the lifecycle transition currently being performed.
-
-For example, `onUnmount()` must not be able to turn its own unmount into a successful re-attach during the same transition.
+A lifecycle callback cannot cancel its own lifecycle transition.
 
 ---
 
 ## 7. Mutation Contract
 
-### 7.1 Structural mutation
+Structural mutations are deferred while a guarded runtime scope is active.
 
-Structural mutation includes changes to hierarchy or ownership topology, such as:
+Examples:
 
-- attach root;
-- attach overlay;
-- attach child;
-- detach root;
-- detach overlay;
-- detach child;
-- reparent, when expressed as detach + attach.
+- add/attach;
+- remove;
+- future runtime structural operations if explicitly introduced.
 
-When a guarded runtime scope is active, structural mutations are deferred.
-
-### 7.2 Safe execution point
-
-The intended model is:
+The intended sequence is:
 
 ```text
 callback / traversal
-      |
-      +-- request structural mutation
-      |
-      +-- current objects remain live
-      |
-callback / traversal finishes
-      |
-flush mutation queue
-      |
-structural/lifetime change is applied
+    |
+    +-- request mutation
+    |
+    +-- current objects remain alive
+    |
+callback ends
+    |
+flush
+    |
+structural/lifetime change
 ```
 
-A node requested for detach therefore remains fully live, owned, and accessible until the mutation is actually flushed.
+Mutations are applied in request order. Mutations generated while draining the queue are processed in later batches during the same flush.
 
-This protects C++ object lifetime while the current callback is executing.
+The queue is an ordered deferred-command mechanism, not a final-state optimizer.
 
-### 7.3 Mutation ordering
-
-Mutations are applied in request order.
-
-The mutation queue uses snapshot-swap semantics. Mutations generated while draining one batch are processed in later batches during the same flush.
-
-The mutation queue is not a declarative final-state optimizer. It is an ordered deferred-command mechanism.
-
-### 7.4 Mutation and traversal
-
-A mutation does not retroactively rewrite a traversal that has already started.
-
-For example:
-
-```text
-A
-├── B
-├── C
-└── D
-
-B callback requests detach(C)
-```
-
-`C` remains live until the current guarded traversal completes, so `C` may still be visited during that traversal. The detach takes effect after flush.
-
-Newly attached nodes do not participate in the current snapshot traversal.
-
-### 7.5 NodeId and mutation queue
-
-These mechanisms solve different problems:
-
-```text
-mutation queue
-    -> controls when structural/lifetime changes are applied
-
-NodeId
-    -> identifies and re-resolves the intended live object
-```
-
-A `NodeId` cannot by itself make destruction during a currently executing C++ member function safe. Deferred mutation is therefore still required.
+`NodeId` resolves the intended live object; the mutation queue determines when the operation is allowed to change runtime state.
 
 ---
 
-## 8. Traversal Contract
+## 8. Add Contract
+
+Public ownership enters the framework through `add`/`attach`:
+
+```cpp
+Node* add(std::unique_ptr<Node> child, size_t index);
+```
+
+and corresponding root/overlay APIs.
+
+Outside a guarded mutation scope, a successful attach may return the live `Node*` immediately.
+
+Inside a guarded scope, the operation may be queued and therefore cannot return the final live pointer synchronously; the current `nullptr` return in this case is accepted as the current contract.
+
+Ownership has nevertheless already transferred to the framework when the caller passes the `unique_ptr`.
+
+---
+
+## 9. Remove Contract — Selected Phase 1 Model
+
+The selected ownership model is:
+
+```text
+add(std::unique_ptr<Node>)
+remove(Node&)
+```
+
+There is **no public client ownership-transfer `detach()` operation in the target Phase 1 API**.
+
+`remove()` means:
+
+> remove the node/subtree from the runtime and let the framework destroy it after the mutation is safely applied.
+
+For a live node inside a guarded scope:
+
+```text
+remove(node)
+    -> queue NodeId
+    -> callback continues
+    -> flush
+    -> resolve NodeId
+    -> unmount
+    -> unregister
+    -> clear owner
+    -> destroy unique_ptr
+```
+
+Self-remove is therefore valid:
+
+```cpp
+void MyNode::update(float)
+{
+    remove(*this);
+    // this is still valid until the current guarded scope ends.
+}
+```
+
+The current callback must never observe `this` being destroyed in the middle of its own execution.
+
+Repeated removal requests should resolve through live-node checks and become no-ops when the node is no longer live.
+
+---
+
+## 10. Reparenting
+
+Reparenting is **not a Phase 1 public capability**.
+
+The framework should not introduce `reparent()` merely for API symmetry or because larger UI toolkits provide it.
+
+The current target application does not demonstrate a requirement for preserving an existing live node while moving it between unrelated parents.
+
+If a future application requirement establishes that reparenting is needed, it should be introduced as a dedicated framework operation that preserves framework ownership rather than by restoring public `detach()`.
+
+---
+
+## 11. Traversal Contract
 
 Traversal is snapshot-based with live re-resolution.
 
-The runtime may capture a sequence of `NodeId` values, then resolve the current node for each ID before invoking the callback.
+The runtime may capture `NodeId` values, then resolve each ID against the current structure before invoking the callback.
 
-The important semantics are:
+The intended guarantees are:
 
-- traversal order is based on the snapshot;
 - mutation is allowed during callbacks;
-- current callback execution is protected by the mutation scope;
-- a node is resolved again before callback execution rather than trusting an old pointer;
+- current callback execution remains safe;
 - mutations do not retroactively rewrite the current traversal;
-- newly attached nodes are not added to the current snapshot;
-- `Stop` stops the traversal;
-- `SkipChildren` has meaningful semantics for pre-order traversal and does not require a separate post-order interpretation.
+- newly attached nodes do not enter the current snapshot;
+- removed/non-live IDs are skipped safely;
+- public callback-capable traversal APIs should provide the same mutation-safety guarantees.
 
-Public traversal APIs are expected to provide the same mutation-safety guarantees.
-
-This includes the root/overlay traversal APIs and `PanelNode` child traversal APIs.
+A node requested for removal remains live until the applicable flush, so it may still be encountered by the current traversal.
 
 ---
 
-## 9. State Mutation Categories
+## 12. State Mutation Categories
 
-Not every node state mutation needs the same runtime semantics.
+State mutations do not all require structural-mutation semantics.
 
-The current implementation already distinguishes different categories.
+The current implementation distinguishes:
 
-### Deferred state/layout mutation
+### Deferred layout-affecting mutation
 
-Examples include:
+Examples include position, size, padding, border, visibility and related layout state.
 
-- visibility;
-- position;
-- size;
-- min/max size;
-- padding;
-- border;
-- overflow;
-- position mode;
-- other layout-affecting state.
+### Immediate runtime flags
 
-These are currently routed through `NodeTree` deferred mutation handling.
+Examples include enabled, focusable and capturable state.
 
-### Immediate runtime state mutation
-
-Examples currently include:
-
-- enabled;
-- focusable;
-- capturable.
-
-These currently change immediately.
-
-This difference is not currently considered a Phase 1 architecture defect. It should be documented rather than artificially unified into one mutation class.
+This distinction is intentional and should be documented rather than forcing every state mutation through the structural mutation queue.
 
 ---
 
-## 10. PanelNode Contract
+## 13. PanelNode Contract
 
-`PanelNode` is the generic child-owning node.
+`PanelNode` remains the generic child-owning node.
 
-For a detached `PanelNode`, child insertion/removal is local ownership manipulation.
+For a not-yet-attached `PanelNode`, `add()` and `remove()` operate on local `unique_ptr` ownership only.
 
-For a live `PanelNode`, child insertion/removal is coordinated by `NodeTree` so that ownership, live-node registration, lifecycle, mutation, and layout invalidation remain consistent.
+For a live `PanelNode`, child operations are coordinated through `NodeTree` so that ownership, live registration, lifecycle, mutation and layout invalidation stay consistent.
 
-Hierarchy constraints include:
-
-- a child cannot already have a parent;
-- a child cannot already belong to a `NodeTree`;
-- a child cannot create a hierarchy cycle.
-
-`PanelNode::forEachChild()` uses snapshot IDs and a mutation guard for live trees.
+A child cannot already have a parent, already belong to a tree, or create a hierarchy cycle.
 
 ---
 
-## 11. Attach, Detach, and Reparent
+## 14. Root / Overlay Contract
 
-### Attach
+Roots and overlays are framework-owned nodes held directly by `NodeTree`.
 
-The framework accepts ownership through `std::unique_ptr<Node>`.
+Target public operations are:
 
-When the operation is applied, the node becomes part of the live hierarchy, is registered, and is mounted.
-
-### Detach
-
-The conceptual meaning of `detach` is:
-
-> remove the node/subtree from the framework hierarchy and transfer ownership to the caller.
-
-This is distinct from destruction.
-
-The client may then:
-
-- keep the subtree;
-- reattach it later;
-- destroy it by destroying the returned `unique_ptr`.
-
-### Reparent
-
-No atomic public `reparent()` primitive is required by the current design.
-
-Reparenting is conceptually:
-
-```text
-detach from old parent
-attach to new parent
+```cpp
+Node* attachRoot(size_t, std::unique_ptr<Node>);
+Node* attachOverlay(size_t, std::unique_ptr<Node>);
+void removeRoot(Node*);
+void removeOverlay(Node*);
 ```
 
-For synchronous operations this can be expressed directly with ownership transfer.
-
-For deferred callback-driven reparenting, the runtime still needs a safe implementation path that preserves ownership and lifecycle invariants. This remains an implementation issue to resolve during Phase 1.
+No root/overlay ownership transfer back to the client is required by the Phase 1 contract.
 
 ---
 
-## 12. UIManager / NodeTree Boundary
+## 15. UIManager / NodeTree Boundary
 
-`UIManager` remains the public runtime facade and orchestration layer.
+`UIManager` remains the public facade/orchestration layer.
 
-`NodeTree` remains the authoritative owner and runtime structure.
+`NodeTree` remains authoritative for:
 
-The intended split is:
+- ownership;
+- lifetime;
+- traversal;
+- mutation;
+- live registry.
 
-```text
-UIManager
-    orchestration / public facade
-
-NodeTree
-    ownership
-    lifetime
-    traversal
-    mutation
-    live registry
-```
-
-No additional ownership abstraction is currently justified.
+The framework should not introduce a second ownership system in `UIManager`.
 
 ---
 
-## 13. Known Problems
+## 16. Known Phase 1 Problems and Decisions
 
-### P1 — `PanelNode::remove()` naming
+### P1 — `detach()` public ownership transfer
 
-Current behavior is ownership transfer and hierarchy detachment, not destruction.
+**Decision:** remove it from the target public API.
 
-**Proposed direction:** rename the operation to `PanelNode::detach()` so the public terminology matches `NodeTree::detach*()` and `UIManager::detach*()`.
+Reason: no demonstrated requirement for client-owned live nodes, and ownership transfer complicates deferred mutation and lifetime safety.
 
-### P2 — Deferred detach cannot currently return ownership
+### P2 — `PanelNode::remove()` currently returns `unique_ptr`
 
-The current implementation defers `detach*()` inside an active mutation scope, immediately returns `nullptr`, and later discards the `std::unique_ptr<Node>` produced by the queued detach operation.
+**Decision:** change it to `void remove(Node&)` with framework-owned destruction semantics.
 
-This conflicts with the ownership-transfer meaning of `detach()`.
+### P3 — `NodeTree::detachRoot/Overlay/Child`
 
-**Status:** unresolved API/implementation issue.
+**Decision:** replace with `removeRoot`, `removeOverlay`, `removeChild` operations that keep ownership in the framework and destroy after safe mutation application.
 
-### P3 — Deferred attach has context-dependent return semantics
+### P4 — `UIManager::detachRoot/Overlay`
 
-An attach/add operation executed inside an active mutation scope returns `nullptr` even though the queued operation may succeed later.
+**Decision:** replace with `removeRoot`, `removeOverlay` facade operations.
 
-Unlike detach, ownership is already transferred into the framework, so this is primarily a return-value/API consistency issue.
+### P5 — Root/overlay traversal mutation scope
 
-**Status:** requires explicit contract; no new request abstraction is currently justified.
+**Decision:** public callback-capable root/overlay traversal should establish the same mutation-safety contract as child traversal.
 
-### P4 — Root/overlay traversal does not consistently establish a mutation scope
+### P6 — `NodeTree` shutdown lifecycle
 
-`PanelNode` child traversal explicitly guards live traversal, while `NodeTree` root/overlay traversal helpers currently rely on callers to establish the appropriate scope.
+**Decision:** shutdown should be explicitly lifecycle-aware: pending mutations are settled, live subtrees are unmounted, then final owning destruction occurs. Shutdown is a one-way transition and callbacks cannot cancel it.
 
-This produces inconsistent guarantees across public traversal APIs.
+### P7 — Reparent
 
-**Proposed direction:** public callback-capable traversal helpers should provide the same mutation-safety contract.
+**Decision:** not implemented in Phase 1. Future reparenting, if required, should preserve framework ownership and be introduced as a dedicated capability.
 
-### P5 — Deferred reparent during callbacks
+### P8 — Immediate vs deferred state mutation
 
-Synchronous detach + attach is conceptually sufficient, but the current public ownership-transfer API does not provide a clean way to express the same operation from inside a guarded callback.
-
-**Status:** unresolved implementation path. No atomic public `reparent()` abstraction is currently desired.
-
-### P6 — `NodeTree` destruction is not currently lifecycle-aware
-
-The current destructor path relies on `unique_ptr` destruction of roots and overlays. It does not currently pass through the normal `onUnmount()` / unregister lifecycle path.
-
-**Proposed direction:** make `NodeTree` shutdown explicitly unmount live subtrees before final ownership destruction, while treating shutdown as a one-way lifecycle transition that cannot be cancelled by callback code.
-
-### P7 — Immediate vs deferred state mutation is not explicitly documented
-
-The source already distinguishes layout-affecting deferred state changes from immediate runtime flags such as enabled/focusable/capturable.
-
-**Proposed direction:** document this distinction instead of forcing all state mutations through the structural mutation queue.
+**Decision:** retain the existing distinction and document it rather than forcing all node state changes through one queue.
 
 ---
 
-## 14. Edge Cases Covered by the Contract
+## 17. Edge Cases Covered
 
-The following cases are intended to be valid runtime scenarios:
+The target contract explicitly covers:
 
-```text
-self-detach / self-remove during update
-remove sibling during traversal
-remove ancestor during traversal
-attach during traversal
-nested mutations
-mutation during onMount
-mutation during onUnmount
-mutation during event callback
-repeat/remove of an already removed node
-```
+- self-remove during update;
+- sibling removal during traversal;
+- ancestor removal during traversal;
+- add during traversal;
+- nested mutations;
+- mutation during `onMount`;
+- mutation during `onUnmount`;
+- mutation during event callbacks;
+- repeated remove requests;
+- add/remove operations occurring in one ordered mutation batch.
 
-The intended general rule is that the current callback completes while the current object remains protected by the deferred structural mutation model.
-
----
-
-## 15. Mutation Ordering Examples
-
-### Add then remove in the same queue
-
-```text
-add(B)
-remove(B)
-```
-
-The queue is ordered. The runtime should apply the operations in that order rather than optimize them into a final state.
-
-This means B may receive its normal mount/unmount lifecycle before being destroyed if both operations are explicitly requested and both are valid when executed.
-
-### Remove parent then mutate child
-
-```text
-remove(A)
-mutate child of A
-```
-
-After `remove(A)` has been applied, subsequent queued work resolving nodes in A's removed subtree must use `NodeId` liveness checks and fail cleanly when those nodes are no longer live.
-
-### Add child after parent removal
-
-```text
-remove(A)
-add(B to A)
-```
-
-The first operation removes A. The later operation cannot resolve A as a live parent and therefore cannot attach B.
+The common rule is that the current callback remains safe until the applicable flush.
 
 ---
 
-## 16. Verification Status
+## 18. Verification Status
 
-Phase 1 currently has no active automated build/test verification in the repository.
+The repository currently has no active standalone build/test verification for the framework runtime.
 
-The framework was intentionally separated from the chessengine/client integration while the runtime architecture is being stabilized. The local framework `CMakeLists.txt` exists in the developer workspace, but it is not currently part of the repository's authoritative build/test setup.
+The Phase 1 analysis is therefore source-based and scenario-based rather than runtime-verified.
 
-Therefore the current analysis is based on:
+This is sufficient for architectural design but not sufficient to claim implementation correctness.
 
-- source inspection;
-- architecture documentation;
-- roadmap requirements;
-- static reasoning through runtime scenarios.
-
-This is sufficient for architectural design work but not sufficient to claim runtime correctness is verified.
-
-Before Phase 1 is considered fully verified, the framework should eventually have a standalone build and a minimal runtime verification path independent of the chessengine/client integration.
+A standalone framework build and minimal runtime verification path remain a later requirement before claiming the phase fully verified.
 
 ---
 
-## 17. Phase 1 Implementation Direction
+## 19. Implementation Direction
 
-The current preferred implementation sequence is:
+The selected implementation sequence is:
 
-1. Align `PanelNode::remove()` terminology with detach semantics.
-2. Resolve the deferred detach ownership-transfer problem.
-3. Normalize mutation-safety guarantees of public root/overlay traversal APIs.
-4. Implement safe deferred reparenting internally without introducing a public atomic `reparent()` abstraction.
-5. Define and implement lifecycle-aware `NodeTree` shutdown.
-6. Document the immediate/deferred state mutation distinction.
-7. Reconcile `ARCHITECTURE.md` with the resulting implementation.
-8. Re-evaluate the Phase 1 exit criteria.
+1. replace public detach/removal ownership-transfer APIs with framework-owned `remove` operations;
+2. preserve the existing `unique_ptr` storage model;
+3. reuse the existing lifecycle and live-node registry machinery;
+4. make removal queue-safe using `NodeId` resolution;
+5. normalize mutation-safety of public root/overlay traversal;
+6. implement lifecycle-aware `NodeTree` shutdown;
+7. update `ARCHITECTURE.md` to the resulting actual implementation;
+8. revisit reparenting only when a concrete supported-application requirement appears.
 
-No unrelated subsystem should be redesigned merely because it currently contains incomplete or incorrect behavior.
-
----
-
-## 18. Non-Goals
-
-Phase 1 does not attempt to:
-
-- redesign layout;
-- stabilize hit-testing;
-- redesign input/event propagation;
-- stabilize `EventHandlerStorage` dispatch;
-- redesign `ControlNode`;
-- redesign `StackPanelNode` layout behavior;
-- introduce rendering abstractions;
-- redesign modal/navigation behavior;
-- revive legacy component directories;
-- introduce abstractions solely for architectural symmetry.
-
----
-
-## 19. Relationship to Project Documentation
-
-`ROADMAP.md` remains the high-level definition of Phase 1 and its exit criteria.
-
-`ARCHITECTURE.md` remains the description of the implemented architecture and must be updated when the implementation changes.
-
-This document records the stabilization work and decisions made during Phase 1.
-
-When Phase 1 is completed, this document should remain as a phase-specific design/history record rather than becoming the authoritative description of future behavior.
+No unrelated subsystem should be redesigned merely for symmetry or completeness.
