@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document records the Phase 1 runtime contracts, identified problems, and implementation decisions derived from the current source code.
+This document records the Phase 1 runtime contracts, identified problems, implementation decisions, and completion checklist derived from the current source code.
 
 It complements:
 
@@ -379,7 +379,119 @@ Reason: no demonstrated requirement for client-owned live nodes, and ownership t
 
 ---
 
-## 17. Edge Cases Covered
+## 17. Final Phase 1 Completion Checklist
+
+Phase 1 is complete only when the following implementation and documentation work is finished.
+
+### A. Ownership/removal API
+
+- [ ] Replace public `PanelNode::remove()` returning `std::unique_ptr<Node>` with `void remove(Node&)`.
+- [ ] Replace `NodeTree::detachRoot()` with `void removeRoot(Node*)`.
+- [ ] Replace `NodeTree::detachOverlay()` with `void removeOverlay(Node*)`.
+- [ ] Replace `NodeTree::detachChild()` with `void removeChild(PanelNode&, Node&)`.
+- [ ] Replace `UIManager::detachRoot()` with `void removeRoot(Node*)`.
+- [ ] Replace `UIManager::detachOverlay()` with `void removeOverlay(Node*)`.
+- [ ] Remove the public client ownership-transfer `detach()` API.
+
+### B. Internal removal implementation
+
+- [ ] Replace `detachFromContainer()` with a removal path that keeps ownership inside the framework until destruction.
+- [ ] Replace `detachInternal()` with a removal implementation that holds the `unique_ptr` locally while running `unmount`/unregister logic, then destroys it when the local owner goes out of scope.
+- [ ] Replace `detachChildInternal()` with framework-owned removal semantics.
+- [ ] Preserve the existing `detachOwnedSubtree()` helper or rename it only if implementation clarity requires it; its internal role is no longer public ownership transfer.
+- [ ] Preserve the existing `unique_ptr` containers, `liveNodes_`, `NodeId` and lifecycle machinery rather than introducing a new ownership abstraction.
+
+### C. Deferred mutation behavior
+
+- [ ] Ensure `removeRoot`, `removeOverlay`, and `removeChild` queue the target `NodeId` while a guarded mutation scope is active.
+- [ ] Ensure queued removal re-resolves the target through `NodeId` before applying the operation.
+- [ ] Ensure removal from inside `update`, traversal, event callbacks, `onMount`, and `onUnmount` is safe.
+- [ ] Ensure self-remove never destroys `this` before the current callback returns.
+- [ ] Ensure repeated/stale removal requests become safe no-ops.
+- [ ] Preserve ordered FIFO batch semantics of `mutationQueue_`.
+
+### D. Traversal consistency
+
+- [ ] Give `forEachRoot()` and `rForEachRoot()` the same mutation-safety contract as `PanelNode::forEachChild()`.
+- [ ] Give `forEachOverlay()` and `rForEachOverlay()` the same mutation-safety contract.
+- [ ] Preserve snapshot identity semantics and live re-resolution.
+- [ ] Preserve the rule that mutations do not retroactively rewrite the current traversal.
+- [ ] Verify that mutations created during traversal are flushed only after the guarded traversal scope ends.
+
+### E. Lifecycle and shutdown
+
+- [ ] Define and implement lifecycle-aware `NodeTree` shutdown.
+- [ ] Settle pending mutation work before final runtime destruction.
+- [ ] Unmount live subtrees in post-order during shutdown.
+- [ ] Unregister nodes and clear runtime ownership metadata before final destruction.
+- [ ] Ensure shutdown is one-way and lifecycle callbacks cannot cancel destruction.
+- [ ] Verify that the shutdown path does not create unsafe recursive mutation/lifetime behavior.
+
+### F. Runtime invariants
+
+After implementation, verify these invariants by source inspection and eventually by standalone runtime tests:
+
+```text
+live node
+    -> exactly one framework owner
+    -> owner_ points to the active NodeTree
+    -> NodeId is present in liveNodes_
+
+removed node
+    -> not present in liveNodes_
+    -> no longer has a framework owner
+    -> is destroyed unless held as an ordinary pre-attachment object
+
+queued removal
+    -> node remains alive until flush
+    -> current callback can finish safely
+    -> target is resolved by NodeId at execution time
+```
+
+Also verify:
+
+- lifecycle order is mount pre-order / unmount post-order;
+- child/root/overlay operations follow the same deferred structural-mutation rules;
+- raw pointers remain explicitly non-owning;
+- `NodeId` remains an identity/liveness mechanism rather than an ownership mechanism;
+- `NodeTree` remains the authoritative runtime owner.
+
+### G. Documentation reconciliation
+
+- [ ] Update `ARCHITECTURE.md` to describe the actual implemented ownership/removal model.
+- [ ] Update `PHASE1_RUNTIME_DECISIONS.md` to mark the `add/remove` decision as implemented rather than merely selected.
+- [ ] Keep `FRAMEWORK_SCOPE.md` focused on framework purpose and capability boundaries.
+- [ ] Keep `ROADMAP.md` high-level and do not turn it into an implementation changelog.
+
+### H. Verification
+
+- [ ] Establish a standalone build path for the framework independent of the chessengine/client integration.
+- [ ] Build the framework with the chosen C++20/SDL dependency configuration.
+- [ ] Add a minimal runtime verification path covering at least add, remove, self-remove, nested mutation, lifecycle order, traversal mutation and live-node resolution.
+- [ ] Do not claim Phase 1 runtime correctness is verified until the standalone build and runtime checks have actually been performed.
+
+---
+
+## 18. Explicit Non-Goals for Phase 1 Completion
+
+The following are intentionally **not** required for Phase 1 completion:
+
+- public `detach()` ownership transfer;
+- public `reparent()` capability;
+- preserving arbitrary detached live subtrees;
+- redesigning layout algorithms;
+- redesigning event routing;
+- redesigning input architecture;
+- redesigning modal architecture;
+- building the full chess client;
+- implementing chess-domain behavior;
+- solving unrelated defects in higher-level controls or legacy components.
+
+If a future requirement makes one of these necessary, it should be evaluated against `FRAMEWORK_SCOPE.md` and a new design decision should be recorded before implementation.
+
+---
+
+## 19. Edge Cases Covered
 
 The target contract explicitly covers:
 
@@ -398,7 +510,7 @@ The common rule is that the current callback remains safe until the applicable f
 
 ---
 
-## 18. Verification Status
+## 20. Verification Status
 
 The repository currently has no active standalone build/test verification for the framework runtime.
 
@@ -406,11 +518,11 @@ The Phase 1 analysis is therefore source-based and scenario-based rather than ru
 
 This is sufficient for architectural design but not sufficient to claim implementation correctness.
 
-A standalone framework build and minimal runtime verification path remain a later requirement before claiming the phase fully verified.
+A standalone framework build and minimal runtime verification path remain required before claiming the phase fully verified.
 
 ---
 
-## 19. Implementation Direction
+## 21. Implementation Direction
 
 The selected implementation sequence is:
 
@@ -420,7 +532,8 @@ The selected implementation sequence is:
 4. make removal queue-safe using `NodeId` resolution;
 5. normalize mutation-safety of public root/overlay traversal;
 6. implement lifecycle-aware `NodeTree` shutdown;
-7. update `ARCHITECTURE.md` to the resulting actual implementation;
-8. revisit reparenting only when a concrete supported-application requirement appears.
+7. reconcile `ARCHITECTURE.md` and the Phase 1 decision record with the resulting implementation;
+8. establish standalone build/runtime verification;
+9. revisit reparenting only when a concrete supported-application requirement appears.
 
 No unrelated subsystem should be redesigned merely for symmetry or completeness.
