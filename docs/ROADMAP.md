@@ -29,11 +29,11 @@ Phase 1 — Runtime
 
 ### Status
 
-Not started.
+In progress.
 
 ### Previous Completed Phase
 
-None.
+Not started.
 
 ### Next Phase
 
@@ -47,6 +47,9 @@ but they should not be implemented prematurely.
 ---
 
 ## PHASE 1 — Runtime
+
+For the current Phase 1 runtime analysis and implementation decisions,
+see `docs/PHASE1_RUNTIME.md`.
 
 ### Scope
 
