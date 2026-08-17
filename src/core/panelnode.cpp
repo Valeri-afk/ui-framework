@@ -181,14 +181,15 @@ namespace ui
         return attachLocal(std::move(child), index);
     }
 
-    std::unique_ptr<Node> PanelNode::remove(Node &child)
+    void PanelNode::remove(Node &child)
     {
         if (owner_)
         {
-            return owner_->detachChild(*this, child);
+            owner_->removeChild(*this, child);
+            return;
         }
 
-        return detachLocal(child);
+        detachLocal(child).reset();
     }
 
     size_t PanelNode::childCount() const noexcept
