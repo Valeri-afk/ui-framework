@@ -93,17 +93,20 @@ For every significant change determine:
 
 ## 7. Implementation Safety
 
-Preserve:
+Preserve or explicitly redefine, rather than accidentally break:
 
 - ownership;
 - lifetime;
 - NodeId/live-node invariants;
 - mutation safety;
 - traversal correctness;
-- detached node lifecycle;
+- node attachment/detachment semantics;
 - event behavior;
 - layout invalidation;
 - rendering behavior.
+
+If ownership or reparenting semantics are changed intentionally, update the
+relevant Phase 1 documentation and public API analysis before implementation.
 
 ## 8. Testing / Verification
 
@@ -112,10 +115,14 @@ For significant changes consider:
 - normal case;
 - nested subtree;
 - mutation during callback;
-- deletion of current node;
-- reparenting;
-- detached node;
+- deletion/removal of current node;
+- reparenting, if supported by the current runtime contract;
+- detached-node behavior, if detachment remains part of the contract;
 - interaction with neighboring modules.
+
+When a local build/test environment is not yet available, scenario analysis
+must still be performed, but unverified behavior must be explicitly identified
+as such.
 
 ## 9. Documentation
 
