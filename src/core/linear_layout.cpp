@@ -1,4 +1,5 @@
 #include "ui_framework/core/linear_layout.hpp"
+#include "ui_framework/core/layout_constraints.hpp"
 #include "ui_framework/core/stackpanelnode.hpp"
 
 #include <algorithm>
@@ -13,11 +14,6 @@ namespace
     float finiteOrZero(float value) noexcept
     {
         return std::isfinite(value) ? value : 0.0f;
-    }
-
-    float finiteOrInfinity(float value) noexcept
-    {
-        return std::isfinite(value) ? value : kInfinity;
     }
 
     float safeAdd(float a, float b) noexcept
@@ -38,91 +34,6 @@ namespace
     float normalizedGap(float gap) noexcept
     {
         return std::isfinite(gap) && gap > 0.0f ? gap : 0.0f;
-    }
-
-    float proposalBoundedByMax(
-        float proposal,
-        float maxValue) noexcept
-    {
-        const float normalizedProposal = finiteOrInfinity(proposal);
-        const float normalizedMax = finiteOrInfinity(maxValue);
-
-        return std::min(normalizedProposal, normalizedMax);
-    }
-
-    ui::LayoutSize resolveMeasurementProposal(
-        const ui::Node &child,
-        ui::LayoutSize proposal) noexcept
-    {
-        proposal.width = finiteOrInfinity(proposal.width);
-        proposal.height = finiteOrInfinity(proposal.height);
-
-        const ui::LayoutSizeValue size = child.getSize();
-        const ui::LayoutSize minSize = child.getMinSize();
-        const ui::LayoutSize maxSize = child.getMaxSize();
-
-        if (size.width.isValue())
-            proposal.width = finiteOrZero(size.width.value);
-        else
-            proposal.width = proposalBoundedByMax(
-                proposal.width,
-                maxSize.width);
-
-        if (size.height.isValue())
-            proposal.height = finiteOrZero(size.height.value);
-        else
-            proposal.height = proposalBoundedByMax(
-                proposal.height,
-                maxSize.height);
-
-        // Minimum size constrains final geometry, not intrinsic measurement.
-        (void)minSize;
-
-        return proposal;
-    }
-
-    ui::LayoutSize resolveFinalSize(
-        const ui::Node &node,
-        ui::LayoutSize allocated) noexcept
-    {
-        allocated.width = finiteOrZero(allocated.width);
-        allocated.height = finiteOrZero(allocated.height);
-
-        const ui::LayoutSizeValue size = node.getSize();
-        const ui::LayoutSize minSize = node.getMinSize();
-        const ui::LayoutSize maxSize = node.getMaxSize();
-
-        if (size.width.isValue())
-        {
-            allocated.width = finiteOrZero(size.width.value);
-        }
-        else
-        {
-            const float minWidth = finiteOrZero(minSize.width);
-            const float maxWidth = finiteOrInfinity(maxSize.width);
-
-            allocated.width = std::clamp(
-                allocated.width,
-                minWidth,
-                std::max(minWidth, maxWidth));
-        }
-
-        if (size.height.isValue())
-        {
-            allocated.height = finiteOrZero(size.height.value);
-        }
-        else
-        {
-            const float minHeight = finiteOrZero(minSize.height);
-            const float maxHeight = finiteOrInfinity(maxSize.height);
-
-            allocated.height = std::clamp(
-                allocated.height,
-                minHeight,
-                std::max(minHeight, maxHeight));
-        }
-
-        return allocated;
     }
 
     void accumulateContentSize(
