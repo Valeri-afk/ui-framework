@@ -65,7 +65,6 @@ namespace ui
             [font](Node &node)
             {
                 auto &textNode = static_cast<TextNode &>(node);
-
                 textNode.font_ = font;
                 textNode.releaseTextObject();
             });
@@ -105,68 +104,36 @@ namespace ui
             });
     }
 
-    float TextNode::getWrapWidth() const noexcept
-    {
-        return wrapWidth_;
-    }
-
-    void TextNode::setWrapWidth(float width)
-    {
-        width = std::max(0.0f, finiteOrZero(width));
-
-        if (wrapWidth_ == width)
-            return;
-
-        deferLayoutMutation(
-            [width](Node &node)
-            {
-                auto &textNode = static_cast<TextNode &>(node);
-                textNode.wrapWidth_ = width;
-
-                if (textNode.textObject_)
-                {
-                    TTF_SetTextWrapWidth(
-                        textNode.textObject_,
-                        width > 0.0f
-                            ? static_cast<int>(std::round(width))
-                            : 0);
-                }
-            });
-    }
-
     LayoutSize TextNode::measure(MeasureContext &ctx)
     {
         if (!font_ || text_.empty())
             return {};
 
-        float availableWidth =
+        const float availableWidth =
             finiteOrInfinity(ctx.availableSize.width);
-
-        if (wrapWidth_ > 0.0f)
-            availableWidth = std::min(availableWidth, wrapWidth_);
 
         int width = 0;
         int height = 0;
 
-        if (availableWidth > 0.0f && availableWidth < kInfinity)
-        {
-            TTF_GetStringSizeWrapped(
-                font_,
-                text_.c_str(),
-                text_.size(),
-                static_cast<int>(std::round(availableWidth)),
-                &width,
-                &height);
-        }
-        else
-        {
-            TTF_GetStringSize(
-                font_,
-                text_.c_str(),
-                text_.size(),
-                &width,
-                &height);
-        }
+        const bool measured =
+            availableWidth < kInfinity
+                ? TTF_GetStringSizeWrapped(
+                      font_,
+                      text_.c_str(),
+                      text_.size(),
+                      static_cast<int>(std::round(
+                          std::max(0.0f, availableWidth))),
+                      &width,
+                      &height)
+                : TTF_GetStringSize(
+                      font_,
+                      text_.c_str(),
+                      text_.size(),
+                      &width,
+                      &height);
+
+        if (!measured)
+            return {};
 
         return {
             static_cast<float>(width),
@@ -182,14 +149,6 @@ namespace ui
 
         if (!textObject_)
             return;
-
-        int textWidth = 0;
-        int textHeight = 0;
-
-        TTF_GetTextSize(
-            textObject_,
-            &textWidth,
-            &textHeight);
 
         const Padding padding = getPadding();
         const Border border = getBorder();
@@ -213,6 +172,10 @@ namespace ui
                 border.top - border.bottom -
                 padding.top - padding.bottom);
 
+        int textWidth = 0;
+        int textHeight = 0;
+        TTF_GetTextSize(textObject_, &textWidth, &textHeight);
+
         float x = contentX;
         float y = contentY;
 
@@ -221,11 +184,9 @@ namespace ui
         case TextAlignment::CENTER:
             x += (contentWidth - static_cast<float>(textWidth)) * 0.5f;
             break;
-
         case TextAlignment::END:
             x += contentWidth - static_cast<float>(textWidth);
             break;
-
         case TextAlignment::START:
             break;
         }
@@ -235,11 +196,9 @@ namespace ui
         case TextAlignment::CENTER:
             y += (contentHeight - static_cast<float>(textHeight)) * 0.5f;
             break;
-
         case TextAlignment::END:
             y += contentHeight - static_cast<float>(textHeight);
             break;
-
         case TextAlignment::START:
             break;
         }
@@ -272,7 +231,6 @@ namespace ui
         if (!textEngine_ || cachedRenderer_ != renderer)
         {
             releaseTextObject();
-
             textEngine_ = TTF_CreateRendererTextEngine(renderer);
             cachedRenderer_ = renderer;
         }
@@ -285,16 +243,6 @@ namespace ui
             font_,
             text_.c_str(),
             text_.size());
-
-        if (!textObject_)
-            return;
-
-        if (wrapWidth_ > 0.0f)
-        {
-            TTF_SetTextWrapWidth(
-                textObject_,
-                static_cast<int>(std::round(wrapWidth_)));
-        }
     }
 
 }
