@@ -27,7 +27,9 @@ Phase 1 — Runtime
 
 ### Status
 
-Architecture complete; implementation staged in `phase1-worktree`.
+**Architecture complete; source-level reconciliation complete; implementation remains staged in `phase1-worktree`.**
+
+Compilation and runtime verification are intentionally deferred until the planned six phases are complete.
 
 ### Previous Completed Phase
 
@@ -37,7 +39,7 @@ Not started.
 
 Phase 2 — Layout
 
-Phase 2 becomes the primary active architectural scope after the Phase 1 worktree is reconciled with the baseline. Compilation and runtime testing are intentionally deferred until the planned six phases are complete.
+Phase 2 becomes the primary active architectural scope after the Phase 1 worktree is accepted as the implementation baseline. Compilation and runtime testing remain intentionally deferred until the planned six phases are complete.
 
 Later phases may be analyzed when necessary to validate architectural decisions, but they should not be implemented prematurely.
 
@@ -45,7 +47,7 @@ Later phases may be analyzed when necessary to validate architectural decisions,
 
 ## PHASE 1 — Runtime
 
-For the current Phase 1 runtime analysis and implementation decisions, see `docs/PHASE1_RUNTIME.md`, `docs/PHASE1_RUNTIME_DECISIONS.md`, `docs/PHASE1_LIFETIME.md`, and `docs/PHASE1_FINAL_DECISIONS.md`.
+For the final Phase 1 runtime contract, see `docs/PHASE1_RUNTIME.md` and `docs/PHASE1_FINAL_DECISIONS.md`.
 
 ### Scope
 
@@ -61,10 +63,6 @@ For the current Phase 1 runtime analysis and implementation decisions, see `docs
 
 Stabilize the runtime foundation of the framework.
 
-### Dependencies
-
-None.
-
 ### Exit Criteria
 
 - Node ownership and lifetime rules are clear.
@@ -77,6 +75,8 @@ None.
 - UIManager and NodeTree responsibilities are clearly separated.
 - PanelNode follows the runtime contracts.
 - No unresolved runtime issue blocks later phases.
+
+**Phase 1 exit criteria are architecturally satisfied.** Runtime/build verification is a later project-level validation stage, not a Phase 1 architecture gate.
 
 ---
 
