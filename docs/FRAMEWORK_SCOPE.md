@@ -276,13 +276,13 @@ Reparenting is a legitimate capability in richer retained-mode UI toolkits, but 
 
 For the current chess application, ordinary UI composition usually creates a node directly under the parent that should own it. Typical screens such as menus, settings, rules, opening cards, move history, timers, and dialogs do not inherently require an existing node to move between unrelated parents.
 
-Therefore reparenting is currently an **unproven requirement**, not a fundamental framework capability.
+Therefore reparenting is currently a **future capability, not a Phase 1 requirement**.
 
 Potential future use cases include:
 
 - drag-and-drop between containers;
 - tab/document transfer;
-- docking/workspace systems;
+- docking/workspace movement;
 - preserving a complex node while moving it between panels;
 - other UI behaviors where destroying and recreating a node would lose meaningful state.
 
@@ -294,15 +294,20 @@ Reparenting must not be introduced merely for API symmetry or because a larger t
 
 ## 9. Ownership Scope
 
-The framework currently uses `std::unique_ptr` as the fundamental ownership mechanism.
+The framework uses `std::unique_ptr` as the fundamental ownership mechanism.
 
-A key design question being investigated in Phase 1 is whether live-node ownership should always remain inside the framework or whether the client should be able to take ownership of an existing node through `detach()`.
+The Phase 1 ownership decision is:
 
-This is intentionally still under evaluation.
+```text
+add(std::unique_ptr<Node>)
+remove(Node&)
+```
 
-The preferred direction is to minimize the number of ownership models the client must understand.
+Live node ownership remains inside the framework. Public ownership-transfer `detach()` is not part of the target runtime contract.
 
-The existence of `detach()` in the historical implementation is not itself sufficient justification for keeping it. It originally arose from a simpler implementation where explicit client ownership transfer was a convenient way to avoid immediate destruction. The runtime now has a live registry, stable `NodeId`, deferred mutation, and explicit lifecycle handling, so the ownership model can be reconsidered based on actual framework requirements.
+The reason is to minimize the number of client lifetime models. The current runtime already has a live registry, stable `NodeId`, deferred mutation, nested mutation scopes and explicit lifecycle handling. A second client-owned lifetime domain is not justified by a demonstrated application requirement.
+
+Client-held `Node*` references remain non-owning and may become invalid after deferred removal and destruction. `NodeId` provides identity/liveness resolution; it does not provide ownership.
 
 ---
 
@@ -393,9 +398,10 @@ The current process is therefore:
 ```text
 1. establish architecture and runtime contracts;
 2. stabilize the framework core;
-3. establish a standalone framework verification path;
-4. integrate with the chess client;
-5. grow higher-level application features from real requirements.
+3. complete the six architecture phases;
+4. establish the final framework verification path;
+5. integrate with the chess client;
+6. grow higher-level application features from real requirements.
 ```
 
 The framework's final scope should be allowed to evolve from actual application needs rather than speculative completeness.
@@ -414,15 +420,23 @@ Defines development phases and high-level exit criteria.
 
 `docs/ARCHITECTURE.md`
 
-Describes the architecture that is actually implemented.
+Describes the architecture that is actually implemented in the main source tree.
 
 `docs/PHASE1_RUNTIME.md`
 
-Records Phase 1 runtime contracts, known problems, and stabilization work.
+Records Phase 1 runtime analysis and stabilization work.
 
 `docs/PHASE1_RUNTIME_DECISIONS.md`
 
-Records active Phase 1 design alternatives and unresolved ownership/reparent decisions.
+Records the detailed Phase 1 ownership/removal/reparenting decision.
+
+`docs/PHASE1_LIFETIME.md`
+
+Records the selected framework lifetime and shutdown contract.
+
+`docs/PHASE1_FINAL_DECISIONS.md`
+
+Provides the concise final architecture snapshot for Phase 1 and future development contexts.
 
 `docs/INSTRUCTIONS.md`
 
