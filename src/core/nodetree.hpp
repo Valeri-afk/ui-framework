@@ -43,15 +43,15 @@ namespace ui
         Node *attachRoot(size_t index, std::unique_ptr<Node> node);
         Node *attachOverlay(size_t index, std::unique_ptr<Node> node);
 
-        std::unique_ptr<Node> detachRoot(Node *node);
-        std::unique_ptr<Node> detachOverlay(Node *node);
+        void removeRoot(Node *node);
+        void removeOverlay(Node *node);
 
         Node *attachChild(
             PanelNode &parent,
             std::unique_ptr<Node> child,
             size_t index = 0);
 
-        std::unique_ptr<Node> detachChild(
+        void removeChild(
             PanelNode &parent,
             Node &child);
 
@@ -104,25 +104,31 @@ namespace ui
             if (!cb)
                 return;
 
-            std::vector<NodeId> ids;
-            ids.reserve(roots_.size());
-
-            for (const auto &root : roots_)
             {
-                if (root)
+                ScopedMutationGuard guard(*this);
+
+                std::vector<NodeId> ids;
+                ids.reserve(roots_.size());
+
+                for (const auto &root : roots_)
                 {
-                    ids.push_back(root->id());
+                    if (root)
+                    {
+                        ids.push_back(root->id());
+                    }
+                }
+
+                for (NodeId id : ids)
+                {
+                    if (Node *node = findNode(id))
+                    {
+                        if (cb(*node))
+                            break;
+                    }
                 }
             }
 
-            for (NodeId id : ids)
-            {
-                if (Node *node = findNode(id))
-                {
-                    if (cb(*node))
-                        return;
-                }
-            }
+            flushMutationQueue();
         }
 
         template <typename Callback>
@@ -131,25 +137,31 @@ namespace ui
             if (!cb)
                 return;
 
-            std::vector<NodeId> ids;
-            ids.reserve(roots_.size());
-
-            for (auto it = roots_.rbegin(); it != roots_.rend(); ++it)
             {
-                if (*it)
+                ScopedMutationGuard guard(*this);
+
+                std::vector<NodeId> ids;
+                ids.reserve(roots_.size());
+
+                for (auto it = roots_.rbegin(); it != roots_.rend(); ++it)
                 {
-                    ids.push_back((*it)->id());
+                    if (*it)
+                    {
+                        ids.push_back((*it)->id());
+                    }
+                }
+
+                for (NodeId id : ids)
+                {
+                    if (Node *node = findNode(id))
+                    {
+                        if (cb(*node))
+                            break;
+                    }
                 }
             }
 
-            for (NodeId id : ids)
-            {
-                if (Node *node = findNode(id))
-                {
-                    if (cb(*node))
-                        return;
-                }
-            }
+            flushMutationQueue();
         }
 
         template <typename Callback>
@@ -158,25 +170,31 @@ namespace ui
             if (!cb)
                 return;
 
-            std::vector<NodeId> ids;
-            ids.reserve(overlays_.size());
-
-            for (const auto &overlay : overlays_)
             {
-                if (overlay)
+                ScopedMutationGuard guard(*this);
+
+                std::vector<NodeId> ids;
+                ids.reserve(overlays_.size());
+
+                for (const auto &overlay : overlays_)
                 {
-                    ids.push_back(overlay->id());
+                    if (overlay)
+                    {
+                        ids.push_back(overlay->id());
+                    }
+                }
+
+                for (NodeId id : ids)
+                {
+                    if (Node *node = findNode(id))
+                    {
+                        if (cb(*node))
+                            break;
+                    }
                 }
             }
 
-            for (NodeId id : ids)
-            {
-                if (Node *node = findNode(id))
-                {
-                    if (cb(*node))
-                        return;
-                }
-            }
+            flushMutationQueue();
         }
 
         template <typename Callback>
@@ -185,25 +203,31 @@ namespace ui
             if (!cb)
                 return;
 
-            std::vector<NodeId> ids;
-            ids.reserve(overlays_.size());
-
-            for (auto it = overlays_.rbegin(); it != overlays_.rend(); ++it)
             {
-                if (*it)
+                ScopedMutationGuard guard(*this);
+
+                std::vector<NodeId> ids;
+                ids.reserve(overlays_.size());
+
+                for (auto it = overlays_.rbegin(); it != overlays_.rend(); ++it)
                 {
-                    ids.push_back((*it)->id());
+                    if (*it)
+                    {
+                        ids.push_back((*it)->id());
+                    }
+                }
+
+                for (NodeId id : ids)
+                {
+                    if (Node *node = findNode(id))
+                    {
+                        if (cb(*node))
+                            break;
+                    }
                 }
             }
 
-            for (NodeId id : ids)
-            {
-                if (Node *node = findNode(id))
-                {
-                    if (cb(*node))
-                        return;
-                }
-            }
+            flushMutationQueue();
         }
 
         template <typename Fn>
@@ -305,7 +329,7 @@ namespace ui
             std::unique_ptr<Node> node,
             std::vector<std::unique_ptr<Node>> &container);
 
-        std::unique_ptr<Node> detachFromContainer(
+        void removeFromContainer(
             NodeId id,
             std::vector<std::unique_ptr<Node>> &container);
 
@@ -319,7 +343,7 @@ namespace ui
             std::unique_ptr<Node> node,
             std::vector<std::unique_ptr<Node>> &container);
 
-        std::unique_ptr<Node> detachInternal(
+        void removeInternal(
             NodeId id,
             std::vector<std::unique_ptr<Node>> &container);
 
@@ -328,7 +352,7 @@ namespace ui
             std::unique_ptr<Node> child,
             size_t index);
 
-        std::unique_ptr<Node> detachChildInternal(
+        void removeChildInternal(
             PanelNode &parent,
             Node &child);
 
