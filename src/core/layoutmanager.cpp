@@ -1,3 +1,5 @@
+#include "ui_framework/core/linear_layout.hpp"
+#include "ui_framework/core/stackpanelnode.hpp"
 #include "layoutmanager.hpp"
 
 #include <algorithm>
@@ -315,8 +317,22 @@ namespace ui
                        : LayoutSize{};
         };
 
-        LayoutSize desiredContent =
-            sanitizeSize(node.measure(ctx));
+        LayoutSize desiredContent{};
+        
+        if (auto *stackPanel = dynamic_cast<StackPanelNode *>(&node))
+        {
+            desiredContent =
+                sanitizeSize(
+                    internal::measureLinearPanel(
+                        *stackPanel,
+                        ctx));
+        }
+        else
+        {
+            desiredContent =
+                sanitizeSize(
+                    node.measure(ctx));
+        }
 
         Node *liveNode = nodeTree.findNode(nodeId);
 
@@ -367,7 +383,16 @@ namespace ui
             arrangeRecursive(*child, nodeTree);
         };
 
-        node.arrange(ctx);
+        if (auto *stackPanel = dynamic_cast<StackPanelNode *>(&node))
+        {
+            internal::arrangeLinearPanel(
+                *stackPanel,
+                ctx);
+        }
+        else
+        {
+            node.arrange(ctx);
+        }
     }
 
     LayoutSize LayoutManager::makeRootAvailableSize(
