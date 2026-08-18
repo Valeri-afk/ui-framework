@@ -2,20 +2,9 @@
 
 This document defines the planned development order of the framework.
 
-The roadmap is intentionally high-level.
+The roadmap is intentionally high-level. It defines development phases, architectural scope, major dependencies, and stabilization criteria. It does not define implementation details.
 
-It defines:
-
-- development phases;
-- architectural scope of each phase;
-- major dependencies between phases;
-- stabilization criteria.
-
-It does NOT define implementation details.
-
-The roadmap describes the intended development direction and current development status, but does not define the current implementation state.
-
-Implementation decisions must be based on the current source code and discussed before changes are made.
+Implementation decisions must be based on the current source code and discussed before changes are made. The source code remains the source of truth for current behavior.
 
 ---
 
@@ -23,23 +12,23 @@ Implementation decisions must be based on the current source code and discussed 
 
 ### Current Phase
 
-Phase 1 — Runtime
+**Phase 2 — Layout**
 
 ### Status
 
-**Architecture complete; source-level reconciliation complete; implementation remains staged in `phase1-worktree`.**
+**Phase 1 — Runtime is accepted as the active `main` source baseline.**
 
-Compilation and runtime verification are intentionally deferred until the planned six phases are complete.
+The Phase 1 ownership, lifecycle, traversal, and deferred-mutation contracts have been promoted into the active source tree. `phase1-worktree/` is retained only as a historical implementation snapshot and is not part of the active build.
+
+Compilation and runtime verification remain a later project-level validation stage. This does not prevent architectural implementation work in the active phase.
 
 ### Previous Completed Phase
 
-Not started.
+**Phase 1 — Runtime**
 
 ### Next Phase
 
-Phase 2 — Layout
-
-Phase 2 becomes the primary active architectural scope after the Phase 1 worktree is accepted as the implementation baseline. Compilation and runtime testing remain intentionally deferred until the planned six phases are complete.
+**Phase 2 — Layout** is the primary active architectural scope.
 
 Later phases may be analyzed when necessary to validate architectural decisions, but they should not be implemented prematurely.
 
@@ -47,7 +36,9 @@ Later phases may be analyzed when necessary to validate architectural decisions,
 
 ## PHASE 1 — Runtime
 
-For the final Phase 1 runtime contract, see `docs/PHASE1_RUNTIME.md` and `docs/PHASE1_FINAL_DECISIONS.md`.
+### Status
+
+**Completed / accepted.**
 
 ### Scope
 
@@ -71,16 +62,20 @@ Stabilize the runtime foundation of the framework.
 - Traversal semantics are defined.
 - Mutation during traversal and callbacks is safe and predictable.
 - Node attach and framework-owned remove behavior are defined.
-- Reparenting is explicitly scoped as a future capability rather than required by Phase 1.
+- Reparenting is explicitly deferred as a future capability.
 - UIManager and NodeTree responsibilities are clearly separated.
 - PanelNode follows the runtime contracts.
-- No unresolved runtime issue blocks later phases.
+- No unresolved Phase 1 architectural issue blocks Phase 2.
 
-**Phase 1 exit criteria are architecturally satisfied.** Runtime/build verification is a later project-level validation stage, not a Phase 1 architecture gate.
+Phase 1 exit criteria are architecturally satisfied. Build/runtime verification remains a later project-level validation stage.
 
 ---
 
 ## PHASE 2 — Layout
+
+### Status
+
+**Active.**
 
 ### Scope
 
@@ -172,19 +167,9 @@ Build reusable UI components on top of the stabilized runtime, layout, and input
 
 ### Notes
 
-ControlNode must not be introduced merely for architectural symmetry.
-
-Its introduction must be justified by responsibilities that cannot be expressed cleanly by Node or existing component types.
+ControlNode must not be introduced merely for architectural symmetry. Its introduction must be justified by responsibilities that cannot be expressed cleanly by Node or existing component types.
 
 Existing component code may be legacy, incomplete, or outside the active development scope. Such code must not be treated as a stable architectural contract without verification against the current source.
-
-### Exit Criteria
-
-- Component responsibilities are clearly separated.
-- Interactive behavior does not leak into unrelated nodes.
-- ControlNode, if introduced, has a justified responsibility boundary.
-- Basic components use existing runtime, layout, and input contracts without bypassing them.
-- Legacy component code has either been updated, replaced, or explicitly excluded from the active component architecture.
 
 ---
 
@@ -207,21 +192,7 @@ Establish higher-level interaction and navigation semantics.
 - Phase 2
 - Phase 3
 
-### Notes
-
 Phase 4 is not a strict dependency unless a particular navigation or modal feature requires component-level behavior.
-
-Modal functionality may therefore be stabilized independently of the complete Component Model.
-
-### Exit Criteria
-
-- Modal stack semantics are defined.
-- Overlay ownership and lifecycle are clear.
-- Modal focus behavior is predictable.
-- Focus restoration is stable.
-- Modal interaction respects hit-testing and event boundaries.
-- Navigation does not introduce ownership inconsistencies.
-- Modal lifecycle does not bypass NodeTree mutation and lifetime rules.
 
 ---
 
@@ -245,31 +216,13 @@ Separate rendering concerns from the framework's core runtime where justified.
 - Phase 2
 - Phase 4 where component rendering requires it
 
-### Notes
-
-Rendering may depend on Phase 5 for specific overlay or modal rendering behavior, but Phase 5 is not a general prerequisite for the rendering architecture.
-
-RenderContext and a second backend are optional architectural directions.
-
-They must not be introduced unless the current rendering architecture demonstrates a concrete need for them.
-
-SDL is currently the rendering backend of the framework. SDL-specific code should remain outside the framework's core architectural contracts where practical.
-
-### Exit Criteria
-
-- Rendering responsibilities are clearly separated from runtime ownership.
-- Clipping semantics are defined.
-- Resource lifetime is defined.
-- SDL-specific dependencies are isolated where practical.
-- Rendering does not bypass NodeTree lifecycle or ownership rules.
-- Additional rendering abstraction is introduced only where justified.
+RenderContext and a second backend are optional architectural directions and must not be introduced without a concrete need.
 
 ---
 
 ## Development Order
 
-The intended dependency order is:
-
+```text
 Phase 1 — Runtime
         ↓
 Phase 2 — Layout
@@ -281,21 +234,18 @@ Phase 4 — Component Model
 Phase 5 — Modal / Navigation
         ↓
 Phase 6 — Rendering / Backend
+```
 
-However, this is a dependency-oriented roadmap rather than a requirement to complete every phase strictly in isolation.
-
-A later phase may be partially investigated when necessary to validate an earlier architectural decision.
-
-Implementation work should remain focused on one primary architectural phase at a time.
+This is a dependency-oriented roadmap rather than a requirement to complete every phase strictly in isolation. Later phases may be investigated when necessary to validate an earlier architectural decision, but implementation remains focused on one primary phase at a time.
 
 ---
 
 ## Active Development Principle
 
-The existence of a file or module does not imply that it is currently part of the active refactoring scope.
+The existence of a file or module does not imply that it is part of the active implementation scope.
 
 Legacy, deprecated, experimental, or currently unused code must be verified against the source before being treated as an architectural contract.
 
 The current source code remains the source of truth for existing behavior.
 
-This roadmap defines where the framework is intended to go, not what the current source code is assumed to already implement.
+This roadmap defines where the framework is intended to go, not what the source is assumed to already implement.
