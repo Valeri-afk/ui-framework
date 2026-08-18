@@ -15,6 +15,11 @@ namespace
         return std::isfinite(value) ? value : 0.0f;
     }
 
+    float finiteOrInfinity(float value) noexcept
+    {
+        return std::isfinite(value) ? value : kInfinity;
+    }
+
     float safeAdd(float a, float b) noexcept
     {
         if (!std::isfinite(a) || !std::isfinite(b))
@@ -35,12 +40,22 @@ namespace
         return std::isfinite(gap) && gap > 0.0f ? gap : 0.0f;
     }
 
+    float proposalBoundedByMax(
+        float proposal,
+        float maxValue) noexcept
+    {
+        const float normalizedProposal = finiteOrInfinity(proposal);
+        const float normalizedMax = finiteOrInfinity(maxValue);
+
+        return std::min(normalizedProposal, normalizedMax);
+    }
+
     ui::LayoutSize resolveMeasurementProposal(
         const ui::Node &child,
         ui::LayoutSize proposal) noexcept
     {
-        proposal.width = finiteOrZero(proposal.width);
-        proposal.height = finiteOrZero(proposal.height);
+        proposal.width = finiteOrInfinity(proposal.width);
+        proposal.height = finiteOrInfinity(proposal.height);
 
         const ui::LayoutSizeValue size = child.getSize();
         const ui::LayoutSize minSize = child.getMinSize();
@@ -49,20 +64,18 @@ namespace
         if (size.width.isValue())
             proposal.width = finiteOrZero(size.width.value);
         else
-            proposal.width = std::min(
+            proposal.width = proposalBoundedByMax(
                 proposal.width,
-                std::max(0.0f, finiteOrZero(maxSize.width)));
+                maxSize.width);
 
         if (size.height.isValue())
             proposal.height = finiteOrZero(size.height.value);
         else
-            proposal.height = std::min(
+            proposal.height = proposalBoundedByMax(
                 proposal.height,
-                std::max(0.0f, finiteOrZero(maxSize.height)));
+                maxSize.height);
 
-        // A minimum size constrains the resulting box, not the intrinsic
-        // content proposal. This keeps proposal-dependent content such as
-        // wrapped text from being reflowed merely because a minimum exists.
+        // Minimum size constrains final geometry, not intrinsic measurement.
         (void)minSize;
 
         return proposal;
@@ -80,28 +93,34 @@ namespace
         const ui::LayoutSize maxSize = node.getMaxSize();
 
         if (size.width.isValue())
+        {
             allocated.width = finiteOrZero(size.width.value);
+        }
         else
+        {
+            const float minWidth = finiteOrZero(minSize.width);
+            const float maxWidth = finiteOrInfinity(maxSize.width);
+
             allocated.width = std::clamp(
                 allocated.width,
-                finiteOrZero(minSize.width),
-                std::max(
-                    finiteOrZero(minSize.width),
-                    std::isfinite(maxSize.width)
-                        ? maxSize.width
-                        : kInfinity));
+                minWidth,
+                std::max(minWidth, maxWidth));
+        }
 
         if (size.height.isValue())
+        {
             allocated.height = finiteOrZero(size.height.value);
+        }
         else
+        {
+            const float minHeight = finiteOrZero(minSize.height);
+            const float maxHeight = finiteOrInfinity(maxSize.height);
+
             allocated.height = std::clamp(
                 allocated.height,
-                finiteOrZero(minSize.height),
-                std::max(
-                    finiteOrZero(minSize.height),
-                    std::isfinite(maxSize.height)
-                        ? maxSize.height
-                        : kInfinity));
+                minHeight,
+                std::max(minHeight, maxHeight));
+        }
 
         return allocated;
     }
@@ -208,7 +227,6 @@ namespace ui::internal
         children.reserve(panel.childCount());
 
         float occupiedMain = 0.0f;
-
         size_t visibleIndex = 0;
 
         for (size_t i = 0; i < panel.childCount(); ++i)
