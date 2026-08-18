@@ -40,7 +40,7 @@ namespace ui
 
     private:
         Node *attachLocal(std::unique_ptr<Node> child, size_t index);
-        void removeLocal(Node &child);
+        std::unique_ptr<Node> detachLocal(Node &child);
 
         void forEachChildImpl(
             const std::function<bool(Node &)> &cb,
