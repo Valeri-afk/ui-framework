@@ -104,8 +104,6 @@ namespace ui
             if (!cb)
                 return;
 
-            bool stop = false;
-
             {
                 ScopedMutationGuard guard(*this);
 
@@ -125,17 +123,12 @@ namespace ui
                     if (Node *node = findNode(id))
                     {
                         if (cb(*node))
-                        {
-                            stop = true;
                             break;
-                        }
                     }
                 }
             }
 
             flushMutationQueue();
-
-            (void)stop;
         }
 
         template <typename Callback>
@@ -143,8 +136,6 @@ namespace ui
         {
             if (!cb)
                 return;
-
-            bool stop = false;
 
             {
                 ScopedMutationGuard guard(*this);
@@ -165,17 +156,12 @@ namespace ui
                     if (Node *node = findNode(id))
                     {
                         if (cb(*node))
-                        {
-                            stop = true;
                             break;
-                        }
                     }
                 }
             }
 
             flushMutationQueue();
-
-            (void)stop;
         }
 
         template <typename Callback>
@@ -183,8 +169,6 @@ namespace ui
         {
             if (!cb)
                 return;
-
-            bool stop = false;
 
             {
                 ScopedMutationGuard guard(*this);
@@ -205,17 +189,12 @@ namespace ui
                     if (Node *node = findNode(id))
                     {
                         if (cb(*node))
-                        {
-                            stop = true;
                             break;
-                        }
                     }
                 }
             }
 
             flushMutationQueue();
-
-            (void)stop;
         }
 
         template <typename Callback>
@@ -223,8 +202,6 @@ namespace ui
         {
             if (!cb)
                 return;
-
-            bool stop = false;
 
             {
                 ScopedMutationGuard guard(*this);
@@ -245,17 +222,12 @@ namespace ui
                     if (Node *node = findNode(id))
                     {
                         if (cb(*node))
-                        {
-                            stop = true;
                             break;
-                        }
                     }
                 }
             }
 
             flushMutationQueue();
-
-            (void)stop;
         }
 
         template <typename Fn>
