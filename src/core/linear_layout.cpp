@@ -8,7 +8,6 @@
 namespace
 {
     constexpr float kInfinity = std::numeric_limits<float>::max();
-    constexpr float kEpsilon = 0.00001f;
 
     float finiteOrZero(float value) noexcept
     {
@@ -134,7 +133,7 @@ namespace ui::internal
 
         struct ChildPlacement
         {
-            size_t index;
+            size_t visibleIndex;
             LayoutSize desired;
         };
 
@@ -142,6 +141,8 @@ namespace ui::internal
         children.reserve(panel.childCount());
 
         float occupiedMain = 0.0f;
+
+        size_t visibleIndex = 0;
 
         for (size_t i = 0; i < panel.childCount(); ++i)
         {
@@ -154,7 +155,8 @@ namespace ui::internal
             const float mainSize = vertical ? desired.height : desired.width;
 
             occupiedMain = safeAdd(occupiedMain, finiteOrZero(mainSize));
-            children.push_back({i, desired});
+            children.push_back({visibleIndex, desired});
+            ++visibleIndex;
         }
 
         if (children.size() > 1)
@@ -170,7 +172,7 @@ namespace ui::internal
         const float availableCross =
             vertical ? ctx.contentSize.width : ctx.contentSize.height;
 
-        float freeMain =
+        const float freeMain =
             std::max(0.0f, finiteOrZero(availableMain) - finiteOrZero(occupiedMain));
 
         float leading = 0.0f;
@@ -253,7 +255,7 @@ namespace ui::internal
                 childPosition.y += crossOffset;
 
             ctx.placeChild(
-                placement.index,
+                placement.visibleIndex,
                 childPosition,
                 finalSize);
 
