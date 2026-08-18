@@ -1,6 +1,6 @@
 # Phase 1 — Final Architecture Decisions
 
-> **Status:** architecture decided
+> **Status:** architecture complete; source-level reconciliation complete
 > **Date:** 2026-08-18
 >
 > This document is the concise authoritative snapshot of the Phase 1 architecture decisions reached during source analysis. It is intended for future development contexts.
@@ -77,7 +77,7 @@ remove(Node&)
 
 Once a node is live, the framework owns it.
 
-Public ownership-transfer `detach()` is not part of the target Phase 1 API.
+Public ownership-transfer `detach()` is not part of the Phase 1 API.
 
 A client-held `Node*` is non-owning and may become invalid after removal. This remains client responsibility.
 
@@ -227,12 +227,10 @@ Therefore the current Phase 1 completion criterion is:
 
 Compilation/runtime verification is a later project-level validation stage, not a Phase 1 architecture gate.
 
-## 14. Remaining Phase 1 work
+## 14. Phase 1 completion state
 
-The remaining work before moving on is limited to:
+Phase 1 architecture and source-level reconciliation are complete.
 
-1. final source-level reconciliation of `phase1-worktree` against the untouched baseline;
-2. final documentation reconciliation so older Phase 1 documents do not contradict these decisions;
-3. then proceed to the next architecture phase.
+The implementation remains in `phase1-worktree` until it is explicitly accepted as the new main-source baseline. No additional Phase 1 runtime abstraction is currently required.
 
-No new runtime abstraction should be introduced unless the final reconciliation exposes a concrete contradiction with these decisions.
+The next architectural scope is Phase 2 — Layout.
