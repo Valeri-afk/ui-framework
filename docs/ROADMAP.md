@@ -2,9 +2,14 @@
 
 This document defines the planned development order of the framework.
 
-The roadmap is intentionally high-level. It defines development phases, architectural scope, major dependencies, and stabilization criteria. It does not define implementation details.
+The roadmap is intentionally high-level. It defines development phases,
+architectural scope, major dependencies, and stabilization criteria. Detailed
+Phase 2 implementation context lives in `PHASE2_HANDOFF.md` and the Phase 2
+architecture documents.
 
-Implementation decisions must be based on the current source code and discussed before changes are made. The source code remains the source of truth for current behavior.
+Implementation decisions must be based on the current source code and
+explicitly documented architectural decisions. The source code remains the
+source of truth for current behavior.
 
 ---
 
@@ -14,23 +19,76 @@ Implementation decisions must be based on the current source code and discussed 
 
 **Phase 2 — Layout**
 
-### Status
+### Current branch
 
-**Phase 1 — Runtime is accepted as the active `main` source baseline.**
+```text
+phase2-layout-migration
+```
 
-The Phase 1 ownership, lifecycle, traversal, and deferred-mutation contracts have been promoted into the active source tree. `phase1-worktree/` is retained only as a historical implementation snapshot and is not part of the active build.
-
-Compilation and runtime verification remain a later project-level validation stage. This does not prevent architectural implementation work in the active phase.
-
-### Previous Completed Phase
+### Previous completed phase
 
 **Phase 1 — Runtime**
 
-### Next Phase
+Phase 1 ownership, lifecycle, traversal and deferred mutation contracts are
+accepted as the active runtime baseline.
 
-**Phase 2 — Layout** is the primary active architectural scope.
+### Current Phase 2 direction
 
-Later phases may be analyzed when necessary to validate architectural decisions, but they should not be implemented prematurely.
+Phase 2 is migrating toward a **framework-owned closed layout engine**.
+Clients configure supported framework components and layout properties but do
+not implement layout strategies, `measure/arrange`, or layout invalidation.
+
+The first useful layout scope is deliberately small:
+
+```text
+Text measurement
+container composition
+one-dimensional flow
+size / min / max
+padding / border
+position / position mode
+alignment
+gap
+visibility / layout participation
+automatic framework-owned invalidation
+```
+
+A full Grid or full CSS/Flexbox model is not required for the first Phase 2
+implementation. Existing Grid code is deferred and must not force the
+architecture to grow around it.
+
+### Current implementation checkpoint
+
+The latest implementation work has established an internal framework-owned
+constraint subsystem:
+
+```text
+include/ui_framework/core/layout_constraints.hpp
+src/core/layout_constraints.cpp
+```
+
+with the conceptual operations:
+
+```text
+resolveMeasurementProposal()
+resolveFinalSize()
+```
+
+The Linear implementation has begun using the same constraint semantics, but
+integration with the central `LayoutManager` is not yet complete.
+
+The next implementation task is to make `LayoutManager` the single
+orchestrator of the complete proposal → measurement → desired size → final
+geometry pipeline, while removing duplicated constraint interpretation from
+layout algorithms.
+
+### Validation policy
+
+Compilation and runtime tests are intentionally deferred until the end of
+Phase 6 by project decision. During Phases 1–6, implementation is validated
+through source inspection, architectural review and documented numerical
+cases. This is intentional and must not be interpreted as an omitted test
+step in the current phase.
 
 ---
 
@@ -38,7 +96,7 @@ Later phases may be analyzed when necessary to validate architectural decisions,
 
 ### Status
 
-**Completed / accepted.**
+**Completed / accepted architecturally.**
 
 ### Scope
 
@@ -67,46 +125,147 @@ Stabilize the runtime foundation of the framework.
 - PanelNode follows the runtime contracts.
 - No unresolved Phase 1 architectural issue blocks Phase 2.
 
-Phase 1 exit criteria are architecturally satisfied. Build/runtime verification remains a later project-level validation stage.
-
 ---
 
 ## PHASE 2 — Layout
 
 ### Status
 
-**Active.**
+**Active — migration in progress.**
 
-### Scope
+### Architectural target
 
-- LayoutManager
-- Measure
-- Arrange
-- StackPanel
-- Grid
-- alignment
-- absolute positioning
-- invalidation
+```text
+Node
+  → common runtime/component state
 
-### Goal
+PanelNode
+  → structural child ownership
 
-Establish a predictable layout system on top of the stabilized runtime.
+LayoutManager
+  → closed layout orchestration and algorithms
 
-### Dependencies
+Layout constraints subsystem
+  → framework-owned interpretation of size/min/max
 
-- Phase 1
+NodeTree
+  → ownership, lifecycle, mutation and layout scheduling
+```
 
-### Exit Criteria
+The client should not need to know about:
 
-- Measure/Arrange contract is stable.
-- Content-box / border-box semantics are defined.
-- Parent-child layout constraints are predictable.
-- Layout invalidation semantics are defined.
-- StackPanel works correctly.
-- Grid works correctly.
-- Alignment and positioning semantics are defined.
-- Absolute positioning does not violate runtime ownership rules.
-- Layout does not bypass NodeTree lifecycle and mutation invariants.
+```text
+LayoutManager
+layout queue
+layout invalidation
+measure/arrange lifecycle
+constraint resolution
+```
+
+### Initial built-in layout
+
+The first layout family is a one-dimensional Linear/Stack-style layout:
+
+```text
+Horizontal
+Vertical
+
+Gap
+
+Main axis:
+    Start
+    Center
+    End
+    SpaceBetween when required
+
+Cross axis:
+    Start
+    Center
+    End
+    Stretch under explicitly defined measurement semantics
+```
+
+### Explicit non-goals for the first implementation
+
+- full Grid system
+- full CSS Flexbox compatibility
+- flex wrapping
+- flex grow/shrink/basis
+- public `LayoutStrategy`
+- public client-side `Measure/Arrange`
+- CSS-style dynamic property system
+- WPF dependency-property system
+- universal Margin semantics
+- ControlNode solely for hierarchy symmetry
+
+These may be reconsidered only after a concrete requirement demonstrates the
+need.
+
+### Constraint semantics checkpoint
+
+The current provisional rules are:
+
+```text
+Fixed size
+    → constrains measurement proposal and final geometry
+
+Max size
+    → can narrow measurement proposal and constrains final geometry
+
+Min size
+    → constrains final geometry; does not automatically narrow intrinsic
+      measurement proposal
+
+Auto
+    → no local explicit size; intrinsic measurement / parent layout decides
+
+Padding/border
+    → translate between outer box and content measurement
+```
+
+This distinction is required for width-dependent content such as wrapped
+text.
+
+### Client contract target
+
+The historical problem being resolved is the client/framework layout contract.
+The target is explicitly **not** to give clients a custom layout strategy
+interface and then rely on clients to call invalidation correctly.
+
+The client should instead configure framework-owned components. Framework
+components may provide their own internal content measurement, but layout
+scheduling and sibling/parent placement remain framework responsibilities.
+
+### Legacy source policy
+
+```text
+src/components/*
+```
+
+is obsolete and must not be modified during Phase 2. Its old Label/Button
+implementations may be inspected only as historical evidence.
+
+`GridNode` and `ControlNode` are not required to define the first Phase 2
+architecture. They remain deferred/legacy concerns unless a concrete source
+integration issue requires revisiting them.
+
+### Phase 2 exit criteria
+
+- effective measurement proposal semantics are stable;
+- final size constraint semantics are stable;
+- content-box / border-box semantics are stable;
+- framework-owned one-dimensional layout is stable;
+- text measurement works with width-dependent wrapping;
+- Button-like compound content can measure correctly;
+- alignment/gap semantics are stable;
+- nested containers work by the same framework pipeline;
+- visibility participation is defined;
+- absolute positioning semantics are defined if retained in the phase;
+- invalidation remains framework-owned;
+- clients do not implement layout algorithms;
+- clients do not call layout invalidation APIs;
+- runtime ownership/lifecycle invariants remain untouched;
+- numerical acceptance cases are satisfied.
 
 ---
 
@@ -123,23 +282,13 @@ Establish a predictable layout system on top of the stabilized runtime.
 
 ### Goal
 
-Establish a predictable input and event system on top of the stabilized runtime and layout systems.
+Establish a predictable input and event system on top of the stabilized runtime
+and layout systems.
 
 ### Dependencies
 
 - Phase 1
 - Phase 2
-
-### Exit Criteria
-
-- Hit-testing semantics are defined.
-- Input state ownership is clear.
-- Focus semantics are stable.
-- Pointer capture semantics are stable.
-- Event propagation semantics are stable.
-- Mutation during event dispatch is safe and predictable.
-- Keyboard input integrates with focus.
-- Input does not violate NodeTree lifecycle invariants.
 
 ---
 
@@ -147,7 +296,7 @@ Establish a predictable input and event system on top of the stabilized runtime 
 
 ### Scope
 
-- ControlNode
+- ControlNode only if justified
 - Button
 - Toggle
 - Text
@@ -157,19 +306,10 @@ Establish a predictable input and event system on top of the stabilized runtime 
 
 ### Goal
 
-Build reusable UI components on top of the stabilized runtime, layout, and input systems.
+Build reusable UI components on top of the stabilized runtime, layout and
+input systems.
 
-### Dependencies
-
-- Phase 1
-- Phase 2
-- Phase 3
-
-### Notes
-
-ControlNode must not be introduced merely for architectural symmetry. Its introduction must be justified by responsibilities that cannot be expressed cleanly by Node or existing component types.
-
-Existing component code may be legacy, incomplete, or outside the active development scope. Such code must not be treated as a stable architectural contract without verification against the current source.
+Existing legacy component code must not be treated as the architecture.
 
 ---
 
@@ -191,8 +331,6 @@ Establish higher-level interaction and navigation semantics.
 - Phase 1
 - Phase 2
 - Phase 3
-
-Phase 4 is not a strict dependency unless a particular navigation or modal feature requires component-level behavior.
 
 ---
 
@@ -216,7 +354,7 @@ Separate rendering concerns from the framework's core runtime where justified.
 - Phase 2
 - Phase 4 where component rendering requires it
 
-RenderContext and a second backend are optional architectural directions and must not be introduced without a concrete need.
+RenderContext and a second backend remain optional architectural directions.
 
 ---
 
@@ -236,16 +374,20 @@ Phase 5 — Modal / Navigation
 Phase 6 — Rendering / Backend
 ```
 
-This is a dependency-oriented roadmap rather than a requirement to complete every phase strictly in isolation. Later phases may be investigated when necessary to validate an earlier architectural decision, but implementation remains focused on one primary phase at a time.
+Later phases may be analyzed when necessary to validate an earlier
+architectural decision, but implementation remains focused on one primary
+phase at a time.
 
 ---
 
 ## Active Development Principle
 
-The existence of a file or module does not imply that it is part of the active implementation scope.
+The existence of a file or module does not imply that it is part of the active
+implementation scope.
 
-Legacy, deprecated, experimental, or currently unused code must be verified against the source before being treated as an architectural contract.
+Legacy, deprecated, experimental, or currently unused code must be verified
+against the source before being treated as an architectural contract.
 
 The current source code remains the source of truth for existing behavior.
-
-This roadmap defines where the framework is intended to go, not what the source is assumed to already implement.
+The roadmap defines the intended development direction, not assumed existing
+behavior.
