@@ -22,12 +22,19 @@ namespace ui
         HIDDEN
     };
 
-    enum class Alignment
+    enum class MainAxisAlignment
     {
         START,
         CENTER,
         END,
-        SPACE_BETWEEN,
+        SPACE_BETWEEN
+    };
+
+    enum class CrossAxisAlignment
+    {
+        START,
+        CENTER,
+        END,
         STRETCH
     };
 
@@ -256,15 +263,12 @@ namespace ui
     };
 
     //==========================================================================
-    // Measure context
-    //==========================================================================
-    //==========================================================================
     // Measure / Arrange contexts
     //==========================================================================
 
     struct MeasureContext
     {
-        // Доступный размер CONTENT-BOX для текущего узла.
+        // Available size inside the current node's content box.
         LayoutSize availableSize;
 
         std::function<LayoutSize(size_t, const LayoutSize &)>
@@ -273,7 +277,7 @@ namespace ui
 
     struct ArrangeContext
     {
-        // CONTENT-BOX текущего узла.
+        // Current node's content-box position and size.
         LayoutPosition contentPosition;
         LayoutSize contentSize;
 
