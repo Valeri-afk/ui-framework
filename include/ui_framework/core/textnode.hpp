@@ -27,9 +27,6 @@ namespace ui
         TextAlignment getVerticalAlignment() const noexcept;
         void setVerticalAlignment(TextAlignment alignment);
 
-        float getWrapWidth() const noexcept;
-        void setWrapWidth(float width);
-
     protected:
         LayoutSize measure(MeasureContext &ctx) override;
         void draw(SDL_Renderer *renderer) override;
@@ -43,7 +40,6 @@ namespace ui
 
         TextAlignment horizontalAlignment_ = TextAlignment::START;
         TextAlignment verticalAlignment_ = TextAlignment::START;
-        float wrapWidth_ = 0.0f;
 
         SDL_Renderer *cachedRenderer_ = nullptr;
         TTF_TextEngine *textEngine_ = nullptr;
