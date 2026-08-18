@@ -13,11 +13,9 @@ It defines:
 
 It does NOT define implementation details.
 
-The roadmap describes the intended development direction and current
-development status, but does not define the current implementation state.
+The roadmap describes the intended development direction and current development status, but does not define the current implementation state.
 
-Implementation decisions must be based on the current source code and discussed
-before changes are made.
+Implementation decisions must be based on the current source code and discussed before changes are made.
 
 ---
 
@@ -29,7 +27,7 @@ Phase 1 — Runtime
 
 ### Status
 
-In progress.
+Architecture complete; implementation staged in `phase1-worktree`.
 
 ### Previous Completed Phase
 
@@ -39,17 +37,15 @@ Not started.
 
 Phase 2 — Layout
 
-The current phase is the primary active development scope.
+Phase 2 becomes the primary active architectural scope after the Phase 1 worktree is reconciled with the baseline. Compilation and runtime testing are intentionally deferred until the planned six phases are complete.
 
-Later phases may be analyzed when necessary to validate architectural decisions,
-but they should not be implemented prematurely.
+Later phases may be analyzed when necessary to validate architectural decisions, but they should not be implemented prematurely.
 
 ---
 
 ## PHASE 1 — Runtime
 
-For the current Phase 1 runtime analysis and implementation decisions,
-see `docs/PHASE1_RUNTIME.md`.
+For the current Phase 1 runtime analysis and implementation decisions, see `docs/PHASE1_RUNTIME.md`, `docs/PHASE1_RUNTIME_DECISIONS.md`, `docs/PHASE1_LIFETIME.md`, and `docs/PHASE1_FINAL_DECISIONS.md`.
 
 ### Scope
 
@@ -76,7 +72,8 @@ None.
 - Node identity / NodeId invariants are stable.
 - Traversal semantics are defined.
 - Mutation during traversal and callbacks is safe and predictable.
-- Node attach, detach, and reparent behavior is defined.
+- Node attach and framework-owned remove behavior are defined.
+- Reparenting is explicitly scoped as a future capability rather than required by Phase 1.
 - UIManager and NodeTree responsibilities are clearly separated.
 - PanelNode follows the runtime contracts.
 - No unresolved runtime issue blocks later phases.
@@ -131,8 +128,7 @@ Establish a predictable layout system on top of the stabilized runtime.
 
 ### Goal
 
-Establish a predictable input and event system on top of the stabilized
-runtime and layout systems.
+Establish a predictable input and event system on top of the stabilized runtime and layout systems.
 
 ### Dependencies
 
@@ -166,8 +162,7 @@ runtime and layout systems.
 
 ### Goal
 
-Build reusable UI components on top of the stabilized runtime, layout, and
-input systems.
+Build reusable UI components on top of the stabilized runtime, layout, and input systems.
 
 ### Dependencies
 
@@ -179,22 +174,17 @@ input systems.
 
 ControlNode must not be introduced merely for architectural symmetry.
 
-Its introduction must be justified by responsibilities that cannot be
-expressed cleanly by Node or existing component types.
+Its introduction must be justified by responsibilities that cannot be expressed cleanly by Node or existing component types.
 
-Existing component code may be legacy, incomplete, or outside the active
-development scope. Such code must not be treated as a stable architectural
-contract without verification against the current source.
+Existing component code may be legacy, incomplete, or outside the active development scope. Such code must not be treated as a stable architectural contract without verification against the current source.
 
 ### Exit Criteria
 
 - Component responsibilities are clearly separated.
 - Interactive behavior does not leak into unrelated nodes.
 - ControlNode, if introduced, has a justified responsibility boundary.
-- Basic components use existing runtime, layout, and input contracts without
-  bypassing them.
-- Legacy component code has either been updated, replaced, or explicitly
-  excluded from the active component architecture.
+- Basic components use existing runtime, layout, and input contracts without bypassing them.
+- Legacy component code has either been updated, replaced, or explicitly excluded from the active component architecture.
 
 ---
 
@@ -219,11 +209,9 @@ Establish higher-level interaction and navigation semantics.
 
 ### Notes
 
-Phase 4 is not a strict dependency unless a particular navigation or modal
-feature requires component-level behavior.
+Phase 4 is not a strict dependency unless a particular navigation or modal feature requires component-level behavior.
 
-Modal functionality may therefore be stabilized independently of the complete
-Component Model.
+Modal functionality may therefore be stabilized independently of the complete Component Model.
 
 ### Exit Criteria
 
@@ -259,18 +247,13 @@ Separate rendering concerns from the framework's core runtime where justified.
 
 ### Notes
 
-Rendering may depend on Phase 5 for specific overlay or modal rendering
-behavior, but Phase 5 is not a general prerequisite for the rendering
-architecture.
+Rendering may depend on Phase 5 for specific overlay or modal rendering behavior, but Phase 5 is not a general prerequisite for the rendering architecture.
 
 RenderContext and a second backend are optional architectural directions.
 
-They must not be introduced unless the current rendering architecture
-demonstrates a concrete need for them.
+They must not be introduced unless the current rendering architecture demonstrates a concrete need for them.
 
-SDL is currently the rendering backend of the framework. SDL-specific code
-should remain outside the framework's core architectural contracts where
-practical.
+SDL is currently the rendering backend of the framework. SDL-specific code should remain outside the framework's core architectural contracts where practical.
 
 ### Exit Criteria
 
@@ -299,26 +282,20 @@ Phase 5 — Modal / Navigation
         ↓
 Phase 6 — Rendering / Backend
 
-However, this is a dependency-oriented roadmap rather than a requirement to
-complete every phase strictly in isolation.
+However, this is a dependency-oriented roadmap rather than a requirement to complete every phase strictly in isolation.
 
-A later phase may be partially investigated when necessary to validate an
-earlier architectural decision.
+A later phase may be partially investigated when necessary to validate an earlier architectural decision.
 
-Implementation work should remain focused on one primary architectural phase
-at a time.
+Implementation work should remain focused on one primary architectural phase at a time.
 
 ---
 
 ## Active Development Principle
 
-The existence of a file or module does not imply that it is currently part of
-the active refactoring scope.
+The existence of a file or module does not imply that it is currently part of the active refactoring scope.
 
-Legacy, deprecated, experimental, or currently unused code must be verified
-against the source before being treated as an architectural contract.
+Legacy, deprecated, experimental, or currently unused code must be verified against the source before being treated as an architectural contract.
 
 The current source code remains the source of truth for existing behavior.
 
-This roadmap defines where the framework is intended to go, not what the
-current source code is assumed to already implement.
+This roadmap defines where the framework is intended to go, not what the current source code is assumed to already implement.
