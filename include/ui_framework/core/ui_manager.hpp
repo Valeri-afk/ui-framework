@@ -31,8 +31,8 @@ namespace ui
         Node *attachRoot(size_t index, std::unique_ptr<Node> node);
         Node *attachOverlay(size_t index, std::unique_ptr<Node> node);
 
-        std::unique_ptr<Node> detachRoot(Node *node);
-        std::unique_ptr<Node> detachOverlay(Node *node);
+        void removeRoot(Node *node);
+        void removeOverlay(Node *node);
 
         void setViewportSize(const LayoutSize &size) noexcept;
         LayoutSize getViewportSize() const noexcept;
