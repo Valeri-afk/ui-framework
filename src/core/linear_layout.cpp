@@ -35,6 +35,77 @@ namespace
         return std::isfinite(gap) && gap > 0.0f ? gap : 0.0f;
     }
 
+    ui::LayoutSize resolveMeasurementProposal(
+        const ui::Node &child,
+        ui::LayoutSize proposal) noexcept
+    {
+        proposal.width = finiteOrZero(proposal.width);
+        proposal.height = finiteOrZero(proposal.height);
+
+        const ui::LayoutSizeValue size = child.getSize();
+        const ui::LayoutSize minSize = child.getMinSize();
+        const ui::LayoutSize maxSize = child.getMaxSize();
+
+        if (size.width.isValue())
+            proposal.width = finiteOrZero(size.width.value);
+        else
+            proposal.width = std::min(
+                proposal.width,
+                std::max(0.0f, finiteOrZero(maxSize.width)));
+
+        if (size.height.isValue())
+            proposal.height = finiteOrZero(size.height.value);
+        else
+            proposal.height = std::min(
+                proposal.height,
+                std::max(0.0f, finiteOrZero(maxSize.height)));
+
+        // A minimum size constrains the resulting box, not the intrinsic
+        // content proposal. This keeps proposal-dependent content such as
+        // wrapped text from being reflowed merely because a minimum exists.
+        (void)minSize;
+
+        return proposal;
+    }
+
+    ui::LayoutSize resolveFinalSize(
+        const ui::Node &node,
+        ui::LayoutSize allocated) noexcept
+    {
+        allocated.width = finiteOrZero(allocated.width);
+        allocated.height = finiteOrZero(allocated.height);
+
+        const ui::LayoutSizeValue size = node.getSize();
+        const ui::LayoutSize minSize = node.getMinSize();
+        const ui::LayoutSize maxSize = node.getMaxSize();
+
+        if (size.width.isValue())
+            allocated.width = finiteOrZero(size.width.value);
+        else
+            allocated.width = std::clamp(
+                allocated.width,
+                finiteOrZero(minSize.width),
+                std::max(
+                    finiteOrZero(minSize.width),
+                    std::isfinite(maxSize.width)
+                        ? maxSize.width
+                        : kInfinity));
+
+        if (size.height.isValue())
+            allocated.height = finiteOrZero(size.height.value);
+        else
+            allocated.height = std::clamp(
+                allocated.height,
+                finiteOrZero(minSize.height),
+                std::max(
+                    finiteOrZero(minSize.height),
+                    std::isfinite(maxSize.height)
+                        ? maxSize.height
+                        : kInfinity));
+
+        return allocated;
+    }
+
     void accumulateContentSize(
         ui::LayoutSize &contentSize,
         ui::LayoutSize childSize,
@@ -92,6 +163,9 @@ namespace ui::internal
                 childAvailable.height = kInfinity;
             else
                 childAvailable.width = kInfinity;
+
+            childAvailable =
+                resolveMeasurementProposal(*child, childAvailable);
 
             const LayoutSize childSize =
                 ctx.measureChild(visibleIndex, childAvailable);
@@ -189,10 +263,6 @@ namespace ui::internal
                 between =
                     gap + freeMain / static_cast<float>(children.size() - 1);
             }
-            else
-            {
-                leading = freeMain * 0.5f;
-            }
             break;
 
         case MainAxisAlignment::START:
@@ -239,6 +309,11 @@ namespace ui::internal
                     finalSize.height = availableCross;
                 break;
             }
+
+            Node *child = panel.getVisibleChild(placement.visibleIndex);
+
+            if (child)
+                finalSize = resolveFinalSize(*child, finalSize);
 
             LayoutPosition childPosition = position;
 
