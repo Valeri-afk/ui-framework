@@ -341,20 +341,20 @@ namespace ui
     }
 
     void NodeTree::removeRoot(Node *node)
-     {
-         if (!node)
-           return;
+    {
+        if (!node)
+            return;
 
         removeFromContainer(node->id(), roots_);
-     }
+    }
 
     void NodeTree::removeOverlay(Node *node)
-     {
-         if (!node)
+    {
+        if (!node)
             return;
 
         removeFromContainer(node->id(), overlays_);
-     }
+    }
 
     Node *NodeTree::attachChild(
         PanelNode &parent,
@@ -395,39 +395,39 @@ namespace ui
     }
 
     void NodeTree::removeChild(
-         PanelNode &parent,
-         Node &child)
-     {
-         if (isMutationScopeActive())
-         {
-             const NodeId parentId = parent.id();
-             const NodeId childId = child.id();
+        PanelNode &parent,
+        Node &child)
+    {
+        if (isMutationScopeActive())
+        {
+            const NodeId parentId = parent.id();
+            const NodeId childId = child.id();
 
-             if (!findNode(parentId) || !findNode(childId))
+            if (!findNode(parentId) || !findNode(childId))
                 return;
 
-             enqueueMutation(
-                 [this, parentId, childId]()
-                 {
-                     if (PanelNode *panelParent = resolveLivePanelNode(parentId))
-                     {
-                         if (Node *liveChild = findNode(childId))
-                         {
+            enqueueMutation(
+                [this, parentId, childId]()
+                {
+                    if (PanelNode *panelParent = resolveLivePanelNode(parentId))
+                    {
+                        if (Node *liveChild = findNode(childId))
+                        {
                             removeChildInternal(*panelParent, *liveChild);
-                         }
-                     }
-                 });
+                        }
+                    }
+                });
 
             return;
-         }
+        }
 
-         PanelNode *panelParent = resolveLivePanelParent(parent);
+        PanelNode *panelParent = resolveLivePanelParent(parent);
 
-         if (!panelParent)
+        if (!panelParent)
             return;
 
         removeChildInternal(*panelParent, child);
-     }
+    }
 
     Node *NodeTree::hitTest(
         float x,
@@ -510,23 +510,23 @@ namespace ui
         return attachInternal(index, std::move(node), container);
     }
 
-   void NodeTree::removeFromContainer(
-         NodeId id,
-         std::vector<std::unique_ptr<Node>> &container)
-     {
-         if (isMutationScopeActive())
-         {
-             enqueueMutation(
-                 [this, id, &container]()
-                 {
+    void NodeTree::removeFromContainer(
+        NodeId id,
+        std::vector<std::unique_ptr<Node>> &container)
+    {
+        if (isMutationScopeActive())
+        {
+            enqueueMutation(
+                [this, id, &container]()
+                {
                     removeInternal(id, container);
-                 });
+                });
 
             return;
-         }
+        }
 
         removeInternal(id, container);
-     }
+    }
 
     void NodeTree::flushMutationQueueAndInsertLayout(NodeId id)
     {
@@ -581,9 +581,9 @@ namespace ui
     }
 
     void NodeTree::removeInternal(
-         NodeId id,
-         std::vector<std::unique_ptr<Node>> &container)
-     {
+        NodeId id,
+        std::vector<std::unique_ptr<Node>> &container)
+    {
         auto it = std::find_if(
             container.begin(),
             container.end(),
@@ -592,19 +592,19 @@ namespace ui
                 return node && node->id() == id;
             });
 
-         if (it == container.end())
+        if (it == container.end())
             return;
 
         auto removed = std::move(*it);
 
-         container.erase(it);
+        container.erase(it);
 
         detachOwnedSubtree(*removed, id);
 
-       // `removed` remains the temporary owner while the subtree is
-       // unmounted and unregistered. It is destroyed here, after all
+        // `removed` remains the temporary owner while the subtree is
+        // unmounted and unregistered. It is destroyed here, after all
         // runtime/lifecycle bookkeeping has completed.
-     }
+    }
 
     Node *NodeTree::attachChildInternal(
         PanelNode &parent,
@@ -663,9 +663,9 @@ namespace ui
     }
 
     void NodeTree::removeChildInternal(
-         PanelNode &parent,
-         Node &child)
-     {
+        PanelNode &parent,
+        Node &child)
+    {
         const NodeId parentId = parent.id();
         const NodeId childId = child.id();
 
@@ -700,27 +700,27 @@ namespace ui
         }
 
         auto removed =
-             parent.detachLocal(child);
+            parent.detachLocal(child);
 
         if (!removed)
             return;
 
- #ifndef NDEBUG
+#ifndef NDEBUG
         SDL_assert(removed->owner_ == this);
         SDL_assert(removed->parent() == nullptr);
         assertSubtreeLive(*removed);
- #endif
+#endif
 
         detachOwnedSubtree(*removed, childId);
 
-         if (Node *liveParent = findNode(parentId))
-         {
-             insertLayoutQueue(liveParent);
-         }
+        if (Node *liveParent = findNode(parentId))
+        {
+            insertLayoutQueue(liveParent);
+        }
 
-       // `removed` is the temporary framework owner and is destroyed
-       // when this function returns.
-     }
+        // `removed` is the temporary framework owner and is destroyed
+        // when this function returns.
+    }
 
     NodeTree::TraversalResult NodeTree::traversePreOrder(
         Node &node,
