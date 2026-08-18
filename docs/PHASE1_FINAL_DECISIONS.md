@@ -1,9 +1,9 @@
 # Phase 1 — Final Architecture Decisions
 
-> **Status:** architecture complete; source-level reconciliation complete
+> **Status:** accepted into active `main`; source-level reconciliation complete
 > **Date:** 2026-08-18
 >
-> This document is the concise authoritative snapshot of the Phase 1 architecture decisions reached during source analysis. It is intended for future development contexts.
+> This document is the authoritative snapshot of the Phase 1 architecture decisions. Phase 1 implementation has been promoted into the active `main` source tree. The `phase1-worktree/` directory is retained only as a historical/audit snapshot.
 
 ## 1. Framework boundary
 
@@ -52,19 +52,9 @@ while (running)
 
 `UIManager::runFrame()` is the public UI-frame boundary. Its internal phase ordering remains framework-controlled and should not be exposed as arbitrary public calls such as `update()`, `layout()` and `draw()`.
 
-If future requirements need client code between UI phases, prefer explicit extension points over exposing the internal phase machinery.
-
 ## 3. SDL relationship
 
-The UI framework is SDL-backed and depends on:
-
-- SDL3;
-- SDL3_image;
-- SDL3_ttf.
-
-The dependency does **not** imply ownership of the SDL runtime.
-
-The application owns SDL initialization, window and renderer lifetime, and event polling. The framework consumes SDL events and an SDL renderer supplied by the application.
+The UI framework is SDL-backed and depends on SDL3, SDL3_image and SDL3_ttf. The application owns SDL initialization, window and renderer lifetime, and event polling. The framework consumes SDL events and an SDL renderer supplied by the application.
 
 ## 4. Node ownership
 
@@ -75,17 +65,13 @@ add(std::unique_ptr<Node>)
 remove(Node&)
 ```
 
-Once a node is live, the framework owns it.
+Once a node is live, the framework owns it. Public ownership-transfer `detach()` is not part of the Phase 1 API.
 
-Public ownership-transfer `detach()` is not part of the Phase 1 API.
-
-A client-held `Node*` is non-owning and may become invalid after removal. This remains client responsibility.
+A client-held `Node*` is non-owning and may become invalid after removal. `NodeId` is used internally for identity/liveness resolution and does not own or extend lifetime.
 
 ## 5. Deferred removal
 
-`remove()` is deferred when the runtime is inside a guarded mutation scope.
-
-The contract is:
+`remove()` is deferred when the runtime is inside a guarded mutation scope:
 
 ```text
 remove(node)
@@ -99,11 +85,11 @@ remove(node)
     -> destroy framework-owned object
 ```
 
-Self-remove is valid. `NodeId` supplies identity/liveness resolution; the mutation queue supplies safe mutation timing. They solve different problems.
+Self-remove is valid. `NodeId` supplies identity/liveness resolution; the mutation queue supplies safe mutation timing.
 
 ## 6. Lifecycle hooks
 
-`onMount()` / `onUnmount()` describe **membership in the active UI runtime**, not raw C++ object lifetime.
+`onMount()` / `onUnmount()` describe membership in the active UI runtime, not raw C++ object lifetime.
 
 ```text
 construct object
@@ -115,9 +101,7 @@ construct object
     -> object destruction
 ```
 
-`onMount()` is distinct from construction because a node may exist before attachment.
-
-`onUnmount()` is distinct from destruction because it means the node is leaving the active UI runtime. It is guaranteed for normal runtime removal, but it is **not a universal promise that every node receives an unmount callback when the entire framework is destroyed**.
+Normal runtime removal guarantees the corresponding unmount transition. Framework-wide C++ destruction is conceptually separate from public `remove()` operations.
 
 ## 7. Traversal and mutation
 
@@ -133,11 +117,9 @@ capture NodeIds
 
 Public root/overlay traversal follows the same mutation-safety contract as child traversal.
 
-Internal recursive pre-order/post-order traversal does not create another mutation scope; its callers already own the appropriate scope.
-
 ## 8. Event callback mutation
 
-The common event dispatch boundary uses:
+The event dispatch boundary uses:
 
 ```cpp
 {
@@ -148,56 +130,21 @@ The common event dispatch boundary uses:
 nodeTree.flushMutationQueue();
 ```
 
-The guard must be destroyed before flushing. Client event callbacks may request structural mutations safely under this contract.
+The guard must be destroyed before flushing. This is an existing runtime invariant; full event/hit-test stabilization remains Phase 3 work.
 
 ## 9. Reparenting
 
-Public `reparent()` is not required for Phase 1.
-
-The absence of reparenting is a scope decision, not a claim that larger UI systems never need it.
-
-If a concrete future requirement appears, use a dedicated framework-owned reparent operation rather than restoring ownership-transfer `detach()`.
+Public `reparent()` is not required for Phase 1. If a concrete future requirement appears, use a dedicated framework-owned reparent operation rather than restoring ownership-transfer `detach()`.
 
 ## 10. Framework lifetime
 
-`UIManager` is the public owner of the UI runtime and is created/destroyed by the application.
-
-Normal C++ RAII is the lifetime mechanism:
-
-```cpp
-UIManager ui;
-```
-
-with:
-
-```cpp
-UIManager::~UIManager() = default;
-```
-
-No public `shutdown()` API or `shuttingDown_` state is required by Phase 1.
-
-Current member destruction order is:
-
-```text
-~LayoutManager()
-~ModalManager()
-~InputManager()
-~NodeTree()
-```
-
-This is the result of reverse destruction of the `UIManager` member declarations and is consistent with the current subsystem dependencies.
+`UIManager` is created and destroyed by the application using normal C++ RAII. Phase 1 does not require a public `shutdown()` API or `shuttingDown_` state.
 
 Framework destruction is conceptually different from normal node removal: the entire UI runtime is ending, so teardown does not need to be modeled as a sequence of public `remove()` operations.
 
-## 11. `NodeTree` destruction
+## 11. What Phase 1 resolved
 
-`NodeTree` remains an ownership container whose live node hierarchy is ultimately destroyed through its `unique_ptr` containers.
-
-Phase 1 does not introduce a special shutdown lifecycle solely to force `onUnmount()` during destruction of the entire framework.
-
-## 12. What Phase 1 has resolved
-
-Resolved at the architecture/source level:
+Phase 1 resolved and promoted into `main`:
 
 - ownership-transfer `detach()` removal;
 - framework-owned deferred `remove()`;
@@ -210,27 +157,34 @@ Resolved at the architecture/source level:
 - `runFrame()` as the UI-frame integration boundary;
 - application-owned main loop;
 - SDL dependency/ownership boundary;
-- `onMount/onUnmount` semantics;
+- `onMount` / `onUnmount` semantics;
 - framework RAII lifetime;
-- no special shutdown protocol;
 - no Phase 1 public reparenting requirement.
+
+## 12. Explicit Phase 1 non-goals
+
+The following remain outside Phase 1:
+
+- recursive hit-testing stabilization;
+- complete event-handler dispatch semantics;
+- layout redesign;
+- input architecture redesign;
+- component architecture;
+- modal/navigation redesign;
+- rendering backend abstraction.
+
+The current source's existing hit-testing and event infrastructure therefore must not be interpreted as fully stabilized merely because the Phase 1 runtime is accepted.
 
 ## 13. Verification policy
 
-The project intentionally does **not** require compilation or runtime tests between architecture phases.
+The repository does not yet have an active standalone framework build/test path. Phase 1 acceptance is therefore based on source reconciliation and architectural invariants, not empirical runtime verification.
 
-Phase 1 development is being performed from source analysis, scenario analysis and architectural invariants. The framework will be built and empirically tested only after the planned six architecture phases are complete.
-
-Therefore the current Phase 1 completion criterion is:
-
-> the architecture and intended implementation are internally coherent and documented.
-
-Compilation/runtime verification is a later project-level validation stage, not a Phase 1 architecture gate.
+A later project-level validation stage must establish standalone build and runtime tests. That later validation is separate from Phase 1 architectural acceptance.
 
 ## 14. Phase 1 completion state
 
-Phase 1 architecture and source-level reconciliation are complete.
+**Phase 1 is accepted into the active `main` source baseline.**
 
-The implementation remains in `phase1-worktree` until it is explicitly accepted as the new main-source baseline. No additional Phase 1 runtime abstraction is currently required.
+The active `include/`, `src/` and `docs/` trees are authoritative for current development. `phase1-worktree/` is retained only as a historical/audit snapshot and must not be used as the source for new implementation.
 
-The next architectural scope is Phase 2 — Layout.
+The next architectural scope is **Phase 2 — Layout**.
