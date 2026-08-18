@@ -19,6 +19,8 @@ namespace ui
     {
     }
 
+    UIManager::~UIManager() = default;
+
     void UIManager::runFrame(
         float dt,
         SDL_Renderer *renderer)
