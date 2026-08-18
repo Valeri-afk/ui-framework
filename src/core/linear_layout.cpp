@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <vector>
 
 namespace
 {
@@ -27,14 +28,6 @@ namespace
         ui::StackPanelNode::Orientation orientation) noexcept
     {
         return orientation == ui::StackPanelNode::Orientation::Vertical;
-    }
-
-    bool isVisibleAlignment(ui::Alignment alignment) noexcept
-    {
-        return alignment == ui::Alignment::START ||
-               alignment == ui::Alignment::CENTER ||
-               alignment == ui::Alignment::END ||
-               alignment == ui::Alignment::STRETCH;
     }
 
     float normalizedGap(float gap) noexcept
@@ -173,30 +166,36 @@ namespace ui::internal
             vertical ? ctx.contentSize.width : ctx.contentSize.height;
 
         const float freeMain =
-            std::max(0.0f, finiteOrZero(availableMain) - finiteOrZero(occupiedMain));
+            std::max(
+                0.0f,
+                finiteOrZero(availableMain) - finiteOrZero(occupiedMain));
 
         float leading = 0.0f;
         float between = gap;
 
         switch (panel.getMainAlignment())
         {
-        case Alignment::CENTER:
+        case MainAxisAlignment::CENTER:
             leading = freeMain * 0.5f;
             break;
 
-        case Alignment::END:
+        case MainAxisAlignment::END:
             leading = freeMain;
             break;
 
-        case Alignment::SPACE_BETWEEN:
+        case MainAxisAlignment::SPACE_BETWEEN:
             if (children.size() > 1)
-                between = gap + freeMain / static_cast<float>(children.size() - 1);
+            {
+                between =
+                    gap + freeMain / static_cast<float>(children.size() - 1);
+            }
             else
+            {
                 leading = freeMain * 0.5f;
+            }
             break;
 
-        case Alignment::START:
-        case Alignment::STRETCH:
+        case MainAxisAlignment::START:
             break;
         }
 
@@ -214,36 +213,30 @@ namespace ui::internal
                 vertical ? finalSize.width : finalSize.height;
 
             const float crossFree =
-                std::max(0.0f, availableCross - finiteOrZero(desiredCross));
-
-            Alignment crossAlignment = panel.getCrossAlignment();
-
-            if (!isVisibleAlignment(crossAlignment))
-                crossAlignment = Alignment::STRETCH;
+                std::max(
+                    0.0f,
+                    availableCross - finiteOrZero(desiredCross));
 
             float crossOffset = 0.0f;
 
-            switch (crossAlignment)
+            switch (panel.getCrossAlignment())
             {
-            case Alignment::CENTER:
+            case CrossAxisAlignment::CENTER:
                 crossOffset = crossFree * 0.5f;
                 break;
 
-            case Alignment::END:
+            case CrossAxisAlignment::END:
                 crossOffset = crossFree;
                 break;
 
-            case Alignment::START:
+            case CrossAxisAlignment::START:
                 break;
 
-            case Alignment::STRETCH:
+            case CrossAxisAlignment::STRETCH:
                 if (vertical)
                     finalSize.width = availableCross;
                 else
                     finalSize.height = availableCross;
-                break;
-
-            case Alignment::SPACE_BETWEEN:
                 break;
             }
 
