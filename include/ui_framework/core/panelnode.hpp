@@ -15,7 +15,7 @@ namespace ui
         ~PanelNode() override;
 
         Node *add(std::unique_ptr<Node> child, size_t index);
-        std::unique_ptr<Node> remove(Node &child);
+        void remove(Node &child);
 
         size_t childCount() const noexcept;
         bool hasChildren() const noexcept;
