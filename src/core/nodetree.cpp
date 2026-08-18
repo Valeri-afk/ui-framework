@@ -340,20 +340,20 @@ namespace ui
         return attachToContainer(index, std::move(node), overlays_);
     }
 
-    std::unique_ptr<Node> NodeTree::detachRoot(Node *node)
+    void NodeTree::removeRoot(Node *node)
     {
         if (!node)
-            return nullptr;
+            return;
 
-        return detachFromContainer(node->id(), roots_);
+        removeFromContainer(node->id(), roots_);
     }
 
-    std::unique_ptr<Node> NodeTree::detachOverlay(Node *node)
+    void NodeTree::removeOverlay(Node *node)
     {
         if (!node)
-            return nullptr;
+            return;
 
-        return detachFromContainer(node->id(), overlays_);
+        removeFromContainer(node->id(), overlays_);
     }
 
     Node *NodeTree::attachChild(
@@ -394,7 +394,7 @@ namespace ui
             index);
     }
 
-    std::unique_ptr<Node> NodeTree::detachChild(
+    void NodeTree::removeChild(
         PanelNode &parent,
         Node &child)
     {
@@ -404,7 +404,7 @@ namespace ui
             const NodeId childId = child.id();
 
             if (!findNode(parentId) || !findNode(childId))
-                return nullptr;
+                return;
 
             enqueueMutation(
                 [this, parentId, childId]()
@@ -413,20 +413,20 @@ namespace ui
                     {
                         if (Node *liveChild = findNode(childId))
                         {
-                            detachChildInternal(*panelParent, *liveChild);
+                            removeChildInternal(*panelParent, *liveChild);
                         }
                     }
                 });
 
-            return nullptr;
+            return;
         }
 
         PanelNode *panelParent = resolveLivePanelParent(parent);
 
         if (!panelParent)
-            return nullptr;
+            return;
 
-        return detachChildInternal(*panelParent, child);
+        removeChildInternal(*panelParent, child);
     }
 
     Node *NodeTree::hitTest(
@@ -510,7 +510,7 @@ namespace ui
         return attachInternal(index, std::move(node), container);
     }
 
-    std::unique_ptr<Node> NodeTree::detachFromContainer(
+    void NodeTree::removeFromContainer(
         NodeId id,
         std::vector<std::unique_ptr<Node>> &container)
     {
@@ -519,13 +519,13 @@ namespace ui
             enqueueMutation(
                 [this, id, &container]()
                 {
-                    detachInternal(id, container);
+                    removeInternal(id, container);
                 });
 
-            return nullptr;
+            return;
         }
 
-        return detachInternal(id, container);
+        removeInternal(id, container);
     }
 
     void NodeTree::flushMutationQueueAndInsertLayout(NodeId id)
@@ -580,7 +580,7 @@ namespace ui
         return findNode(nodeId);
     }
 
-    std::unique_ptr<Node> NodeTree::detachInternal(
+    void NodeTree::removeInternal(
         NodeId id,
         std::vector<std::unique_ptr<Node>> &container)
     {
@@ -593,15 +593,17 @@ namespace ui
             });
 
         if (it == container.end())
-            return nullptr;
+            return;
 
-        auto detached = std::move(*it);
+        auto removed = std::move(*it);
 
         container.erase(it);
 
-        detachOwnedSubtree(*detached, id);
+        detachOwnedSubtree(*removed, id);
 
-        return detached;
+        // `removed` remains the temporary owner while the subtree is
+        // unmounted and unregistered. It is destroyed here, after all
+        // runtime/lifecycle bookkeeping has completed.
     }
 
     Node *NodeTree::attachChildInternal(
@@ -660,7 +662,7 @@ namespace ui
         return nullptr;
     }
 
-    std::unique_ptr<Node> NodeTree::detachChildInternal(
+    void NodeTree::removeChildInternal(
         PanelNode &parent,
         Node &child)
     {
@@ -674,7 +676,7 @@ namespace ui
                 "NodeTree: parent does not belong to this tree.");
 
             SDL_assert(false);
-            return nullptr;
+            return;
         }
 
         if (child.owner_ != this)
@@ -684,7 +686,7 @@ namespace ui
                 "NodeTree: child does not belong to this tree.");
 
             SDL_assert(false);
-            return nullptr;
+            return;
         }
 
         if (child.parent() != &parent)
@@ -694,29 +696,30 @@ namespace ui
                 "NodeTree: child is not a child of the given parent.");
 
             SDL_assert(false);
-            return nullptr;
+            return;
         }
 
-        auto detached =
+        auto removed =
             parent.detachLocal(child);
 
-        if (!detached)
-            return nullptr;
+        if (!removed)
+            return;
 
 #ifndef NDEBUG
-        SDL_assert(detached->owner_ == this);
-        SDL_assert(detached->parent() == nullptr);
-        assertSubtreeLive(*detached);
+        SDL_assert(removed->owner_ == this);
+        SDL_assert(removed->parent() == nullptr);
+        assertSubtreeLive(*removed);
 #endif
 
-        detachOwnedSubtree(*detached, childId);
+        detachOwnedSubtree(*removed, childId);
 
         if (Node *liveParent = findNode(parentId))
         {
             insertLayoutQueue(liveParent);
         }
 
-        return detached;
+        // `removed` is the temporary framework owner and is destroyed
+        // when this function returns.
     }
 
     NodeTree::TraversalResult NodeTree::traversePreOrder(
