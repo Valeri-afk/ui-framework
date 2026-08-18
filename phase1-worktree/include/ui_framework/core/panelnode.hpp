@@ -15,7 +15,7 @@ namespace ui
         ~PanelNode() override;
 
         Node *add(std::unique_ptr<Node> child, size_t index);
-        std::unique_ptr<Node> remove(Node &child);
+        void remove(Node &child);
 
         size_t childCount() const noexcept;
         bool hasChildren() const noexcept;
@@ -40,7 +40,7 @@ namespace ui
 
     private:
         Node *attachLocal(std::unique_ptr<Node> child, size_t index);
-        std::unique_ptr<Node> detachLocal(Node &child);
+        void removeLocal(Node &child);
 
         void forEachChildImpl(
             const std::function<bool(Node &)> &cb,
