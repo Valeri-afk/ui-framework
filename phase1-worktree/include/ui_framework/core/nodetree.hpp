@@ -104,25 +104,31 @@ namespace ui
             if (!cb)
                 return;
 
-            std::vector<NodeId> ids;
-            ids.reserve(roots_.size());
-
-            for (const auto &root : roots_)
             {
-                if (root)
+                ScopedMutationGuard guard(*this);
+
+                std::vector<NodeId> ids;
+                ids.reserve(roots_.size());
+
+                for (const auto &root : roots_)
                 {
-                    ids.push_back(root->id());
+                    if (root)
+                    {
+                        ids.push_back(root->id());
+                    }
+                }
+
+                for (NodeId id : ids)
+                {
+                    if (Node *node = findNode(id))
+                    {
+                        if (cb(*node))
+                            return;
+                    }
                 }
             }
 
-            for (NodeId id : ids)
-            {
-                if (Node *node = findNode(id))
-                {
-                    if (cb(*node))
-                        return;
-                }
-            }
+            flushMutationQueue();
         }
 
         template <typename Callback>
@@ -131,25 +137,31 @@ namespace ui
             if (!cb)
                 return;
 
-            std::vector<NodeId> ids;
-            ids.reserve(roots_.size());
-
-            for (auto it = roots_.rbegin(); it != roots_.rend(); ++it)
             {
-                if (*it)
+                ScopedMutationGuard guard(*this);
+
+                std::vector<NodeId> ids;
+                ids.reserve(roots_.size());
+
+                for (auto it = roots_.rbegin(); it != roots_.rend(); ++it)
                 {
-                    ids.push_back((*it)->id());
+                    if (*it)
+                    {
+                        ids.push_back((*it)->id());
+                    }
+                }
+
+                for (NodeId id : ids)
+                {
+                    if (Node *node = findNode(id))
+                    {
+                        if (cb(*node))
+                            return;
+                    }
                 }
             }
 
-            for (NodeId id : ids)
-            {
-                if (Node *node = findNode(id))
-                {
-                    if (cb(*node))
-                        return;
-                }
-            }
+            flushMutationQueue();
         }
 
         template <typename Callback>
@@ -158,25 +170,31 @@ namespace ui
             if (!cb)
                 return;
 
-            std::vector<NodeId> ids;
-            ids.reserve(overlays_.size());
-
-            for (const auto &overlay : overlays_)
             {
-                if (overlay)
+                ScopedMutationGuard guard(*this);
+
+                std::vector<NodeId> ids;
+                ids.reserve(overlays_.size());
+
+                for (const auto &overlay : overlays_)
                 {
-                    ids.push_back(overlay->id());
+                    if (overlay)
+                    {
+                        ids.push_back(overlay->id());
+                    }
+                }
+
+                for (NodeId id : ids)
+                {
+                    if (Node *node = findNode(id))
+                    {
+                        if (cb(*node))
+                            return;
+                    }
                 }
             }
 
-            for (NodeId id : ids)
-            {
-                if (Node *node = findNode(id))
-                {
-                    if (cb(*node))
-                        return;
-                }
-            }
+            flushMutationQueue();
         }
 
         template <typename Callback>
@@ -185,25 +203,31 @@ namespace ui
             if (!cb)
                 return;
 
-            std::vector<NodeId> ids;
-            ids.reserve(overlays_.size());
-
-            for (auto it = overlays_.rbegin(); it != overlays_.rend(); ++it)
             {
-                if (*it)
+                ScopedMutationGuard guard(*this);
+
+                std::vector<NodeId> ids;
+                ids.reserve(overlays_.size());
+
+                for (auto it = overlays_.rbegin(); it != overlays_.rend(); ++it)
                 {
-                    ids.push_back((*it)->id());
+                    if (*it)
+                    {
+                        ids.push_back((*it)->id());
+                    }
+                }
+
+                for (NodeId id : ids)
+                {
+                    if (Node *node = findNode(id))
+                    {
+                        if (cb(*node))
+                            return;
+                    }
                 }
             }
 
-            for (NodeId id : ids)
-            {
-                if (Node *node = findNode(id))
-                {
-                    if (cb(*node))
-                        return;
-                }
-            }
+            flushMutationQueue();
         }
 
         template <typename Fn>
