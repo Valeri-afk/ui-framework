@@ -1,4 +1,5 @@
 #include "ui_framework/core/linear_layout.hpp"
+#include "ui_framework/core/layout_constraints.hpp"
 #include "ui_framework/core/stackpanelnode.hpp"
 #include "layoutmanager.hpp"
 
@@ -34,7 +35,10 @@ namespace
 
     float safeSubtract(float a, float b) noexcept
     {
-        if (!std::isfinite(a) || !std::isfinite(b))
+        if (!std::isfinite(a))
+            return kInfinity;
+
+        if (!std::isfinite(b))
             return 0.0f;
 
         return std::max(0.0f, a - b);
@@ -45,6 +49,13 @@ namespace
         return {
             finiteOrZero(size.width),
             finiteOrZero(size.height)};
+    }
+
+    ui::LayoutSize sanitizeProposal(ui::LayoutSize size) noexcept
+    {
+        return {
+            finiteOrInfinity(size.width),
+            finiteOrInfinity(size.height)};
     }
 
     ui::Padding sanitizePadding(ui::Padding padding) noexcept
@@ -65,31 +76,6 @@ namespace
         border.bottom = finiteOrZero(border.bottom);
 
         return border;
-    }
-
-    ui::LayoutConstraints normalizeConstraints(
-        ui::LayoutConstraints constraints) noexcept
-    {
-        constraints.minWidth = finiteOrZero(constraints.minWidth);
-        constraints.maxWidth = finiteOrInfinity(constraints.maxWidth);
-        constraints.minHeight = finiteOrZero(constraints.minHeight);
-        constraints.maxHeight = finiteOrInfinity(constraints.maxHeight);
-
-        if (constraints.maxWidth < constraints.minWidth)
-            constraints.maxWidth = constraints.minWidth;
-
-        if (constraints.maxHeight < constraints.minHeight)
-            constraints.maxHeight = constraints.minHeight;
-
-        return constraints;
-    }
-
-    float subtractFromMax(float max, float value) noexcept
-    {
-        if (max >= kInfinity / 2.0f)
-            return max;
-
-        return safeSubtract(max, value);
     }
 
     ui::LayoutSize paddingBorderSize(
@@ -124,6 +110,14 @@ namespace
             safeAdd(contentSize.height, insets.height)};
     }
 
+    float subtractInset(float value, float inset) noexcept
+    {
+        if (value >= kInfinity / 2.0f)
+            return kInfinity;
+
+        return safeSubtract(value, inset);
+    }
+
     ui::LayoutSize subtractPaddingBorder(
         ui::LayoutSize borderBoxSize,
         const ui::Padding &padding,
@@ -133,8 +127,8 @@ namespace
             paddingBorderSize(padding, border);
 
         return {
-            safeSubtract(borderBoxSize.width, insets.width),
-            safeSubtract(borderBoxSize.height, insets.height)};
+            subtractInset(borderBoxSize.width, insets.width),
+            subtractInset(borderBoxSize.height, insets.height)};
     }
 
     ui::LayoutPosition getContentPosition(const ui::Node &node) noexcept
@@ -160,8 +154,12 @@ namespace
             paddingBorderSize(padding, border);
 
         return {
-            safeSubtract(finiteOrZero(size.width), insets.width),
-            safeSubtract(finiteOrZero(size.height), insets.height)};
+            std::max(
+                0.0f,
+                finiteOrZero(size.width) - insets.width),
+            std::max(
+                0.0f,
+                finiteOrZero(size.height) - insets.height)};
     }
 
     bool getRenderOutputSize(
@@ -248,10 +246,9 @@ namespace ui
                         return;
 
                     liveRoot->actualSize_ =
-                        liveRoot->clampSize(
-                            rootAvailable,
-                            liveRoot->minSize_,
-                            liveRoot->maxSize_);
+                        internal::resolveFinalSize(
+                            *liveRoot,
+                            rootAvailable);
 
                     liveRoot->actualPosition_ =
                         liveRoot->position_;
@@ -275,14 +272,13 @@ namespace ui
 
         const Node::Id nodeId = node.id();
 
-        LayoutSize availableBorder = sanitizeSize(availableBorderBoxSize);
+        LayoutSize availableBorder =
+            sanitizeProposal(availableBorderBoxSize);
 
-        // Fixed size ограничивает measure.
-        if (node.size_.width.isValue())
-            availableBorder.width = node.size_.width.value;
-
-        if (node.size_.height.isValue())
-            availableBorder.height = node.size_.height.value;
+        availableBorder =
+            internal::resolveMeasurementProposal(
+                node,
+                availableBorder);
 
         const LayoutSize availableContent =
             toContentSize(node, availableBorder);
@@ -318,7 +314,7 @@ namespace ui
         };
 
         LayoutSize desiredContent{};
-        
+
         if (auto *stackPanel = dynamic_cast<StackPanelNode *>(&node))
         {
             desiredContent =
@@ -343,7 +339,9 @@ namespace ui
             toBorderBoxSize(*liveNode, desiredContent);
 
         desiredBorder =
-            applyMeasureRules(*liveNode, desiredBorder);
+            internal::resolveFinalSize(
+                *liveNode,
+                desiredBorder);
 
         liveNode->desiredSize_ = desiredBorder;
     }
@@ -372,10 +370,9 @@ namespace ui
                 return;
 
             LayoutSize finalSize =
-                child->clampSize(
-                    sanitizeSize(size),
-                    child->getMinSize(),
-                    child->getMaxSize());
+                internal::resolveFinalSize(
+                    *child,
+                    sanitizeSize(size));
 
             child->actualPosition_ = position;
             child->actualSize_ = finalSize;
@@ -414,7 +411,7 @@ namespace ui
         const LayoutSize &borderBoxSize) const
     {
         return subtractPaddingBorder(
-            sanitizeSize(borderBoxSize),
+            sanitizeProposal(borderBoxSize),
             sanitizePadding(node.getPadding()),
             sanitizeBorder(node.getBorder()));
     }
@@ -424,7 +421,7 @@ namespace ui
         const LayoutSize &contentSize) const
     {
         return addPaddingBorder(
-            sanitizeSize(contentSize),
+            sanitizeProposal(contentSize),
             sanitizePadding(node.getPadding()),
             sanitizeBorder(node.getBorder()));
     }
@@ -433,21 +430,9 @@ namespace ui
         const Node &node,
         const LayoutSize &measuredBorderBoxSize) const
     {
-        LayoutSize result = sanitizeSize(measuredBorderBoxSize);
-
-        if (node.size_.width.isValue())
-            result.width = node.size_.width.value;
-
-        if (node.size_.height.isValue())
-            result.height = node.size_.height.value;
-
-        result =
-            node.clampSize(
-                result,
-                node.getMinSize(),
-                node.getMaxSize());
-
-        return sanitizeSize(result);
+        return internal::resolveFinalSize(
+            node,
+            sanitizeSize(measuredBorderBoxSize));
     }
 
     void LayoutManager::sanitizeLayoutSize(
