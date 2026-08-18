@@ -25,11 +25,11 @@ namespace ui
         void setGap(float gap);
         float getGap() const noexcept;
 
-        void setMainAlignment(Alignment alignment);
-        Alignment getMainAlignment() const noexcept;
+        void setMainAlignment(MainAxisAlignment alignment);
+        MainAxisAlignment getMainAlignment() const noexcept;
 
-        void setCrossAlignment(Alignment alignment);
-        Alignment getCrossAlignment() const noexcept;
+        void setCrossAlignment(CrossAxisAlignment alignment);
+        CrossAxisAlignment getCrossAlignment() const noexcept;
 
     protected:
         LayoutSize measure(MeasureContext &ctx) override;
@@ -38,8 +38,8 @@ namespace ui
     private:
         Orientation orientation_ = Orientation::Vertical;
         float gap_ = 0.0f;
-        Alignment mainAlignment_ = Alignment::START;
-        Alignment crossAlignment_ = Alignment::STRETCH;
+        MainAxisAlignment mainAlignment_ = MainAxisAlignment::START;
+        CrossAxisAlignment crossAlignment_ = CrossAxisAlignment::STRETCH;
     };
 
 }
