@@ -17,26 +17,27 @@ namespace ui
         {
             if (!target)
                 return false;
-
+    
             const Node::Id targetId = target->id();
-
+    
             if (nodeTree.findNode(targetId) != target)
                 return false;
-
-            NodeTree::ScopedMutationGuard guard(nodeTree);
-
-            EventDispatcher::dispatch(
-                nodeTree,
-                target,
-                event,
-                tunneling,
-                bubbling);
-
+    
+            {
+                NodeTree::ScopedMutationGuard guard(nodeTree);
+    
+                EventDispatcher::dispatch(
+                    nodeTree,
+                    target,
+                    event,
+                    tunneling,
+                    bubbling);
+            }
+    
             nodeTree.flushMutationQueue();
-
+    
             return nodeTree.findNode(targetId) != nullptr;
         }
-
     }
 
     InputManager::InputManager() = default;
