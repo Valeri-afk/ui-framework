@@ -8,6 +8,7 @@
 namespace
 {
     constexpr float kInfinity = std::numeric_limits<float>::max();
+    constexpr float kEpsilon = 0.00001f;
 
     float finiteOrZero(float value) noexcept
     {
@@ -27,6 +28,19 @@ namespace
         ui::StackPanelNode::Orientation orientation) noexcept
     {
         return orientation == ui::StackPanelNode::Orientation::Vertical;
+    }
+
+    bool isVisibleAlignment(ui::Alignment alignment) noexcept
+    {
+        return alignment == ui::Alignment::START ||
+               alignment == ui::Alignment::CENTER ||
+               alignment == ui::Alignment::END ||
+               alignment == ui::Alignment::STRETCH;
+    }
+
+    float normalizedGap(float gap) noexcept
+    {
+        return std::isfinite(gap) && gap > 0.0f ? gap : 0.0f;
     }
 
     void accumulateContentSize(
@@ -68,6 +82,8 @@ namespace ui::internal
             return {};
 
         const bool vertical = isVerticalOrientation(panel.getOrientation());
+        const float gap = normalizedGap(panel.getGap());
+
         LayoutSize contentSize{};
         size_t visibleIndex = 0;
 
@@ -92,6 +108,17 @@ namespace ui::internal
             ++visibleIndex;
         }
 
+        if (visibleIndex > 1)
+        {
+            const float totalGap =
+                gap * static_cast<float>(visibleIndex - 1);
+
+            if (vertical)
+                contentSize.height = safeAdd(contentSize.height, totalGap);
+            else
+                contentSize.width = safeAdd(contentSize.width, totalGap);
+        }
+
         return contentSize;
     }
 
@@ -103,8 +130,18 @@ namespace ui::internal
             return;
 
         const bool vertical = isVerticalOrientation(panel.getOrientation());
-        LayoutPosition position = ctx.contentPosition;
-        size_t visibleIndex = 0;
+        const float gap = normalizedGap(panel.getGap());
+
+        struct ChildPlacement
+        {
+            size_t index;
+            LayoutSize desired;
+        };
+
+        std::vector<ChildPlacement> children;
+        children.reserve(panel.childCount());
+
+        float occupiedMain = 0.0f;
 
         for (size_t i = 0; i < panel.childCount(); ++i)
         {
@@ -114,21 +151,119 @@ namespace ui::internal
                 continue;
 
             const LayoutSize desired = child->getDesiredSize();
-            LayoutSize finalSize = desired;
+            const float mainSize = vertical ? desired.height : desired.width;
+
+            occupiedMain = safeAdd(occupiedMain, finiteOrZero(mainSize));
+            children.push_back({i, desired});
+        }
+
+        if (children.size() > 1)
+        {
+            occupiedMain = safeAdd(
+                occupiedMain,
+                gap * static_cast<float>(children.size() - 1));
+        }
+
+        const float availableMain =
+            vertical ? ctx.contentSize.height : ctx.contentSize.width;
+
+        const float availableCross =
+            vertical ? ctx.contentSize.width : ctx.contentSize.height;
+
+        float freeMain =
+            std::max(0.0f, finiteOrZero(availableMain) - finiteOrZero(occupiedMain));
+
+        float leading = 0.0f;
+        float between = gap;
+
+        switch (panel.getMainAlignment())
+        {
+        case Alignment::CENTER:
+            leading = freeMain * 0.5f;
+            break;
+
+        case Alignment::END:
+            leading = freeMain;
+            break;
+
+        case Alignment::SPACE_BETWEEN:
+            if (children.size() > 1)
+                between = gap + freeMain / static_cast<float>(children.size() - 1);
+            else
+                leading = freeMain * 0.5f;
+            break;
+
+        case Alignment::START:
+        case Alignment::STRETCH:
+            break;
+        }
+
+        LayoutPosition position = ctx.contentPosition;
+
+        if (vertical)
+            position.y += leading;
+        else
+            position.x += leading;
+
+        for (const ChildPlacement &placement : children)
+        {
+            LayoutSize finalSize = placement.desired;
+            const float desiredCross =
+                vertical ? finalSize.width : finalSize.height;
+
+            const float crossFree =
+                std::max(0.0f, availableCross - finiteOrZero(desiredCross));
+
+            Alignment crossAlignment = panel.getCrossAlignment();
+
+            if (!isVisibleAlignment(crossAlignment))
+                crossAlignment = Alignment::STRETCH;
+
+            float crossOffset = 0.0f;
+
+            switch (crossAlignment)
+            {
+            case Alignment::CENTER:
+                crossOffset = crossFree * 0.5f;
+                break;
+
+            case Alignment::END:
+                crossOffset = crossFree;
+                break;
+
+            case Alignment::START:
+                break;
+
+            case Alignment::STRETCH:
+                if (vertical)
+                    finalSize.width = availableCross;
+                else
+                    finalSize.height = availableCross;
+                break;
+
+            case Alignment::SPACE_BETWEEN:
+                break;
+            }
+
+            LayoutPosition childPosition = position;
 
             if (vertical)
-                finalSize.width = ctx.contentSize.width;
+                childPosition.x += crossOffset;
             else
-                finalSize.height = ctx.contentSize.height;
+                childPosition.y += crossOffset;
 
-            ctx.placeChild(visibleIndex, position, finalSize);
+            ctx.placeChild(
+                placement.index,
+                childPosition,
+                finalSize);
+
+            const float mainSize =
+                vertical ? finalSize.height : finalSize.width;
 
             if (vertical)
-                position.y += finalSize.height;
+                position.y += mainSize + between;
             else
-                position.x += finalSize.width;
-
-            ++visibleIndex;
+                position.x += mainSize + between;
         }
     }
 
