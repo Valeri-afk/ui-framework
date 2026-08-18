@@ -580,31 +580,7 @@ namespace ui
         return findNode(nodeId);
     }
 
-    std::unique_ptr<Node> NodeTree::detachInternal(
-        NodeId id,
-        std::vector<std::unique_ptr<Node>> &container)
-    {
-        auto it = std::find_if(
-            container.begin(),
-            container.end(),
-            [id](const std::unique_ptr<Node> &node)
-            {
-                return node && node->id() == id;
-            });
-
-        if (it == container.end())
-            return nullptr;
-
-        auto detached = std::move(*it);
-
-        container.erase(it);
-
-        detachOwnedSubtree(*detached, id);
-
-        return detached;
-    }
-
-+    void NodeTree::removeInternal(
+    void NodeTree::removeInternal(
          NodeId id,
          std::vector<std::unique_ptr<Node>> &container)
      {
