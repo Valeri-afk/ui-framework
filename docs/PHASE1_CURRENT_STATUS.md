@@ -6,7 +6,7 @@
 
 ## 1. Where We Are
 
-Phase 1 has completed the main **source-level runtime analysis** of ownership, structural mutation, traversal, lifecycle callbacks, and event callback boundaries.
+Phase 1 has completed the main **source-level runtime analysis** of ownership, structural mutation, traversal, lifecycle callbacks, event callback boundaries, and the UI frame boundary.
 
 The current work is being developed in:
 
@@ -144,6 +144,28 @@ The important rule is:
 
 > A lifecycle callback cannot cause the node currently executing that callback to be destroyed in the middle of the callback.
 
+### Meaning of `onMount` / `onUnmount`
+
+The current interpretation is **runtime-tree membership**, not raw C++ object lifetime:
+
+```text
+construct object
+    |
+attach to active tree
+    |
+onMount
+    |
+live in UI runtime
+    |
+remove from active tree
+    |
+onUnmount
+    |
+object may then be destroyed
+```
+
+This means `onUnmount()` should not automatically be treated as a synonym for `~Node()`.
+
 ---
 
 ## 6. Event/Input Boundary — Result
@@ -177,7 +199,180 @@ The outer `processEvent()` flush remains acceptable as an additional synchroniza
 
 ---
 
-## 7. Reparenting — Deferred, Not Required for Phase 1
+## 7. UI Framework vs Application Loop — Current Architectural Position
+
+The current analysis does **not** require the UI framework to own the application's main loop.
+
+The working model is:
+
+```text
+Application
+    owns application lifetime
+    owns main/game loop
+    owns SDL event polling / global timing
+
+UI framework
+    owns UI runtime state and control flow once the application gives it a frame
+```
+
+The UI framework is therefore an **embedded retained-mode UI framework/runtime**, not an application framework responsible for the entire process lifetime.
+
+The application may do:
+
+```cpp
+while (running)
+{
+    pollEvents();
+    ui.processEvent(...);
+
+    updateGame(dt);
+    ui.runFrame(dt, renderer);
+
+    present();
+}
+```
+
+The absence of an internal `while` loop does not by itself make the system a library. The framework still controls internal UI execution and invokes client callbacks at framework-defined points.
+
+### What the framework controls
+
+Within one UI frame, `UIManager::runFrame()` currently coordinates a non-trivial sequence:
+
+```text
+sync viewport
+    -> request full layout if needed
+    -> apply pending mutations
+    -> process layout queue
+    -> sync modal/input state
+    -> NodeTree update
+    -> process layout queue
+    -> sync state
+    -> NodeTree draw
+    -> sync state
+```
+
+That sequence is part of the runtime contract. It should not be exposed to the client as an arbitrary collection of independent calls merely for symmetry.
+
+The client therefore controls **when UI receives a frame**, while the framework controls **what a UI frame means and in what order its internal phases execute**.
+
+This gives the following division of responsibility:
+
+```text
+Application controls:     WHEN
+UI framework controls:    WHAT HAPPENS DURING THE UI FRAME
+```
+
+### Why `runFrame()` should remain an integration boundary for now
+
+Allowing the client to manually compose:
+
+```cpp
+ui.update();
+ui.layout();
+ui.sync();
+ui.draw();
+```
+
+would expose internal invariants such as mutation flushing, layout timing and input/modal synchronization. A client could then execute phases in an invalid order and create inconsistent runtime state.
+
+The current design instead exposes a single frame boundary:
+
+```cpp
+ui.runFrame(dt, renderer);
+```
+
+while keeping the internal phase functions private.
+
+If a concrete requirement later appears for client code to run between UI phases, the preferred solution is a controlled extension point rather than exposing internal frame stages as arbitrary public methods.
+
+### Why the framework does not need to own the application loop
+
+The target application contains systems that are outside the UI framework's responsibility:
+
+- chess engine;
+- chess clock/timers;
+- replay/history;
+- application state;
+- future network/AI or other application systems.
+
+Making the UI framework own the entire main loop would move the framework toward an application framework and force unrelated systems into its runtime protocol.
+
+The current boundary is therefore intentional rather than a missing feature.
+
+---
+
+## 8. Framework vs Library vs Application — Working Definitions
+
+For this project, use the following practical distinction:
+
+### Library
+
+The application decides when to call the library and generally controls the surrounding execution flow.
+
+### Embedded framework/runtime
+
+The application chooses when to hand control to the framework, but once control is handed over the framework determines the internal execution protocol and invokes client-defined behavior at framework-controlled extension points.
+
+### Application framework
+
+The framework also owns substantial application-level control flow such as the main event loop and application lifetime, with application code living inside that runtime.
+
+The current UI framework belongs to the **second category**.
+
+It does not need to become an application framework merely to qualify as a framework.
+
+---
+
+## 9. Qt Clarification
+
+Qt should not be modeled as “the application that the client uses”. Qt is a **full development framework** consisting of multiple libraries/modules, tools and application-runtime infrastructure. Qt's GUI/application layer includes `QGuiApplication`/`QApplication`, which manage GUI application control flow and contain the main event loop. Qt's event system receives native window-system events and dispatches them into Qt objects. citeturn288976search13turn288976search0
+
+A Qt application is therefore more naturally represented as:
+
+```text
+Client application code
+        |
+        v
+Qt framework/runtime
+   ├── application/event infrastructure
+   ├── GUI
+   ├── widgets / Qt Quick
+   ├── rendering abstraction
+   ├── platform integration
+   └── other modules
+```
+
+The client application code remains the application. Qt is not itself “the client”.
+
+Qt also provides rendering backends and graphics abstractions as part of its framework. Qt's RHI abstracts APIs such as OpenGL, Vulkan, Metal and Direct3D, and Qt Quick uses that infrastructure for scene-graph rendering. citeturn288976search3turn288976search5turn288976search8
+
+The existence of a rendering backend does not make Qt the application. It means the framework owns more of the infrastructure normally sitting below the client application's code.
+
+For comparison with this project:
+
+```text
+Your architecture:
+
+Application
+ ├── ChessEngine
+ ├── SDL/platform layer
+ └── UIManager / UI framework
+
+Qt-style architecture:
+
+Application code
+ └── Qt application/framework runtime
+      ├── event loop
+      ├── UI system
+      ├── rendering/platform infrastructure
+      └── other framework services
+```
+
+The important distinction is therefore **scope and control flow**, not whether the framework has a renderer or an event loop.
+
+---
+
+## 10. Reparenting — Deferred, Not Required for Phase 1
 
 Reparenting was deliberately separated from `detach()`.
 
@@ -197,20 +392,11 @@ If a real requirement appears later, the preferred design is a dedicated framewo
 
 ---
 
-## 8. Shutdown — Deliberately Reopened Question
+## 11. Shutdown — Deliberately Reopened Question
 
 This is the **one major runtime-lifetime question currently left open**.
 
-An earlier analysis assumed that `NodeTree` destruction should reproduce the normal `remove()` lifecycle:
-
-```text
-pending mutations
- -> onUnmount
- -> unregister
- -> destroy
-```
-
-We have since identified that this assumption is not justified yet.
+An earlier analysis assumed that `NodeTree` destruction should reproduce the normal `remove()` lifecycle. We have since identified that this assumption is not justified yet.
 
 There are two conceptually different operations:
 
@@ -252,15 +438,15 @@ First determine the framework lifetime model and decide what `onUnmount()` seman
 
 The current evidence favors treating `onUnmount()` as a **structural/runtime-removal callback**, not automatically as a destructor callback.
 
-This decision is intentionally open pending the framework lifetime discussion.
+This decision remains open pending the framework lifetime discussion.
 
 ---
 
-## 9. Framework Lifetime Questions Still Open
+## 12. Framework Lifetime Questions Still Open
 
 Before closing Phase 1, answer these questions:
 
-1. What object is the actual public owner of the UI runtime? Currently this appears to be `UIManager`.
+1. What object is the public owner of the UI runtime? Currently this appears to be `UIManager`.
 2. Who normally constructs and destroys `UIManager` — the application/client, an application runtime object, or another owner?
 3. What is the intended destruction order among:
    - `InputManager`;
@@ -277,7 +463,7 @@ No code change should be made solely to answer these questions until their inten
 
 ---
 
-## 10. Current API Direction
+## 13. Current API Direction
 
 Target Phase 1 direction:
 
@@ -312,7 +498,7 @@ Exact signatures still need final reconciliation with the current headers before
 
 ---
 
-## 11. Problems: Resolved vs Open
+## 14. Problems: Resolved vs Open
 
 ### Resolved by design
 
@@ -325,7 +511,10 @@ Exact signatures still need final reconciliation with the current headers before
 - traversal mutation is snapshot + live re-resolution;
 - root/overlay traversal receives a mutation scope;
 - lifecycle callbacks may request deferred mutation;
-- event dispatch flush ordering is corrected in the worktree.
+- event dispatch flush ordering is corrected in the worktree;
+- the application loop remains outside the UI framework;
+- `UIManager::runFrame()` remains the framework's internal UI-frame integration boundary;
+- client code should not manually compose the private UI frame phases.
 
 ### Open
 
@@ -333,7 +522,7 @@ Exact signatures still need final reconciliation with the current headers before
 - destruction order of runtime subsystems;
 - whether framework destruction invokes `onUnmount()`;
 - whether explicit shutdown is needed;
-- final reconciliation of the worktree against baseline headers/source;
+- final reconciliation of the worktree against baseline;
 - standalone compilation;
 - runtime tests.
 
@@ -341,7 +530,7 @@ There is currently **no other identified structural mutation problem comparable 
 
 ---
 
-## 12. Phase 1 Completion Gate
+## 15. Phase 1 Completion Gate
 
 Phase 1 should not be declared runtime-verified until:
 
@@ -351,11 +540,12 @@ scenario analysis                  ✅
 ownership decision                 ✅
 remove model                       ✅
 traversal model                    ✅
-event mutation boundary             ✅
-reparent scope                      ✅
-framework lifetime decision         ☐
-API/header reconciliation           ☐
-worktree vs baseline comparison     ☐
+event mutation boundary            ✅
+UI frame boundary                  ✅
+reparent scope                     ✅
+framework lifetime decision        ☐
+API/header reconciliation          ☐
+worktree vs baseline comparison    ☐
 standalone build                   ☐
 runtime verification               ☐
 documentation reconciliation       ☐
@@ -365,10 +555,10 @@ The next discussion should therefore focus on **what the framework runtime actua
 
 ---
 
-## 13. Important Note About Existing Phase 1 Documents
+## 16. Important Note About Existing Phase 1 Documents
 
 `PHASE1_RUNTIME.md` and `PHASE1_RUNTIME_DECISIONS.md` contain earlier design decisions made during the analysis. In particular, older text may describe lifecycle-aware shutdown as already selected.
 
 This current-status file supersedes that earlier shutdown assumption until the framework lifetime discussion is completed.
 
-After that discussion, the older documents should be reconciled so that there is one authoritative shutdown decision.
+After the framework lifetime discussion, the older documents should be reconciled so that there is one authoritative shutdown decision.
