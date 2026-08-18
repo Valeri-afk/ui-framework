@@ -104,14 +104,20 @@ namespace ui
                    : nullptr;
     }
 
-    std::unique_ptr<Node> UIManager::detachRoot(Node *node)
+    void UIManager::removeRoot(Node *node)
     {
-        return nodeTree_ ? nodeTree_->detachRoot(node) : nullptr;
+        if (nodeTree_)
+        {
+            nodeTree_->removeRoot(node);
+        }
     }
 
-    std::unique_ptr<Node> UIManager::detachOverlay(Node *node)
+    void UIManager::removeOverlay(Node *node)
     {
-        return nodeTree_ ? nodeTree_->detachOverlay(node) : nullptr;
+        if (nodeTree_)
+        {
+            nodeTree_->removeOverlay(node);
+        }
     }
 
     void UIManager::setViewportSize(const LayoutSize &size) noexcept
