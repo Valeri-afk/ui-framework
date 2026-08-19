@@ -44,6 +44,8 @@ namespace ui
         SDL_Renderer *cachedRenderer_ = nullptr;
         TTF_TextEngine *textEngine_ = nullptr;
         TTF_Text *textObject_ = nullptr;
+
+        friend class LayoutManager;
     };
 
 }
