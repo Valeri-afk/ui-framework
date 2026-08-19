@@ -22,6 +22,15 @@ namespace
     {
         return std::min(finiteOrInfinity(proposal), finiteOrInfinity(maxValue));
     }
+
+    float resolveFinalDimension(float allocated, float explicitValue, const ui::LayoutValue &sizeValue,
+                                float minValue, float maxValue) noexcept
+    {
+        const float minResolved = finiteOrZero(minValue);
+        const float maxResolved = std::max(minResolved, finiteOrInfinity(maxValue));
+        const float requested = sizeValue.isValue() ? finiteOrZero(explicitValue) : finiteOrZero(allocated);
+        return std::clamp(requested, minResolved, maxResolved);
+    }
 }
 
 namespace ui::internal
@@ -57,23 +66,10 @@ namespace ui::internal
         const LayoutSize minSize = node.getMinSize();
         const LayoutSize maxSize = node.getMaxSize();
 
-        if (size.width.isValue())
-            allocated.width = finiteOrZero(size.width.value);
-        else
-        {
-            const float minWidth = finiteOrZero(minSize.width);
-            const float maxWidth = finiteOrInfinity(maxSize.width);
-            allocated.width = std::clamp(allocated.width, minWidth, std::max(minWidth, maxWidth));
-        }
-
-        if (size.height.isValue())
-            allocated.height = finiteOrZero(size.height.value);
-        else
-        {
-            const float minHeight = finiteOrZero(minSize.height);
-            const float maxHeight = finiteOrInfinity(maxSize.height);
-            allocated.height = std::clamp(allocated.height, minHeight, std::max(minHeight, maxHeight));
-        }
+        allocated.width = resolveFinalDimension(
+            allocated.width, size.width.value, size.width, minSize.width, maxSize.width);
+        allocated.height = resolveFinalDimension(
+            allocated.height, size.height.value, size.height, minSize.height, maxSize.height);
 
         return allocated;
     }
