@@ -18,7 +18,7 @@ namespace ui
         StyleProps getStyleProps() const noexcept;
 
     protected:
-        void drawSelf(SDL_Renderer *renderer) override;
+        void draw(SDL_Renderer *renderer) override;
 
         StyleProps styleProps_;
     };
