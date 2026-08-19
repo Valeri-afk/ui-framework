@@ -45,12 +45,12 @@ namespace ui::internal
         const LayoutSize maxSize = node.getMaxSize();
 
         if (size.width.isValue())
-            proposal.width = finiteOrZero(size.width.value);
+            proposal.width = proposalBoundedByMax(size.width.value, maxSize.width);
         else
             proposal.width = proposalBoundedByMax(proposal.width, maxSize.width);
 
         if (size.height.isValue())
-            proposal.height = finiteOrZero(size.height.value);
+            proposal.height = proposalBoundedByMax(size.height.value, maxSize.height);
         else
             proposal.height = proposalBoundedByMax(proposal.height, maxSize.height);
 
