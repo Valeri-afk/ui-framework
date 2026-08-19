@@ -28,7 +28,6 @@ namespace ui
         void setVerticalAlignment(TextAlignment alignment);
 
     protected:
-        LayoutSize measure(MeasureContext &ctx) override;
         void draw(SDL_Renderer *renderer) override;
 
     private:
