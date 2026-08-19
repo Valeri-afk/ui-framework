@@ -3,197 +3,43 @@
 > **Purpose:** canonical recovery document for continuing Phase 2 in a new chat.
 > **Date:** 2026-08-19
 > **Active branch:** `phase2-layout-migration`
-> **Tests/build:** intentionally deferred until the end of Phase 6 by project decision.
+> **Current branch HEAD:** `a87a3ff3d6c64742eef7b8d443ca1ccbf9e10d34`
+> **Build/tests:** intentionally deferred until the end of Phase 6 by project decision.
 
-## 1. Current project position
+## 1. Phase 2 objective
 
-Phase 1 Runtime has been accepted as the active `main` baseline. Phase 2 Layout is the only active implementation phase.
+Move layout ownership from the Node inheritance hierarchy into the framework layout subsystem while preserving the retained-mode runtime and NodeTree ownership model.
 
-The Phase 2 work is deliberately incremental. The objective is to move layout ownership from the Node inheritance hierarchy into the framework layout subsystem without rewriting the retained-mode runtime or NodeTree ownership model.
-
-## 2. Historical architectural path
-
-The project previously went through several layout models:
+Target ownership:
 
 ```text
-1. One large Widget + separate layout engine
-2. WPF-like separation of Node/component responsibilities
-3. Single Node with client-defined layout algorithms
-4. Measure/Arrange with client-owned algorithms + manual invalidation
-5. Current migration toward framework-owned layout execution
-```
+Node / PanelNode
+    -> runtime state + structure
 
-The main reasons previous approaches were rejected were:
-
-```text
-- capability/base-class proliferation;
-- framework-wide dependence on one universal Widget/Node;
-- client knowledge of invalidation and layout contracts;
-- custom measure/arrange code being easy to implement incorrectly;
-- text measurement being awkward when treated as a separate client TextEngine service;
-- attempting to make a CSS-style abstraction map directly onto C++ when the runtime semantics differ.
-```
-
-Legacy `src/components` is historical evidence only and must not be modified. In particular, old `Label`, `Button` and `Component` implementations are useful for understanding the desired content-measurement boundary but are not the implementation target.
-
-## 3. Final architectural direction reached
-
-The preferred target is:
-
-> **Framework-owned retained-mode layout with a structural `Node` / `PanelNode` hierarchy and framework-provided layout components.**
-
-The client configures components and properties. The framework owns layout execution and invalidation.
-
-### `Node`
-
-`Node` is the base runtime element.
-
-It owns common:
-
-```text
-identity
-parent/owner references
-lifecycle state
-common runtime state
-enabled/visibility/focus-related state
-size
-min/max
-padding
-border
-position / position mode
-actual/desired geometry
-events
-render/update hooks
-```
-
-`Node` does not own children.
-
-A generic client `Node` does not have to provide intrinsic measurement.
-
-### `PanelNode`
-
-`PanelNode` is the structural child-container base.
-
-It owns:
-
-```text
-children
-child attachment/removal
-child traversal
-structural container behavior
-```
-
-It should not require a client-defined layout algorithm in the final architecture.
-
-### Framework components
-
-Examples:
-
-```text
-Text
-Button
-Image
-Stack/Linear panel
-future Modal/dialog components
-```
-
-Client code may inherit from framework-provided components to customize behavior/state without implementing layout.
-
-### `NodeTree`
-
-`NodeTree` remains the runtime authority for:
-
-```text
-live-node ownership
-identity registry
-attach/detach
-lifecycle
-traversal
-deferred mutation
-layout scheduling
-roots/overlays
-```
-
-It does not own layout algorithms.
-
-### `LayoutManager`
-
-`LayoutManager` becomes the framework-owned layout execution orchestrator:
-
-```text
-proposal generation
-constraint resolution
-content measurement dispatch
-container layout
-absolute placement when supported
-arrangement
-geometry commit
-```
-
-### `UIManager`
-
-`UIManager` remains top-level subsystem orchestration:
-
-```text
-NodeTree
-InputManager
-ModalManager
 LayoutManager
+    -> measurement + constraints + container layout + arrangement
+
+NodeTree
+    -> lifetime + mutation + scheduling
 ```
 
-It does not own layout mathematics.
+No public `LayoutStrategy`, `CustomLayoutStrategy`, `MeasurableNode`, or client-defined measure/arrange contract is part of Phase 2.
 
-## 4. Client/framework contract
+## 2. Important project decisions
 
-The final client contract should allow:
+- `src/components/*` is legacy reference material and must not be modified.
+- `inputmanager.cpp` remains untouched unless a concrete Phase 2 dependency is demonstrated.
+- Grid is deferred; an existing Grid implementation must not force a generic layout abstraction.
+- ControlNode is deferred.
+- Full Flexbox is deferred (`flex-grow`, `flex-shrink`, `flex-basis`, wrap, order, etc.).
+- Margin is deferred.
+- Build and runtime tests are not to be run during Phase 2 development. Final compilation/tests are planned only after the core framework phases are formed, per project decision.
 
-```text
-create components
-inherit from framework components
-set framework properties
-compose children through framework containers
-implement component behavior/state
-```
+## 3. Current architectural model
 
-The client should not need to:
+### Node
 
-```text
-implement measure()
-implement arrange()
-call markLayout()
-call invalidateMeasure()
-access LayoutManager
-access NodeTree scheduling internals
-operate a TextEngine service
-implement container layout algorithms
-```
-
-There is intentionally no public `LayoutStrategy` / `CustomLayoutStrategy` in Phase 2.
-
-A future narrow custom intrinsic-measurement extension (`proposal -> desired size`) may be considered only if a real use case requires it. Custom measurement remains conceptually distinct from custom layout.
-
-## 5. Layout scope chosen for Phase 2
-
-The initial built-in layout is intentionally small: a one-dimensional Linear/Stack model.
-
-Supported conceptual properties:
-
-```text
-orientation: Horizontal | Vertical
-gap
-main-axis distribution:
-    START
-    CENTER
-    END
-    SPACE_BETWEEN
-cross-axis alignment:
-    START
-    CENTER
-    END
-    STRETCH
-```
-
-Current common Node geometry candidates:
+Owns common geometry/configuration/state:
 
 ```text
 size
@@ -203,336 +49,333 @@ border
 position
 position mode
 visibility
+actual/desired geometry
+runtime/event state
 ```
 
-`margin` is deferred.
+It does not own children and no longer exposes legacy `measure()` / `arrange()` virtual layout hooks.
 
-Grid is deliberately excluded from the first Phase 2 implementation path even though a legacy/current `GridNode` exists in the repository. Its presence must not force a generic strategy/property model.
+### PanelNode
 
-Full CSS Flexbox compatibility is deferred:
+Owns structural children and traversal. It is not intended to require a client-defined layout algorithm.
 
-```text
-flex-grow
-flex-shrink
-flex-basis
-wrap
-order
-full intrinsic-size semantics
-```
+### StackPanelNode
 
-`ControlNode` remains deferred and must not be added merely for hierarchy symmetry.
-
-## 6. Axis semantics
-
-The old single `Alignment` enum was found to mix two different semantics.
-
-The current direction uses:
-
-```text
-MainAxisAlignment
-    START
-    CENTER
-    END
-    SPACE_BETWEEN
-
-CrossAxisAlignment
-    START
-    CENTER
-    END
-    STRETCH
-```
-
-This keeps container distribution and cross-axis placement conceptually separate.
-
-## 7. Constraint model
-
-A critical architectural distinction was established:
-
-```text
-measurement proposal != final size constraint
-```
-
-Current provisional semantics:
-
-```text
-Fixed size
-    → constrains measurement proposal and final geometry
-
-Max size
-    → can narrow measurement proposal and final geometry
-
-Min size
-    → constrains final geometry
-
-Auto
-    → no explicit local size; intrinsic measurement / parent layout determines size
-```
-
-Padding/border translate between border-box and content-box.
-
-This distinction is required for proposal-dependent content such as wrapped text.
-
-Example:
-
-```text
-parent width = 500
-maxWidth = 300
-Text
-```
-
-The desired behavior is to measure Text using an effective width of 300, not measure at 500 and merely clamp the final width afterward.
-
-A minimum does not automatically force a smaller intrinsic measurement proposal. For example, `minWidth=300` with a parent width of 500 may still measure at 500.
-
-## 8. Measurement / layout pipeline
-
-The target pipeline is:
-
-```text
-parent proposal
-    ↓
-resolve Node measurement proposal
-    ↓
-content measurement / child measurement
-    ↓
-desired content size
-    ↓
-box composition (padding/border)
-    ↓
-final size resolution
-    ↓
-container allocation
-    ↓
-arrangement
-    ↓
-actual geometry
-```
-
-For Text:
-
-```text
-effective width proposal
-    ↓
-text measurement
-    ↓
-wrapped intrinsic size
-```
-
-The text implementation does not know the parent layout algorithm and does not manually invalidate its ancestors.
-
-## 9. Invalidation and lifecycle
-
-The current Phase 1 deferred mutation system is intentionally preserved as the foundation.
-
-Conceptually:
-
-```text
-property mutation
-    ↓
-framework mutation queue
-    ↓
-coalesced layout work
-    ↓
-LayoutManager pass
-```
-
-The internal system should eventually distinguish conceptually:
-
-```text
-Measure dirty
-Arrange dirty
-Render dirty
-```
-
-but the first implementation may conservatively recalculate a queued root/subtree. Fine-grained dependency graphs are deferred until real performance requirements justify them.
-
-Mutations occurring during layout should be deferred rather than causing immediate recursive layout.
-
-Geometry outputs such as `actualSize` and `actualPosition` are not themselves generic invalidation triggers.
-
-## 10. Current source migration state
-
-The migration has already started on `phase2-layout-migration`.
-
-### New internal layout files
-
-```text
-include/ui_framework/core/linear_layout.hpp
-src/core/linear_layout.cpp
-
-include/ui_framework/core/layout_constraints.hpp
-src/core/layout_constraints.cpp
-```
-
-### Current role of `StackPanelNode`
-
-It has been reduced toward persistent configuration:
+Now acts primarily as persistent configuration:
 
 ```text
 orientation
 gap
-main alignment
-cross alignment
+main-axis alignment
+cross-axis alignment
 ```
 
-Its old algorithm was extracted into `linear_layout.cpp`.
+The one-dimensional algorithm is in internal `linear_layout` code and is dispatched by `LayoutManager`.
 
-### Current role of `LayoutManager`
+### LayoutManager
 
-It already dispatches `StackPanelNode` through the internal Linear layout path while other nodes still use the legacy `Node::measure/arrange` bridge.
-
-This is a deliberate migration seam, not final architecture.
-
-### Current `types.hpp`
-
-It now contains separate axis alignment types:
+Owns the current framework layout pipeline:
 
 ```text
-MainAxisAlignment
-CrossAxisAlignment
+root proposal
+  -> constraint proposal resolution
+  -> border/content box conversion
+  -> framework content measurement
+  -> Linear child measurement/allocation
+  -> final constraint resolution
+  -> arrangement
+  -> actual geometry
 ```
 
-and retains existing value/size/constraint/context types.
+### NodeTree
 
-## 11. Important current implementation status
+Still owns live nodes, identity, lifecycle, mutation queue, traversal, roots/overlays and layout scheduling. It does not own layout mathematics.
 
-The implementation is **not yet complete Phase 2**.
+## 4. Constraint semantics currently established
 
-The next architectural/code step is to connect the common `layout_constraints` subsystem to the central `LayoutManager` pipeline so that constraint semantics are not duplicated inside specific layout algorithms.
-
-After that, the next major target is framework-owned Text/intrinsic measurement.
-
-The old client-side `measure/arrange` virtual hooks remain temporarily for migration and must not yet be removed.
-
-## 12. Known static issues to resolve before final Phase 2 cleanup
-
-The current migration is intentionally incomplete. Before removing legacy hooks, the following must be resolved:
+The critical distinction is:
 
 ```text
-- single ownership of constraint resolution;
-- central LayoutManager proposal pipeline;
-- Text/content measurement integration;
-- final stretch semantics with min/max;
-- normal-vs-absolute positioning semantics;
-- internal measurement dispatch choice;
-- invalidation propagation details;
-- removal of concrete StackPanel measure/arrange overrides;
-- removal of client-facing layout obligations from PanelNode.
+measurement proposal != final size
 ```
 
-## 13. Build/test policy
-
-By project decision, **build and tests are intentionally not run before the end of Phase 6**.
-
-Therefore:
+Current semantics:
 
 ```text
-No build result before Phase 6
-No runtime test result before Phase 6
+Fixed size
+    -> constrains measurement proposal and final geometry
+
+Max size
+    -> may narrow measurement proposal and final geometry
+
+Min size
+    -> constrains final geometry
+
+Auto
+    -> intrinsic measurement / parent allocation determines size
 ```
 
-This is intentional and must not be treated as an accidental missing verification step during Phase 2 development.
+Padding and border translate between border-box and content-box.
 
-Until Phase 6, validation is performed through:
+For width-dependent content:
+
+```text
+parent proposal 500
+maxWidth 300
+Text
+
+measure using effective width 300
+```
+
+not:
+
+```text
+measure at 500
+then clamp to 300
+```
+
+A minimum does not automatically narrow the intrinsic measurement proposal.
+
+## 5. Current implementation state
+
+The following internal files are active:
+
+```text
+include/ui_framework/core/linear_layout.hpp
+src/core/linear_layout.cpp
+include/ui_framework/core/layout_constraints.hpp
+src/core/layout_constraints.cpp
+```
+
+`LayoutManager` currently integrates both.
+
+### Constraint fixes already committed
+
+1. `cd9f0ca2686be6772eba75ceda72188cdc56b385`
+   `Apply min and max constraints to fixed final sizes`
+
+   Final explicit sizes are now clamped by min/max instead of bypassing final constraints.
+
+2. `f574c3386fccbc7e7f13f70e94ed3326f2dd6e0d`
+   `Bound fixed measurement proposals by max size`
+
+   Fixed proposals are also bounded by max before content measurement, which is required for wrapped text correctness.
+
+### Absolute positioning fix
+
+3. `2b148b876d2e511957f7a5b0af1233bc7279d7dc`
+   `Use parent content allocation for absolute children`
+
+   Absolute children are removed from Linear flow, measured independently, positioned relative to the parent content origin, and final size is resolved through the common constraint resolver. Auto falls back to desired size; explicit size/max are resolved through the common path.
+
+### Legacy layout seam removal
+
+4. `727335baa16f06b84605cf2206c16e65238540f3`
+   `Remove legacy Node layout migration seam`
+
+   Removed `Node::measure()` and `Node::arrange()`.
+
+5. `a87a3ff3d6c64742eef7b8d443ca1ccbf9e10d34`
+   `Remove legacy layout context types`
+
+   Removed `MeasureContext` and `ArrangeContext`.
+
+Repository search after these changes found no remaining `MeasureContext`, `ArrangeContext`, `measure(` or `arrange(` references in the accessible repository search.
+
+## 6. Text architecture checkpoint
+
+Text measurement and rendering are now explicitly separated.
+
+Measurement:
+
+```text
+TextNode
+    text + font
+        -> LayoutManager::measureTextNode()
+        -> TTF_GetStringSizeWrapped()
+```
+
+Rendering:
+
+```text
+TextNode::draw()
+    -> renderer-specific TTF_TextEngine / TTF_Text
+    -> TTF_DrawRendererText()
+```
+
+`TextNode` header contains renderer-specific text objects but no wrap-width measurement property. The implementation no longer contains a `measure()` override or client-owned measurement state.
+
+The previously suspected header/implementation mismatch is therefore resolved.
+
+## 7. Box-model checkpoint
+
+The current measurement path is:
+
+```text
+border-box proposal
+    -> resolve Node proposal/max
+    -> subtract padding + border
+    -> content measurement
+    -> add padding + border
+    -> desired border-box size
+```
+
+Final geometry uses the common final resolver.
+
+Absolute position uses:
+
+```text
+parent actual position
+    + parent border + padding
+    + child position offset
+```
+
+Negative offsets are allowed; no CSS-like left/right/top/bottom model is being introduced in Phase 2.
+
+## 8. Current exact position in Phase 2
+
+The project is **past the central Linear algorithm extraction, proposal/max correction, Text measurement integration, Absolute placement integration, and removal of the legacy Node measure/arrange contract**.
+
+The remaining work is primarily consolidation and acceptance rather than another large architectural rewrite.
+
+Current flow is approximately:
+
+```text
+                 Phase 2
+                    |
+    architecture / internal types       DONE
+                    |
+    Linear algorithm ownership          DONE
+                    |
+    constraint proposal/final semantics DONE
+                    |
+    Text intrinsic measurement          DONE
+                    |
+    Absolute placement baseline         DONE
+                    |
+    legacy measure/arrange removal      DONE
+                    |
+    >>> CURRENT CHECKPOINT <<<
+                    |
+    cleanup / consistency audit
+                    |
+    remaining Linear edge semantics
+                    |
+    invalidation/lifecycle audit
+                    |
+    numerical acceptance audit
+                    |
+    Phase 2 documentation/closure
+```
+
+## 9. Remaining work estimate
+
+Do **not** interpret this as an exact commit count. The remaining work is better measured as architectural work units.
+
+Expected remaining units:
+
+```text
+1. TextNode dead include/helper cleanup
+2. Full static consistency audit of Linear + constraints + box model
+3. Final Linear semantics audit:
+       stretch + min/max
+       gap/alignment edge cases
+       zero/empty children
+       visibility
+4. Absolute/normal arrangement consistency audit
+5. Invalidation/lifecycle audit against deferred mutation semantics
+6. Numerical acceptance-case audit against PHASE2_NUMERICAL_LAYOUT_CASES.md
+7. Final Phase 2 documentation/checkpoint cleanup
+```
+
+So the realistic remaining scope is roughly **6-7 focused work units**, not another major redesign. Some of these may collapse into the same commit if the code already satisfies the intended semantics.
+
+Build/test execution is deliberately excluded from these Phase 2 units.
+
+## 10. What must NOT be reintroduced
+
+Do not reintroduce:
+
+```text
+Node::measure()
+Node::arrange()
+MeasureContext
+ArrangeContext
+public LayoutStrategy
+public custom layout API
+TextEngine service
+client invalidation calls
+CSS/Flexbox-wide property model
+Grid implementation into the new generic path
+```
+
+## 11. Immediate next step
+
+Before making the next code commit, this handoff itself is the recovery checkpoint.
+
+The next code change is the already identified TextNode cleanup:
+
+```text
+remove unused measurement-related includes/helpers from src/core/textnode.cpp
+```
+
+This must not alter rendering or measurement behavior.
+
+After that, continue with the static Linear/constraint acceptance audit.
+
+## 12. Validation policy
+
+Until Phase 6:
+
+```text
+NO BUILD
+NO RUNTIME TESTS
+```
+
+Use only:
 
 ```text
 source inspection
 architectural consistency checks
 static reasoning
-numerical layout cases
+numerical cases
 ownership/lifecycle reasoning
 documentation checkpoints
 ```
 
-## 14. Large-file editing policy
+At the eventual final validation point, run the full build/test/compilation verification.
 
-Large files such as:
+## 13. Recovery procedure for a new chat
 
-```text
-src/core/layoutmanager.cpp
-src/core/nodetree.cpp
-src/core/nodetree.hpp
-src/core/node.cpp
-```
+Read this file first.
 
-should be changed incrementally and surgically.
-
-The assistant should first attempt edits itself. The user can manually patch a large file only when the available editing mechanism makes a precise safe change impractical.
-
-Small files may be edited directly.
-
-## 15. Files explicitly protected from Phase 2 changes
-
-Do not modify:
-
-```text
-src/components/*
-```
-
-They are legacy/historical reference material only.
-
-`inputmanager.cpp` should also remain untouched unless an actual Phase 2 dependency is demonstrated.
-
-## 16. Authoritative documentation map
-
-Use this document first when restoring context in a new chat.
-
-Then consult:
+Then, in order:
 
 ```text
 PHASE2_ARCHITECTURE_SPECIFICATION.md
-    → target architecture
-
 PHASE2_SOURCE_LEVEL_MAPPING.md
-    → source-to-architecture mapping
-
-PHASE2_IMPLEMENTATION_MIGRATION_PLAN.md
-    → implementation order
-
 PHASE2_CONSTRAINT_SEMANTICS.md
-    → Auto/fixed/min/max semantics
-
 PHASE2_NUMERICAL_LAYOUT_CASES.md
-    → numerical validation cases
-
 PHASE2_LAYOUT_LIFECYCLE_INVALIDATION_ANALYSIS.md
-    → lifecycle/invalidation reasoning
-
 INTRINSIC_MEASUREMENT_DISPATCH_ANALYSIS.md
-    → measurement dispatch alternatives
-
 PHASE2_MEASUREMENT_DISPATCH_RECOMMENDATION.md
-    → current preferred internal measurement boundary
 ```
 
-Earlier layout research documents remain valuable historical evidence. They should not be interpreted as stronger than this current checkpoint when the documents disagree.
+Treat this handoff's current checkpoint as authoritative over older statements in the implementation migration plan that describe the migration as not yet started or that say legacy hooks still remain.
 
-## 17. Immediate continuation point
-
-The exact continuation point is:
+## 14. Last known branch state
 
 ```text
-Current branch:
+branch:
     phase2-layout-migration
 
-Current architecture:
-    Node + PanelNode structure
-    framework-owned Linear algorithm
-    internal constraint subsystem
-    LayoutManager still partly transitional
+HEAD:
+    a87a3ff3d6c64742eef7b8d443ca1ccbf9e10d34
+    Remove legacy layout context types
 
-Next step:
-    centralize constraint proposal/final-size resolution inside LayoutManager
-    without removing the legacy hooks yet
+build/tests:
+    intentionally deferred
 
-Then:
-    integrate framework-owned Text/intrinsic measurement
-
-Then:
-    finish Linear semantics and invalidate/arrange ownership
-
-Then:
-    remove the old client layout contract
+next code action:
+    TextNode dead-code/include cleanup
 ```
-
-This document is the primary context recovery point for the next chat.
