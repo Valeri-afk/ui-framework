@@ -3,9 +3,7 @@
 This document defines the planned development order of the framework.
 
 The roadmap is intentionally high-level. It defines development phases,
-architectural scope, major dependencies, and stabilization criteria. Detailed
-Phase 2 implementation context lives in `PHASE2_HANDOFF.md` and the Phase 2
-architecture documents.
+architectural scope, major dependencies, and stabilization criteria.
 
 Implementation decisions must be based on the current source code and
 explicitly documented architectural decisions. The source code remains the
