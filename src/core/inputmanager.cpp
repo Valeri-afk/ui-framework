@@ -428,13 +428,6 @@ namespace ui
                 return false;
             }
     
-            if (!nodeTree.findNode(oldFocusedId))
-            {
-                syncState(nodeTree);
-                finishTransition();
-                return false;
-            }
-
             if (pendingClearFocus_)
             {
                 pendingClearFocus_ = false;
@@ -446,24 +439,32 @@ namespace ui
             
                 syncState(nodeTree);
                 finishTransition();
+            
                 return input_.focusedNode == nullptr;
             }
-    
+            
             if (pendingFocusNodeId_)
             {
                 const Node::Id pendingId = *pendingFocusNodeId_;
                 pendingFocusNodeId_.reset();
-    
+            
                 Node *pendingNode = nodeTree.findNode(pendingId);
-    
+            
                 if (pendingNode)
                 {
                     focusTransitionInProgress_ = false;
                     return focus(nodeTree, *pendingNode);
                 }
-    
-                finishTransition();
+            
                 syncState(nodeTree);
+                finishTransition();
+                return false;
+            }
+            
+            if (!nodeTree.findNode(oldFocusedId))
+            {
+                syncState(nodeTree);
+                finishTransition();
                 return false;
             }
         }
