@@ -102,6 +102,9 @@ namespace ui
         virtual void update(float dt) {};
         virtual void draw(SDL_Renderer *renderer) {};
 
+        virtual LayoutSize measure(MeasureContext &ctx) { return {}; }
+        virtual void arrange(ArrangeContext &ctx) {}
+
         virtual void onMount() {};
         virtual void onUnmount() {};
 
