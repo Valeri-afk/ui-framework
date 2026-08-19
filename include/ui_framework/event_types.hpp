@@ -137,8 +137,8 @@ namespace ui
         enum class Phase
         {
             TUNNELING,
-            BUBBLING,
-            TARGET
+            TARGET,
+            BUBBLING
         };
 
         Node *target = nullptr;
