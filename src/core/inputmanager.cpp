@@ -636,12 +636,20 @@ namespace ui
 
         if (input_.capturedNode)
         {
-            const Node::Id targetId = target->id();
-
+            const Node::Id previousCaptureId =
+                input_.capturedNode->id();
+        
             cancelPointerInteraction(nodeTree);
-
-            target = nodeTree.findNode(targetId);
-
+        
+            if (input_.capturedNode &&
+                input_.capturedNode->id() != previousCaptureId)
+            {
+                syncState(nodeTree);
+                return true;
+            }
+        
+            target = nodeTree.findNode(target->id());
+        
             if (!target)
                 return false;
         }
@@ -713,12 +721,25 @@ namespace ui
     {
         Node *captured = input_.capturedNode;
 
+        const std::optional<Node::Id> capturedId =
+            captured
+                ? std::optional<Node::Id>(captured->id())
+                : std::nullopt;
+
         if (captured &&
             !dispatchDragEndIfNeeded(
                 nodeTree,
                 captured,
                 position))
         {
+            return;
+        }
+
+        if (capturedId &&
+            input_.capturedNode &&
+            input_.capturedNode->id() != *capturedId)
+        {
+            syncState(nodeTree);
             return;
         }
 
