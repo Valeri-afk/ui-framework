@@ -217,8 +217,15 @@ namespace ui
             {
                 Node *child = stackPanel->getChildAt(i);
                 if (!child || !child->isVisible() || child->getPositionMode() != PositionMode::Absolute) continue;
+
+                const LayoutSize parentContentSize = ctx.contentSize;
+                const LayoutSize absoluteProposal = internal::resolveMeasurementProposal(*child, parentContentSize);
+                const LayoutSize allocatedSize = child->getSize().width.isValue() || child->getSize().height.isValue()
+                    ? absoluteProposal
+                    : child->desiredSize_;
+
                 child->actualPosition_ = ctx.contentPosition + child->position_;
-                child->actualSize_ = internal::resolveFinalSize(*child, sanitizeSize(child->desiredSize_));
+                child->actualSize_ = internal::resolveFinalSize(*child, sanitizeSize(allocatedSize));
                 arrangeRecursive(*child, nodeTree);
             }
         }
