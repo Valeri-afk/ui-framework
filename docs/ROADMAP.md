@@ -15,7 +15,7 @@ source of truth for current behavior.
 
 ### Current Phase
 
-**Phase 4 — Component Model (started)**
+**Phase 4 — Rendering / Backend (next implementation phase)**
 
 ### Current branch
 
@@ -294,26 +294,65 @@ Phase 3 does not introduce:
 
 ---
 
-## PHASE 4 — Component Model
+## PHASE 4 — Rendering / Backend
 
 ### Status
 
-**Started.**
+**Next implementation phase.**
 
 ### Scope
 
-- ControlNode only if justified
-- Button
-- Toggle
-- Text
-- Image
-- Scroll
-- other components as required
+- SDL rendering;
+- clipping;
+- resources;
+- rendering traversal and backend boundaries;
+- optional RenderContext;
+- optional second backend.
 
 ### Goal
 
-Build reusable UI components on top of the stabilized runtime, layout and
-input systems.
+Establish a stable rendering contract for the framework before building the
+main reusable component layer.
+
+### Dependencies
+
+- Phase 1
+- Phase 2
+- Phase 3
+
+### Explicit non-goals
+
+- forcing a second backend;
+- introducing RenderContext without a concrete architectural need;
+- redesigning layout or input contracts for rendering convenience.
+
+---
+
+## PHASE 5 — Component Model
+
+### Status
+
+**Planned.**
+
+### Scope
+
+- ControlNode only if justified;
+- Button;
+- Toggle;
+- Text;
+- Image;
+- Scroll;
+- other components as required;
+- Modal component abstraction only where it is a consumer of the existing
+  ModalManager infrastructure.
+
+### Goal
+
+Build reusable UI components on top of the stabilized runtime, layout, input,
+event and rendering systems.
+
+The component layer does not redefine NodeTree ownership, layout orchestration,
+input dispatch or event propagation.
 
 Existing legacy component code must not be treated as the architecture.
 
@@ -322,51 +361,59 @@ Existing legacy component code must not be treated as the architecture.
 - Phase 1
 - Phase 2
 - Phase 3
+- Phase 4
+
+### Modal component boundary
+
+A future Modal component may use the existing ModalManager as infrastructure.
+It may configure presentation and invoke modal open/close behavior, but it does
+not redefine modal stacking, focus restoration or navigation policy.
+Those higher-level semantics remain in Phase 6.
 
 ---
 
-## PHASE 5 — Modal / Navigation
+## PHASE 6 — Modal / Navigation / Validation
+
+### Status
+
+**Planned.**
 
 ### Scope
 
-- ModalManager
-- focus restoration
-- navigation
-- overlays
+- ModalManager hardening and final integration;
+- modal stacking semantics;
+- focus restoration policy;
+- keyboard navigation and focus traversal;
+- navigation semantics;
+- overlay integration;
+- integration of the component layer with modal/navigation behavior;
+- compilation;
+- automated tests;
+- runtime validation;
+- full accumulated-phase validation.
 
 ### Goal
 
-Establish higher-level interaction and navigation semantics.
+Establish higher-level interaction/navigation semantics and perform the full
+technical validation intentionally deferred from Phases 1–5.
+
+### Existing modal infrastructure
+
+`ModalManager` already exists in the source and is not recreated in Phase 6.
+Its current responsibilities include modal sessions, modal stack tracking,
+previous-focus storage, focus entry/restore, pointer-interaction cancellation
+and synchronization with `NodeTree` and `InputManager`.
+
+Phase 6 therefore completes and hardens the higher-level contract around this
+existing infrastructure rather than treating modal support as entirely new.
 
 ### Dependencies
 
 - Phase 1
 - Phase 2
 - Phase 3
-
----
-
-## PHASE 6 — Rendering / Backend
-
-### Scope
-
-- SDL rendering
-- clipping
-- resources
-- optional RenderContext
-- optional second backend
-- build / compilation / runtime validation of the accumulated phases
-
-### Goal
-
-Separate rendering concerns from the framework's core runtime where justified
-and perform the project's deferred full validation.
-
-### Dependencies
-
-- Phase 1
-- Phase 2
-- Phase 4 where component rendering requires it
+- Phase 4
+- Phase 5
 
 RenderContext and a second backend remain optional architectural directions.
 
@@ -381,11 +428,11 @@ Phase 2 — Layout                    [source-level complete]
         ↓
 Phase 3 — Input / Events            [source-level complete]
         ↓
-Phase 4 — Component Model           [started]
+Phase 4 — Rendering / Backend       [next]
         ↓
-Phase 5 — Modal / Navigation
+Phase 5 — Component Model
         ↓
-Phase 6 — Rendering / Backend       [full build/test validation]
+Phase 6 — Modal / Navigation        [full build/test validation]
 ```
 
 Later phases may be analyzed when necessary to validate an earlier
