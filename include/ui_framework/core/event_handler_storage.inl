@@ -84,10 +84,15 @@ namespace ui
         auto snapshot = std::vector<Entry>{};
         snapshot.reserve(table->entries.size());
 
-        for (auto &entry : table->entries)
+        for (const auto &entry : table->entries)
         {
             snapshot.push_back({entry.token,
                                 entry.handler});
+        }
+
+        for (auto &entry : snapshot)
+        {
+            callback(entry.handler);
         }
 
         return true;
