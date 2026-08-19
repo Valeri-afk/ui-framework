@@ -57,7 +57,6 @@ namespace ui
 
     struct LayoutPosition
     {
-
         float x = 0.0f;
         float y = 0.0f;
 
@@ -260,32 +259,6 @@ namespace ui
                     minHeight,
                     maxHeight)};
         }
-    };
-
-    //==========================================================================
-    // Measure / Arrange contexts
-    //==========================================================================
-
-    struct MeasureContext
-    {
-        // Available size inside the current node's content box.
-        LayoutSize availableSize;
-
-        std::function<LayoutSize(size_t, const LayoutSize &)>
-            measureChild;
-    };
-
-    struct ArrangeContext
-    {
-        // Current node's content-box position and size.
-        LayoutPosition contentPosition;
-        LayoutSize contentSize;
-
-        std::function<void(
-            size_t,
-            const LayoutPosition &,
-            const LayoutSize &)>
-            placeChild;
     };
 
     //==========================================================================
