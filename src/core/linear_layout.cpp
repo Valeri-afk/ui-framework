@@ -68,7 +68,7 @@ namespace ui::internal
 
     LayoutSize measureLinearPanel(
         StackPanelNode &panel,
-        MeasureContext &ctx)
+        LinearMeasureContext &ctx)
     {
         if (!ctx.measureChild)
             return {};
@@ -122,7 +122,7 @@ namespace ui::internal
 
     void arrangeLinearPanel(
         StackPanelNode &panel,
-        ArrangeContext &ctx)
+        LinearArrangeContext &ctx)
     {
         if (!ctx.placeChild)
             return;
@@ -261,9 +261,9 @@ namespace ui::internal
                 vertical ? finalSize.height : finalSize.width;
 
             if (vertical)
-                position.y += mainSize + between;
+                position.y += finiteOrZero(mainSize) + between;
             else
-                position.x += mainSize + between;
+                position.x += finiteOrZero(mainSize) + between;
         }
     }
 
