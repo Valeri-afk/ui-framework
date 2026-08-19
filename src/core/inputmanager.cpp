@@ -358,41 +358,62 @@ namespace ui
     {
         input_ = InputState{};
         modalRootId_.reset();
+
+        pendingFocusNodeId_.reset();
+        focusTransitionInProgress_ = false;
     }
 
-    bool InputManager::focus(
+        bool InputManager::focus(
         NodeTree &nodeTree,
         Node &node)
     {
         if (!isNodeAllowedByModal(nodeTree, &node))
             return false;
-
+    
         if (!node.isVisible() ||
             !node.isEnabled() ||
             !node.isFocusable())
         {
             return false;
         }
-
+    
         if (nodeTree.findNode(node.id()) != &node)
         {
             syncState(nodeTree);
             return false;
         }
-
-        if (input_.focusedNode == &node)
+    
+        const Node::Id requestedId = node.id();
+    
+        if (focusTransitionInProgress_)
         {
+            pendingFocusNodeId_ = requestedId;
             return true;
         }
-
+    
+        focusTransitionInProgress_ = true;
+    
+        auto finishTransition =
+            [this]()
+            {
+                focusTransitionInProgress_ = false;
+            };
+    
         Node *oldFocused = input_.focusedNode;
-
+    
+        if (oldFocused == &node)
+        {
+            pendingFocusNodeId_.reset();
+            finishTransition();
+            return true;
+        }
+    
         if (oldFocused)
         {
             const Node::Id oldFocusedId = oldFocused->id();
-
+    
             FocusLostEvent event;
-
+    
             if (!dispatchEvent(
                     nodeTree,
                     oldFocused,
@@ -401,23 +422,43 @@ namespace ui
                     false))
             {
                 syncState(nodeTree);
+                finishTransition();
                 return false;
             }
-
+    
             if (!nodeTree.findNode(oldFocusedId))
             {
+                syncState(nodeTree);
+                finishTransition();
+                return false;
+            }
+    
+            if (pendingFocusNodeId_)
+            {
+                const Node::Id pendingId = *pendingFocusNodeId_;
+                pendingFocusNodeId_.reset();
+    
+                Node *pendingNode = nodeTree.findNode(pendingId);
+    
+                if (pendingNode)
+                {
+                    focusTransitionInProgress_ = false;
+                    return focus(nodeTree, *pendingNode);
+                }
+    
+                finishTransition();
                 syncState(nodeTree);
                 return false;
             }
         }
-
+    
         setTrackedNode(
             input_.focusedNode,
             input_.focusedNodeId,
             &node);
-
+    
         FocusGainedEvent event;
-
+    
         if (!dispatchEvent(
                 nodeTree,
                 &node,
@@ -426,29 +467,54 @@ namespace ui
                 false))
         {
             syncState(nodeTree);
+            finishTransition();
             return false;
         }
-
-        if (nodeTree.findNode(node.id()) != &node)
+    
+        if (pendingFocusNodeId_)
         {
-            syncState(nodeTree);
-            return false;
+            const Node::Id pendingId = *pendingFocusNodeId_;
+            pendingFocusNodeId_.reset();
+    
+            Node *pendingNode = nodeTree.findNode(pendingId);
+    
+            if (pendingNode &&
+                pendingNode != input_.focusedNode)
+            {
+                focusTransitionInProgress_ = false;
+                return focus(nodeTree, *pendingNode);
+            }
         }
-
-        return input_.focusedNode == &node;
+    
+        syncState(nodeTree);
+    
+        const bool success =
+            input_.focusedNode == &node;
+    
+        finishTransition();
+    
+        return success;
     }
-
+    
     void InputManager::clearFocus(NodeTree &nodeTree)
     {
+        if (focusTransitionInProgress_)
+        {
+            pendingFocusNodeId_.reset();
+            return;
+        }
+    
         Node *oldFocused = input_.focusedNode;
-
+    
         if (!oldFocused)
             return;
-
+    
+        focusTransitionInProgress_ = true;
+    
         const Node::Id oldFocusedId = oldFocused->id();
-
+    
         FocusLostEvent event;
-
+    
         if (!dispatchEvent(
                 nodeTree,
                 oldFocused,
@@ -457,18 +523,27 @@ namespace ui
                 false))
         {
             syncState(nodeTree);
+            focusTransitionInProgress_ = false;
             return;
         }
-
+    
         if (!nodeTree.findNode(oldFocusedId))
         {
             syncState(nodeTree);
+            focusTransitionInProgress_ = false;
             return;
         }
-
-        clearTrackedNode(
-            input_.focusedNode,
-            input_.focusedNodeId);
+    
+        if (input_.focusedNode == oldFocused)
+        {
+            clearTrackedNode(
+                input_.focusedNode,
+                input_.focusedNodeId);
+        }
+    
+        syncState(nodeTree);
+    
+        focusTransitionInProgress_ = false;
     }
 
     bool InputManager::capture(
