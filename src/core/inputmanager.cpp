@@ -367,9 +367,8 @@ namespace ui
                     input.focusedNode,
                     modalRoot))
             {
-                clearTrackedNode(
-                    input.focusedNode,
-                    input.focusedNodeId);
+                // Keep the live focus state until validateInputState()
+                // performs the semantic FocusLost transition.
             }
 
             if (input.capturedNode &&
