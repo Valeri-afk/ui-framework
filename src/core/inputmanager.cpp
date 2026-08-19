@@ -109,9 +109,10 @@ namespace ui
         const Node *modalRoot)
     {
         setModalRootId(modalRoot);
-
+        
         syncState(nodeTree);
-
+        validateInputState(nodeTree);
+        
         const bool modalIsActive = modalRoot != nullptr;
 
         switch (sdlEvent.type)
@@ -250,6 +251,11 @@ namespace ui
         }
 
         nodeTree.flushMutationQueue();
+        
+        syncState(nodeTree);
+        validateInputState(nodeTree);
+        
+        nodeTree.flushMutationQueue();
         syncState(nodeTree);
     }
 
@@ -260,18 +266,22 @@ namespace ui
             Node *focused = nodeTree.findNode(
                 input_.focusedNode->id());
     
-            if (focused &&
-                isNodeAllowedByModal(nodeTree, focused) &&
-                focused->isVisible() &&
-                focused->isEnabled() &&
-                focused->isFocusable())
+            if (!focused)
+            {
+                input_.focusedNode = nullptr;
+                input_.focusedNodeId.reset();
+            }
+            else if (!isNodeAllowedByModal(nodeTree, focused) ||
+                     !focused->isVisible() ||
+                     !focused->isEnabled() ||
+                     !focused->isFocusable())
+            {
+                clearFocus(nodeTree);
+            }
+            else
             {
                 input_.focusedNode = focused;
                 input_.focusedNodeId = focused->id();
-            }
-            else if (focused)
-            {
-                clearFocus(nodeTree);
             }
         }
     
@@ -280,13 +290,23 @@ namespace ui
             Node *captured = nodeTree.findNode(
                 input_.capturedNode->id());
     
-            if (!captured ||
-                !isNodeAllowedByModal(nodeTree, captured) ||
-                !captured->isVisible() ||
-                !captured->isEnabled() ||
-                !captured->isCapturable())
+            if (!captured)
+            {
+                input_.capturedNode = nullptr;
+                input_.capturedNodeId.reset();
+                clearDragState();
+            }
+            else if (!isNodeAllowedByModal(nodeTree, captured) ||
+                     !captured->isVisible() ||
+                     !captured->isEnabled() ||
+                     !captured->isCapturable())
             {
                 cancelPointerInteraction(nodeTree);
+            }
+            else
+            {
+                input_.capturedNode = captured;
+                input_.capturedNodeId = captured->id();
             }
         }
     }
