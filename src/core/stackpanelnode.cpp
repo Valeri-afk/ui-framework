@@ -1,5 +1,4 @@
 #include "ui_framework/core/stackpanelnode.hpp"
-#include "ui_framework/core/linear_layout.hpp"
 
 #include <cmath>
 
@@ -84,16 +83,6 @@ namespace ui
     CrossAxisAlignment StackPanelNode::getCrossAlignment() const noexcept
     {
         return crossAlignment_;
-    }
-
-    LayoutSize StackPanelNode::measure(MeasureContext &ctx)
-    {
-        return internal::measureLinearPanel(*this, ctx);
-    }
-
-    void StackPanelNode::arrange(ArrangeContext &ctx)
-    {
-        internal::arrangeLinearPanel(*this, ctx);
     }
 
 }
