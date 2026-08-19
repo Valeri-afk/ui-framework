@@ -13,6 +13,7 @@
 
 #include "ui_framework/core/node.hpp"
 #include "ui_framework/core/panelnode.hpp"
+#include "ui_framework/core/rendering_state.hpp"
 
 namespace ui
 {
@@ -113,9 +114,7 @@ namespace ui
                 for (const auto &root : roots_)
                 {
                     if (root)
-                    {
                         ids.push_back(root->id());
-                    }
                 }
 
                 for (NodeId id : ids)
@@ -146,9 +145,7 @@ namespace ui
                 for (auto it = roots_.rbegin(); it != roots_.rend(); ++it)
                 {
                     if (*it)
-                    {
                         ids.push_back((*it)->id());
-                    }
                 }
 
                 for (NodeId id : ids)
@@ -179,9 +176,7 @@ namespace ui
                 for (const auto &overlay : overlays_)
                 {
                     if (overlay)
-                    {
                         ids.push_back(overlay->id());
-                    }
                 }
 
                 for (NodeId id : ids)
@@ -212,9 +207,7 @@ namespace ui
                 for (auto it = overlays_.rbegin(); it != overlays_.rend(); ++it)
                 {
                     if (*it)
-                    {
                         ids.push_back((*it)->id());
-                    }
                 }
 
                 for (NodeId id : ids)
@@ -302,23 +295,10 @@ namespace ui
 
         std::vector<std::unique_ptr<Node>> roots_;
         std::vector<std::unique_ptr<Node>> overlays_;
-
-        // Generic deferred mutation queue.
-        //
-        // Mutations are drained with snapshot-swap semantics. New mutations
-        // added while draining go into the next snapshot and are processed in
-        // the same flush call.
         std::vector<std::unique_ptr<Mutation>> mutationQueue_;
-
-        // Deduplicated layout invalidation queue.
-        //
-        // The queue stores root ids. When any node requires layout, the nearest
-        // root is inserted here.
         std::deque<NodeId> layoutQueue_;
         std::unordered_set<NodeId> layoutQueueSet_;
-
         std::unordered_map<NodeId, Node *> liveNodes_;
-
         std::size_t mutationDepth_ = 0;
 
         template <typename Fn>
@@ -335,7 +315,6 @@ namespace ui
 
         PanelNode *resolveLivePanelParent(Node &parent);
         PanelNode *resolveLivePanelNode(NodeId id);
-
         void flushMutationQueueAndInsertLayout(NodeId id);
 
         Node *attachInternal(
@@ -358,28 +337,21 @@ namespace ui
 
         void insertLayoutQueue(Node *node);
         void drainMutationQueue();
-
         void enterMutationScope() noexcept;
         void leaveMutationScope() noexcept;
-
         bool isMutationScopeActive() const noexcept;
 
         void assertSubtreeOwner(const Node &node, NodeTree *owner) const;
         void assertSubtreeLive(const Node &node) const;
         void assertLiveSubtree(NodeId id, NodeTree *owner) const;
-
         void registerSubtree(Node &node);
         void unregisterSubtree(Node &node);
-
         void registerNode(Node &node);
         void unregisterNode(Node &node);
-
         void mountSubtree(Node &root);
         void unmountSubtree(Node &root);
-
         void attachOwnedSubtree(Node &root, NodeId rootId);
         void detachOwnedSubtree(Node &root, NodeId rootId);
-
         void setSubtreeOwner(Node &root, NodeTree *owner);
 
         bool containsNodeInContainer(
