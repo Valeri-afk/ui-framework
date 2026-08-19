@@ -322,6 +322,26 @@ namespace ui
                     internal::measureLinearPanel(
                         *stackPanel,
                         ctx));
+
+            for (size_t i = 0; i < stackPanel->childCount(); ++i)
+            {
+                Node *child = stackPanel->getChildAt(i);
+
+                if (!child ||
+                    !child->isVisible() ||
+                    child->getPositionMode() != PositionMode::Absolute)
+                {
+                    continue;
+                }
+
+                const LayoutSize childAvailableBorder =
+                    toBorderBoxSize(*child, availableContent);
+
+                measureRecursive(
+                    *child,
+                    childAvailableBorder,
+                    nodeTree);
+            }
         }
         else
         {
@@ -385,6 +405,29 @@ namespace ui
             internal::arrangeLinearPanel(
                 *stackPanel,
                 ctx);
+
+            for (size_t i = 0; i < stackPanel->childCount(); ++i)
+            {
+                Node *child = stackPanel->getChildAt(i);
+
+                if (!child ||
+                    !child->isVisible() ||
+                    child->getPositionMode() != PositionMode::Absolute)
+                {
+                    continue;
+                }
+
+                LayoutSize finalSize =
+                    internal::resolveFinalSize(
+                        *child,
+                        sanitizeSize(child->desiredSize_));
+
+                child->actualPosition_ =
+                    ctx.contentPosition + child->position_;
+                child->actualSize_ = finalSize;
+
+                arrangeRecursive(*child, nodeTree);
+            }
         }
         else
         {
