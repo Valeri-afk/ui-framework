@@ -15,7 +15,11 @@ source of truth for current behavior.
 
 ### Current Phase
 
-**Phase 4 — Rendering / Backend (next implementation phase)**
+**Phase 5 — Component Model**
+
+Phase 4 — Rendering / Backend is **completed at source level** on the current
+`main` branch. Compilation, automated tests, runtime validation and full-build
+validation remain intentionally deferred until the end of Phase 6.
 
 ### Current branch
 
@@ -30,6 +34,8 @@ main
 **Phase 2 — Layout**
 
 **Phase 3 — Input / Events**
+
+**Phase 4 — Rendering / Backend**
 
 Phase 1 ownership, lifecycle, traversal and deferred mutation contracts are
 accepted as the active runtime baseline.
@@ -298,33 +304,79 @@ Phase 3 does not introduce:
 
 ### Status
 
-**Next implementation phase.**
+**Completed at source level.**
 
-### Scope
+### Architectural result
 
-- SDL rendering;
-- clipping;
-- resources;
-- rendering traversal and backend boundaries;
-- optional RenderContext;
-- optional second backend.
+Phase 4 established the framework's rendering and backend contract without
+introducing unnecessary generic abstractions.
 
-### Goal
+Core result:
 
-Establish a stable rendering contract for the framework before building the
-main reusable component layer.
+```text
+Layout final geometry
+        ↓
+actualPosition / actualSize
+        ↓
+render traversal
+        ↓
+renderer state isolation / clipping
+        ↓
+SDL3 backend
+```
 
-### Dependencies
+Top-level paint order:
 
-- Phase 1
-- Phase 2
-- Phase 3
+```text
+roots → overlays → top modal
+```
+
+The same top-level priority model is reused by update and reversed for
+hit-testing.
+
+The framework is SDL3-only. The application owns SDL runtime lifetime while
+the framework uses the SDL3 renderer/backend.
+
+Renderer-bound resources remain local to the component/node that owns them;
+no generic resource manager was introduced. Animation is a future state-change
+mechanism, not a Phase 4 subsystem.
+
+### Completed source-level scope
+
+- SDL3 rendering;
+- mutation-safe render traversal;
+- root / overlay / modal presentation ordering;
+- renderer state RAII isolation;
+- nested rectangular `Overflow::HIDDEN` clipping;
+- renderer-state restoration;
+- canonical recursive hit-testing;
+- resource ownership/representation boundary;
+- stable SDL3 backend boundary;
+- geometry → rendering boundary;
+- documented visual-state and future-animation semantics.
 
 ### Explicit non-goals
 
 - forcing a second backend;
-- introducing RenderContext without a concrete architectural need;
+- `RenderContext` without concrete need;
+- global `zIndex` / stacking contexts;
+- generic ResourceManager / AnimationManager;
+- transform subsystem;
+- scroll subsystem;
+- persistent text-to-texture cache;
+- full offscreen resource system;
 - redesigning layout or input contracts for rendering convenience.
+
+### Documentation checkpoints
+
+- `docs/PHASE4_CHECKPOINT_BCE.md`
+- `docs/PHASE4_IMPLEMENTATION_SCOPE.md`
+- `docs/PHASE4_FINAL_CHECKPOINT.md`
+
+### Validation status
+
+Phase 4 remains **source-level complete**. Compilation, automated tests,
+runtime validation and full-build validation remain deferred to Phase 6.
 
 ---
 
@@ -332,7 +384,7 @@ main reusable component layer.
 
 ### Status
 
-**Planned.**
+**Current / Planned.**
 
 ### Scope
 
@@ -428,9 +480,9 @@ Phase 2 — Layout                    [source-level complete]
         ↓
 Phase 3 — Input / Events            [source-level complete]
         ↓
-Phase 4 — Rendering / Backend       [next]
+Phase 4 — Rendering / Backend       [source-level complete]
         ↓
-Phase 5 — Component Model
+Phase 5 — Component Model           [current]
         ↓
 Phase 6 — Modal / Navigation        [full build/test validation]
 ```
