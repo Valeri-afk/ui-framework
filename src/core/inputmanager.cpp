@@ -1182,6 +1182,16 @@ namespace ui
     {
         InputState &input = input_;
 
+        const std::optional<Node::Id> initialCaptureId =
+        input.capturedNode
+            ? std::optional<Node::Id>(input.capturedNode->id())
+            : std::nullopt;
+
+        const std::optional<Node::Id> initialPressedId =
+            input.pressedNode
+                ? std::optional<Node::Id>(input.pressedNode->id())
+                : std::nullopt;
+
         Node *releaseNode =
             input.capturedNode ? input.capturedNode : node;
 
@@ -1221,7 +1231,32 @@ namespace ui
             return;
         }
 
+        if (initialCaptureId)
+        {
+            if (!input.capturedNode)
+            {
+                syncState(nodeTree);
+                return;
+            }
+        
+            if (input.capturedNode->id() != *initialCaptureId)
+            {
+                syncState(nodeTree);
+                return;
+            }
+        }
+
         Node *pressedNode = input.pressedNode;
+        
+        if (initialPressedId)
+        {
+            if (!pressedNode ||
+                pressedNode->id() != *initialPressedId)
+            {
+                syncState(nodeTree);
+                return;
+            }
+        }
 
         if (pressedNode)
         {
@@ -1246,6 +1281,14 @@ namespace ui
                 clickEvent.position = event.position;
                 clickEvent.button = event.button;
 
+                if (captureBeforeClick &&
+                input.capturedNode &&
+                input.capturedNode->id() != *captureBeforeClick)
+                {
+                    syncState(nodeTree);
+                    return;
+                }
+
                 if (!dispatchEvent(
                         nodeTree,
                         liveReleaseNode,
@@ -1265,6 +1308,11 @@ namespace ui
             }
         }
 
+        const std::optional<Node::Id> captureBeforeClick =
+        input.capturedNode
+            ? std::optional<Node::Id>(input.capturedNode->id())
+            : std::nullopt;
+        
         releaseCapture(nodeTree, event.position);
     }
 
