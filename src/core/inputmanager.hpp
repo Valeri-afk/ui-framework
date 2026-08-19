@@ -103,6 +103,8 @@ namespace ui
             bool requireFocusable = false,
             bool requireCapturable = false);
 
+        void validateInputState(NodeTree &nodeTree);
+
         void setModalRootId(const Node *modalRoot) noexcept;
 
         bool dispatchDragEndIfNeeded(
