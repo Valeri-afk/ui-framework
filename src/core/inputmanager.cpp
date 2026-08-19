@@ -1253,6 +1253,78 @@ namespace ui
         case SDLK_RIGHT:
             return KeyCode::RIGHT;
 
+        case SDLK_LSHIFT:
+            return KeyCode::LSHIFT;
+
+        case SDLK_RSHIFT:
+            return KeyCode::RSHIFT;
+
+        case SDLK_LCTRL:
+            return KeyCode::LCTRL;
+
+        case SDLK_RCTRL:
+            return KeyCode::RCTRL;
+
+        case SDLK_LALT:
+            return KeyCode::LALT;
+
+        case SDLK_RALT:
+            return KeyCode::RALT;
+
+        case SDLK_LGUI:
+            return KeyCode::LGUI;
+
+        case SDLK_RGUI:
+            return KeyCode::RGUI;
+
+        case SDLK_CAPSLOCK:
+            return KeyCode::CAPS_LOCK;
+
+        case SDLK_NUMLOCKCLEAR:
+            return KeyCode::NUM_LOCK;
+
+        case SDLK_SCROLLLOCK:
+            return KeyCode::SCROLL_LOCK;
+
+        case SDLK_PAUSE:
+            return KeyCode::PAUSE;
+
+        case SDLK_PRINTSCREEN:
+            return KeyCode::PRINT_SCREEN;
+
+        case SDLK_COMMA:
+            return KeyCode::COMMA;
+
+        case SDLK_PERIOD:
+            return KeyCode::PERIOD;
+
+        case SDLK_SLASH:
+            return KeyCode::SLASH;
+
+        case SDLK_SEMICOLON:
+            return KeyCode::SEMICOLON;
+
+        case SDLK_APOSTROPHE:
+            return KeyCode::QUOTE;
+
+        case SDLK_LEFTBRACKET:
+            return KeyCode::LBRACKET;
+
+        case SDLK_RIGHTBRACKET:
+            return KeyCode::RBRACKET;
+
+        case SDLK_BACKSLASH:
+            return KeyCode::BACKSLASH;
+
+        case SDLK_GRAVE:
+            return KeyCode::GRAVE;
+
+        case SDLK_MINUS:
+            return KeyCode::MINUS;
+
+        case SDLK_EQUALS:
+            return KeyCode::EQUALS;
+
         default:
             return KeyCode::UNKNOWN;
         }
