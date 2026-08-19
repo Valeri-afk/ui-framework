@@ -1,4 +1,5 @@
 #include "ui_framework/core/linear_layout.hpp"
+#include "ui_framework/core/layout_constraints.hpp"
 #include "ui_framework/core/stackpanelnode.hpp"
 
 #include <algorithm>
@@ -133,6 +134,7 @@ namespace ui::internal
         struct ChildPlacement
         {
             size_t visibleIndex;
+            Node *node;
             LayoutSize desired;
         };
 
@@ -154,11 +156,12 @@ namespace ui::internal
             if (child->getPositionMode() == PositionMode::Absolute)
                 continue;
 
-            const LayoutSize desired = child->getDesiredSize();
+            const LayoutSize desired =
+                resolveFinalSize(*child, child->getDesiredSize());
             const float mainSize = vertical ? desired.height : desired.width;
 
             occupiedMain = safeAdd(occupiedMain, finiteOrZero(mainSize));
-            children.push_back({childVisibleIndex, desired});
+            children.push_back({childVisibleIndex, child, desired});
         }
 
         if (children.size() > 1)
@@ -244,6 +247,20 @@ namespace ui::internal
                     finalSize.height = availableCross;
                 break;
             }
+
+            finalSize = resolveFinalSize(*placement.node, finalSize);
+
+            const float finalCross =
+                vertical ? finalSize.width : finalSize.height;
+            const float finalCrossFree =
+                std::max(0.0f, availableCross - finiteOrZero(finalCross));
+
+            if (panel.getCrossAlignment() == CrossAxisAlignment::CENTER)
+                crossOffset = finalCrossFree * 0.5f;
+            else if (panel.getCrossAlignment() == CrossAxisAlignment::END)
+                crossOffset = finalCrossFree;
+            else
+                crossOffset = 0.0f;
 
             LayoutPosition childPosition = position;
 
