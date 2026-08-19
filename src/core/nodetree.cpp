@@ -920,9 +920,24 @@ namespace ui
 
     void NodeTree::insertLayoutQueueById(NodeId id)
     {
-        if (layoutQueueSet_.insert(id).second)
+        Node *node = findNode(id);
+    
+        if (!node)
+            return;
+    
+        Node *layoutRoot = node;
+    
+        while (layoutRoot->parent())
         {
-            layoutQueue_.push_back(id);
+            layoutRoot = layoutRoot->parent();
+        }
+    
+        if (!isRoot(layoutRoot) && !isOverlay(layoutRoot))
+            return;
+    
+        if (layoutQueueSet_.insert(layoutRoot->id()).second)
+        {
+            layoutQueue_.push_back(layoutRoot->id());
         }
     }
 
