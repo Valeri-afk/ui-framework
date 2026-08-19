@@ -426,14 +426,6 @@ Describes the architecture that is actually implemented in the main source tree.
 
 Records Phase 1 runtime analysis and stabilization work.
 
-`docs/PHASE1_RUNTIME_DECISIONS.md`
-
-Records the detailed Phase 1 ownership/removal/reparenting decision.
-
-`docs/PHASE1_LIFETIME.md`
-
-Records the selected framework lifetime and shutdown contract.
-
 `docs/PHASE1_FINAL_DECISIONS.md`
 
 Provides the concise final architecture snapshot for Phase 1 and future development contexts.
