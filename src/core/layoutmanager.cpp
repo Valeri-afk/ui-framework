@@ -11,24 +11,14 @@
 
 namespace
 {
-
     constexpr float kInfinity = std::numeric_limits<float>::max();
 
-    float finiteOrZero(float value) noexcept
-    {
-        return std::isfinite(value) ? value : 0.0f;
-    }
-
-    float finiteOrInfinity(float value) noexcept
-    {
-        return std::isfinite(value) ? value : kInfinity;
-    }
+    float finiteOrZero(float value) noexcept { return std::isfinite(value) ? value : 0.0f; }
+    float finiteOrInfinity(float value) noexcept { return std::isfinite(value) ? value : kInfinity; }
 
     float safeAdd(float a, float b) noexcept
     {
-        if (!std::isfinite(a) || !std::isfinite(b))
-            return kInfinity;
-
+        if (!std::isfinite(a) || !std::isfinite(b)) return kInfinity;
         const float result = a + b;
         return std::isfinite(result) ? result : kInfinity;
     }
@@ -51,369 +41,199 @@ namespace
         return border;
     }
 
-    ui::LayoutSize paddingBorderSize(
-        const ui::Padding &padding,
-        const ui::Border &border) noexcept
+    ui::LayoutSize paddingBorderSize(const ui::Padding &padding, const ui::Border &border) noexcept
     {
         return {
-            safeAdd(
-                safeAdd(padding.left, padding.right),
-                safeAdd(border.left, border.right)),
-            safeAdd(
-                safeAdd(padding.top, padding.bottom),
-                safeAdd(border.top, border.bottom))};
+            safeAdd(safeAdd(padding.left, padding.right), safeAdd(border.left, border.right)),
+            safeAdd(safeAdd(padding.top, padding.bottom), safeAdd(border.top, border.bottom))};
     }
 
     float subtractInset(float value, float inset) noexcept
     {
-        return std::max(
-            0.0f,
-            finiteOrInfinity(value) - finiteOrZero(inset));
+        return std::max(0.0f, finiteOrInfinity(value) - finiteOrZero(inset));
     }
 
-    ui::LayoutSize subtractPaddingBorder(
-        ui::LayoutSize borderBoxSize,
-        const ui::Padding &padding,
-        const ui::Border &border) noexcept
+    ui::LayoutSize subtractPaddingBorder(ui::LayoutSize borderBoxSize, const ui::Padding &padding, const ui::Border &border) noexcept
     {
-        const ui::LayoutSize insets =
-            paddingBorderSize(padding, border);
-
-        return {
-            subtractInset(borderBoxSize.width, insets.width),
-            subtractInset(borderBoxSize.height, insets.height)};
+        const ui::LayoutSize insets = paddingBorderSize(padding, border);
+        return {subtractInset(borderBoxSize.width, insets.width), subtractInset(borderBoxSize.height, insets.height)};
     }
 
-    ui::LayoutSize toContentSize(
-        ui::Node &node,
-        ui::LayoutSize borderBoxSize) noexcept
+    ui::LayoutSize toContentSize(ui::Node &node, ui::LayoutSize borderBoxSize) noexcept
     {
-        return subtractPaddingBorder(
-            borderBoxSize,
-            sanitizePadding(node.getPadding()),
-            sanitizeBorder(node.getBorder()));
+        return subtractPaddingBorder(borderBoxSize, sanitizePadding(node.getPadding()), sanitizeBorder(node.getBorder()));
     }
 
-    ui::LayoutSize toBorderBoxSize(
-        const ui::Node &node,
-        ui::LayoutSize contentSize) noexcept
+    ui::LayoutSize toBorderBoxSize(const ui::Node &node, ui::LayoutSize contentSize) noexcept
     {
         const ui::Padding padding = sanitizePadding(node.getPadding());
         const ui::Border border = sanitizeBorder(node.getBorder());
         const ui::LayoutSize insets = paddingBorderSize(padding, border);
-
-        return {
-            safeAdd(contentSize.width, insets.width),
-            safeAdd(contentSize.height, insets.height)};
+        return {safeAdd(contentSize.width, insets.width), safeAdd(contentSize.height, insets.height)};
     }
 
     ui::LayoutPosition getContentPosition(const ui::Node &node) noexcept
     {
         const ui::LayoutPosition position = node.getActualPosition();
-
         const ui::Padding padding = sanitizePadding(node.getPadding());
         const ui::Border border = sanitizeBorder(node.getBorder());
-
-        return {
-            finiteOrZero(position.x) + border.left + padding.left,
-            finiteOrZero(position.y) + border.top + padding.top};
+        return {finiteOrZero(position.x) + border.left + padding.left, finiteOrZero(position.y) + border.top + padding.top};
     }
 
     ui::LayoutSize getContentSize(const ui::Node &node) noexcept
     {
         const ui::LayoutSize size = node.getActualSize();
-
         const ui::Padding padding = sanitizePadding(node.getPadding());
         const ui::Border border = sanitizeBorder(node.getBorder());
-
-        const ui::LayoutSize insets =
-            paddingBorderSize(padding, border);
-
-        return {
-            std::max(
-                0.0f,
-                finiteOrZero(size.width) - insets.width),
-            std::max(
-                0.0f,
-                finiteOrZero(size.height) - insets.height)};
+        const ui::LayoutSize insets = paddingBorderSize(padding, border);
+        return {std::max(0.0f, finiteOrZero(size.width) - insets.width), std::max(0.0f, finiteOrZero(size.height) - insets.height)};
     }
 
-    bool getRenderOutputSize(
-        SDL_Renderer *renderer,
-        int *width,
-        int *height)
+    bool getRenderOutputSize(SDL_Renderer *renderer, int *width, int *height)
     {
         return SDL_GetCurrentRenderOutputSize(renderer, width, height) == 0;
     }
-
 }
 
 namespace ui
 {
     LayoutManager::LayoutManager() = default;
 
-    void LayoutManager::setViewportSize(
-        const LayoutSize &size) noexcept
-    {
-        viewportSize_ = sanitizeSize(size);
-    }
+    void LayoutManager::setViewportSize(const LayoutSize &size) noexcept { viewportSize_ = sanitizeSize(size); }
+    LayoutSize LayoutManager::getViewportSize() const noexcept { return viewportSize_; }
 
-    LayoutSize LayoutManager::getViewportSize() const noexcept
+    bool LayoutManager::syncViewportFromRenderer(SDL_Renderer *renderer)
     {
-        return viewportSize_;
-    }
-
-    bool LayoutManager::syncViewportFromRenderer(
-        SDL_Renderer *renderer)
-    {
-        if (!renderer)
-            return false;
-
+        if (!renderer) return false;
         int width = 0;
         int height = 0;
-
-        if (!getRenderOutputSize(renderer, &width, &height))
-            return false;
-
-        const LayoutSize newSize{
-            static_cast<float>(width),
-            static_cast<float>(height)};
-
-        if (newSize == viewportSize_)
-            return false;
-
+        if (!getRenderOutputSize(renderer, &width, &height)) return false;
+        const LayoutSize newSize{static_cast<float>(width), static_cast<float>(height)};
+        if (newSize == viewportSize_) return false;
         viewportSize_ = sanitizeSize(newSize);
         return true;
     }
 
-    void LayoutManager::requestFullLayout(
-        NodeTree &nodeTree)
-    {
-        nodeTree.requestFullLayout();
-    }
+    void LayoutManager::requestFullLayout(NodeTree &nodeTree) { nodeTree.requestFullLayout(); }
 
-    void LayoutManager::processLayoutQueue(
-        NodeTree &nodeTree)
+    void LayoutManager::processLayoutQueue(NodeTree &nodeTree)
     {
         {
             NodeTree::ScopedMutationGuard guard(nodeTree);
-
-            nodeTree.forEachLayoutQueue(
-                [this, &nodeTree](Node &root)
-                {
-                    if (!root.isVisible())
-                        return;
-
-                    const Node::Id rootId = root.id();
-                    const LayoutSize rootAvailable =
-                        makeRootAvailableSize(root);
-
-                    measureRecursive(root, rootAvailable, nodeTree);
-
-                    Node *liveRoot = nodeTree.findNode(rootId);
-                    if (!liveRoot)
-                        return;
-
-                    liveRoot->actualSize_ =
-                        internal::resolveFinalSize(*liveRoot, rootAvailable);
-                    liveRoot->actualPosition_ = liveRoot->position_;
-
-                    arrangeRecursive(*liveRoot, nodeTree);
-                });
+            nodeTree.forEachLayoutQueue([this, &nodeTree](Node &root)
+            {
+                if (!root.isVisible()) return;
+                const Node::Id rootId = root.id();
+                const LayoutSize rootAvailable = makeRootAvailableSize(root);
+                measureRecursive(root, rootAvailable, nodeTree);
+                Node *liveRoot = nodeTree.findNode(rootId);
+                if (!liveRoot) return;
+                liveRoot->actualSize_ = internal::resolveFinalSize(*liveRoot, rootAvailable);
+                liveRoot->actualPosition_ = liveRoot->position_;
+                arrangeRecursive(*liveRoot, nodeTree);
+            });
         }
-
         nodeTree.flushMutationQueue();
     }
 
-    LayoutSize LayoutManager::measureTextNode(
-        TextNode &node,
-        const LayoutSize &availableContent) const
+    LayoutSize LayoutManager::measureTextNode(TextNode &node, const LayoutSize &availableContent) const
     {
-        if (!node.font_ || node.text_.empty())
-            return {};
-
-        const float availableWidth =
-            finiteOrInfinity(availableContent.width);
-
+        if (!node.font_ || node.text_.empty()) return {};
+        const float availableWidth = finiteOrInfinity(availableContent.width);
         int width = 0;
         int height = 0;
-
-        const bool measured =
-            availableWidth < kInfinity
-                ? TTF_GetStringSizeWrapped(
-                      node.font_,
-                      node.text_.c_str(),
-                      node.text_.size(),
-                      static_cast<int>(std::round(
-                          std::max(0.0f, availableWidth))),
-                      &width,
-                      &height)
-                : TTF_GetStringSize(
-                      node.font_,
-                      node.text_.c_str(),
-                      node.text_.size(),
-                      &width,
-                      &height);
-
-        if (!measured)
-            return {};
-
-        return {
-            static_cast<float>(width),
-            static_cast<float>(height)};
+        const bool measured = availableWidth < kInfinity
+            ? TTF_GetStringSizeWrapped(node.font_, node.text_.c_str(), node.text_.size(),
+                  static_cast<int>(std::round(std::max(0.0f, availableWidth))), &width, &height)
+            : TTF_GetStringSize(node.font_, node.text_.c_str(), node.text_.size(), &width, &height);
+        if (!measured) return {};
+        return {static_cast<float>(width), static_cast<float>(height)};
     }
 
-    void LayoutManager::measureRecursive(
-        Node &node,
-        const LayoutSize &availableBorderBoxSize,
-        NodeTree &nodeTree)
+    void LayoutManager::measureRecursive(Node &node, const LayoutSize &availableBorderBoxSize, NodeTree &nodeTree)
     {
-        if (!node.isVisible())
-            return;
-
+        if (!node.isVisible()) return;
         const Node::Id nodeId = node.id();
-        LayoutSize availableBorder =
-            internal::resolveMeasurementProposal(
-                node,
-                sanitizeProposal(availableBorderBoxSize));
-        const LayoutSize availableContent =
-            toContentSize(node, availableBorder);
+        const LayoutSize availableBorder = internal::resolveMeasurementProposal(node, sanitizeProposal(availableBorderBoxSize));
+        const LayoutSize availableContent = toContentSize(node, availableBorder);
 
         internal::LinearMeasureContext ctx;
         ctx.availableSize = availableContent;
-        ctx.measureChild =
-            [this, &nodeTree, &node](
-                size_t visibleChildIndex,
-                const LayoutSize &childAvailableContent) -> LayoutSize
+        ctx.measureChild = [this, &nodeTree, &node](size_t visibleChildIndex, const LayoutSize &childAvailableContent) -> LayoutSize
         {
             Node *child = node.getVisibleChild(visibleChildIndex);
-            if (!child)
-                return {};
-
+            if (!child) return {};
             const Node::Id childId = child->id();
-            const LayoutSize childAvailableBorder =
-                toBorderBoxSize(*child, childAvailableContent);
-
+            const LayoutSize childAvailableBorder = toBorderBoxSize(*child, childAvailableContent);
             measureRecursive(*child, childAvailableBorder, nodeTree);
-
             Node *liveChild = nodeTree.findNode(childId);
             return liveChild ? liveChild->desiredSize_ : LayoutSize{};
         };
 
         LayoutSize desiredContent{};
-
         if (auto *stackPanel = dynamic_cast<StackPanelNode *>(&node))
         {
-            desiredContent = sanitizeSize(
-                internal::measureLinearPanel(*stackPanel, ctx));
-
+            desiredContent = sanitizeSize(internal::measureLinearPanel(*stackPanel, ctx));
             for (size_t i = 0; i < stackPanel->childCount(); ++i)
             {
                 Node *child = stackPanel->getChildAt(i);
-                if (!child || !child->isVisible() ||
-                    child->getPositionMode() != PositionMode::Absolute)
-                    continue;
-
-                measureRecursive(
-                    *child,
-                    toBorderBoxSize(*child, availableContent),
-                    nodeTree);
+                if (!child || !child->isVisible() || child->getPositionMode() != PositionMode::Absolute) continue;
+                measureRecursive(*child, toBorderBoxSize(*child, availableContent), nodeTree);
             }
         }
         else if (auto *textNode = dynamic_cast<TextNode *>(&node))
         {
-            desiredContent = sanitizeSize(
-                measureTextNode(*textNode, availableContent));
+            desiredContent = sanitizeSize(measureTextNode(*textNode, availableContent));
         }
         else
         {
-            MeasureContext legacyCtx;
-            legacyCtx.availableSize = ctx.availableSize;
-            legacyCtx.measureChild = ctx.measureChild;
-            desiredContent = sanitizeSize(node.measure(legacyCtx));
+            // Non-layout nodes have no intrinsic measurement in the Phase 2 core.
+            desiredContent = {};
         }
 
         Node *liveNode = nodeTree.findNode(nodeId);
-        if (!liveNode)
-            return;
-
-        LayoutSize desiredBorder =
-            internal::resolveFinalSize(
-                *liveNode,
-                toBorderBoxSize(*liveNode, desiredContent));
-
-        liveNode->desiredSize_ = desiredBorder;
+        if (!liveNode) return;
+        liveNode->desiredSize_ = internal::resolveFinalSize(*liveNode, toBorderBoxSize(*liveNode, desiredContent));
     }
 
-    void LayoutManager::arrangeRecursive(
-        Node &node,
-        NodeTree &nodeTree)
+    void LayoutManager::arrangeRecursive(Node &node, NodeTree &nodeTree)
     {
-        if (!node.isVisible())
-            return;
-
+        if (!node.isVisible()) return;
         internal::LinearArrangeContext ctx;
         ctx.contentPosition = getContentPosition(node);
         ctx.contentSize = getContentSize(node);
-        ctx.placeChild =
-            [this, &nodeTree, &node](
-                size_t visibleChildIndex,
-                const LayoutPosition &position,
-                const LayoutSize &size)
+        ctx.placeChild = [this, &nodeTree, &node](size_t visibleChildIndex, const LayoutPosition &position, const LayoutSize &size)
         {
             Node *child = node.getVisibleChild(visibleChildIndex);
-            if (!child || !child->isVisible())
-                return;
-
+            if (!child || !child->isVisible()) return;
             child->actualPosition_ = position;
-            child->actualSize_ = internal::resolveFinalSize(
-                *child,
-                sanitizeSize(size));
-
+            child->actualSize_ = internal::resolveFinalSize(*child, sanitizeSize(size));
             arrangeRecursive(*child, nodeTree);
         };
 
         if (auto *stackPanel = dynamic_cast<StackPanelNode *>(&node))
         {
             internal::arrangeLinearPanel(*stackPanel, ctx);
-
             for (size_t i = 0; i < stackPanel->childCount(); ++i)
             {
                 Node *child = stackPanel->getChildAt(i);
-                if (!child || !child->isVisible() ||
-                    child->getPositionMode() != PositionMode::Absolute)
-                    continue;
-
-                child->actualPosition_ =
-                    ctx.contentPosition + child->position_;
-                child->actualSize_ = internal::resolveFinalSize(
-                    *child,
-                    sanitizeSize(child->desiredSize_));
-
+                if (!child || !child->isVisible() || child->getPositionMode() != PositionMode::Absolute) continue;
+                child->actualPosition_ = ctx.contentPosition + child->position_;
+                child->actualSize_ = internal::resolveFinalSize(*child, sanitizeSize(child->desiredSize_));
                 arrangeRecursive(*child, nodeTree);
             }
         }
-        else
+        else if (node.getVisibleChild(0))
         {
-            ArrangeContext legacyCtx;
-            legacyCtx.contentPosition = ctx.contentPosition;
-            legacyCtx.contentSize = ctx.contentSize;
-            legacyCtx.placeChild = ctx.placeChild;
-            node.arrange(legacyCtx);
+            // Non-linear containers have no Phase 2 arrangement algorithm yet.
         }
     }
 
-    LayoutSize LayoutManager::makeRootAvailableSize(
-        const Node &root) const
+    LayoutSize LayoutManager::makeRootAvailableSize(const Node &root) const
     {
         LayoutSize size = viewportSize_;
-
-        if (root.size_.width.isValue())
-            size.width = root.size_.width.value;
-
-        if (root.size_.height.isValue())
-            size.height = root.size_.height.value;
-
+        if (root.size_.width.isValue()) size.width = root.size_.width.value;
+        if (root.size_.height.isValue()) size.height = root.size_.height.value;
         return sanitizeSize(size);
     }
 }
