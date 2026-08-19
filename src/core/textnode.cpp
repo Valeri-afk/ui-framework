@@ -172,6 +172,10 @@ namespace ui
                 border.top - border.bottom -
                 padding.top - padding.bottom);
 
+        TTF_SetTextWrapWidth(
+            textObject_,
+            static_cast<int>(std::round(contentWidth)));
+
         int textWidth = 0;
         int textHeight = 0;
         TTF_GetTextSize(textObject_, &textWidth, &textHeight);
