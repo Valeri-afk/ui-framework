@@ -30,52 +30,24 @@ namespace
             return kInfinity;
 
         const float result = a + b;
-
         return std::isfinite(result) ? result : kInfinity;
-    }
-
-    float safeSubtract(float a, float b) noexcept
-    {
-        if (!std::isfinite(a))
-            return kInfinity;
-
-        if (!std::isfinite(b))
-            return 0.0f;
-
-        return std::max(0.0f, a - b);
-    }
-
-    ui::LayoutSize sanitizeSize(ui::LayoutSize size) noexcept
-    {
-        return {
-            finiteOrZero(size.width),
-            finiteOrZero(size.height)};
-    }
-
-    ui::LayoutSize sanitizeProposal(ui::LayoutSize size) noexcept
-    {
-        return {
-            finiteOrInfinity(size.width),
-            finiteOrInfinity(size.height)};
     }
 
     ui::Padding sanitizePadding(ui::Padding padding) noexcept
     {
-        padding.left = finiteOrZero(padding.left);
-        padding.right = finiteOrZero(padding.right);
-        padding.top = finiteOrZero(padding.top);
-        padding.bottom = finiteOrZero(padding.bottom);
-
+        padding.left = std::max(0.0f, finiteOrZero(padding.left));
+        padding.right = std::max(0.0f, finiteOrZero(padding.right));
+        padding.top = std::max(0.0f, finiteOrZero(padding.top));
+        padding.bottom = std::max(0.0f, finiteOrZero(padding.bottom));
         return padding;
     }
 
     ui::Border sanitizeBorder(ui::Border border) noexcept
     {
-        border.left = finiteOrZero(border.left);
-        border.right = finiteOrZero(border.right);
-        border.top = finiteOrZero(border.top);
-        border.bottom = finiteOrZero(border.bottom);
-
+        border.left = std::max(0.0f, finiteOrZero(border.left));
+        border.right = std::max(0.0f, finiteOrZero(border.right));
+        border.top = std::max(0.0f, finiteOrZero(border.top));
+        border.bottom = std::max(0.0f, finiteOrZero(border.bottom));
         return border;
     }
 
@@ -83,40 +55,43 @@ namespace
         const ui::Padding &padding,
         const ui::Border &border) noexcept
     {
-        const float horizontal =
+        return {
             safeAdd(
                 safeAdd(padding.left, padding.right),
-                safeAdd(border.left, border.right));
-
-        const float vertical =
+                safeAdd(border.left, border.right)),
             safeAdd(
                 safeAdd(padding.top, padding.bottom),
-                safeAdd(border.top, border.bottom));
-
-        return {
-            horizontal,
-            vertical};
-    }
-
-    ui::LayoutSize addPaddingBorder(
-        ui::LayoutSize contentSize,
-        const ui::Padding &padding,
-        const ui::Border &border) noexcept
-    {
-        const ui::LayoutSize insets =
-            paddingBorderSize(padding, border);
-
-        return {
-            safeAdd(contentSize.width, insets.width),
-            safeAdd(contentSize.height, insets.height)};
+                safeAdd(border.top, border.bottom))};
     }
 
     float subtractInset(float value, float inset) noexcept
     {
-        if (value >= kInfinity / 2.0f)
-            return kInfinity;
+        return std::max(
+            0.0f,
+            finiteOrInfinity(value) - finiteOrZero(inset));
+    }
 
-        return safeSubtract(value, inset);
+    ui::LayoutSize toContentSize(
+        ui::Node &node,
+        ui::LayoutSize borderBoxSize) noexcept
+    {
+        return subtractPaddingBorder(
+            borderBoxSize,
+            sanitizePadding(node.getPadding()),
+            sanitizeBorder(node.getBorder()));
+    }
+
+    ui::LayoutSize toBorderBoxSize(
+        const ui::Node &node,
+        ui::LayoutSize contentSize) noexcept
+    {
+        const ui::Padding padding = sanitizePadding(node.getPadding());
+        const ui::Border border = sanitizeBorder(node.getBorder());
+        const ui::LayoutSize insets = paddingBorderSize(padding, border);
+
+        return {
+            safeAdd(contentSize.width, insets.width),
+            safeAdd(contentSize.height, insets.height)};
     }
 
     ui::LayoutSize subtractPaddingBorder(
@@ -322,7 +297,7 @@ namespace ui
         const LayoutSize availableContent =
             toContentSize(node, availableBorder);
 
-        MeasureContext ctx;
+        internal::LinearMeasureContext ctx;
         ctx.availableSize = availableContent;
 
         ctx.measureChild =
@@ -420,7 +395,7 @@ namespace ui
         if (!node.isVisible())
             return;
 
-        ArrangeContext ctx;
+        internal::LinearArrangeContext ctx;
 
         ctx.contentPosition = getContentPosition(node);
         ctx.contentSize = getContentSize(node);
@@ -478,7 +453,11 @@ namespace ui
         }
         else
         {
-            node.arrange(ctx);
+            ArrangeContext legacyCtx;
+            legacyCtx.contentPosition = ctx.contentPosition;
+            legacyCtx.contentSize = ctx.contentSize;
+            legacyCtx.placeChild = ctx.placeChild;
+            node.arrange(legacyCtx);
         }
     }
 
