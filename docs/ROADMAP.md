@@ -15,17 +15,19 @@ source of truth for current behavior.
 
 ### Current Phase
 
-**Phase 2 — Layout (source-level complete)**
+**Phase 3 — Input / Events (source-level complete on `phase3-input-events`)**
 
 ### Current branch
 
 ```text
-main
+phase3-input-events
 ```
 
-### Previous completed phase
+### Previous completed phases
 
 **Phase 1 — Runtime**
+
+**Phase 2 — Layout**
 
 Phase 1 ownership, lifecycle, traversal and deferred mutation contracts are
 accepted as the active runtime baseline.
@@ -235,7 +237,7 @@ Build and runtime validation are intentionally deferred until Phase 6.
 
 ### Status
 
-**Next implementation phase.**
+**Completed at source level.**
 
 ### Scope
 
@@ -255,6 +257,38 @@ and layout systems.
 
 - Phase 1
 - Phase 2
+
+### Completed source-level scope
+
+The Phase 3 source implementation currently includes:
+
+- InputManager;
+- hit-test integration;
+- mouse move/down/up/wheel events;
+- mouse enter/leave;
+- click generation;
+- pointer capture;
+- drag begin/update/end;
+- focus acquisition and clearing;
+- FocusGainedEvent / FocusLostEvent;
+- modal input boundary enforcement;
+- keyboard key down/up targeting through focus;
+- NodeId-based event propagation;
+- tunneling / target / bubbling;
+- mutation-safe handler snapshots;
+- deferred mutation safety during event dispatch;
+- reentrant focus and pointer-capture handling.
+
+### Explicit non-goals
+
+Phase 3 does not introduce:
+
+- tab-order focus navigation;
+- keyboard focus traversal;
+- text input / IME;
+- accelerator or key-chord subsystems;
+- drag-and-drop as a higher-level transfer system;
+- application-specific control semantics.
 
 ---
 
@@ -333,7 +367,7 @@ Phase 1 — Runtime
         ↓
 Phase 2 — Layout                    [source-level complete]
         ↓
-Phase 3 — Input / Events            [next]
+Phase 3 — Input / Events            [source-level complete]
         ↓
 Phase 4 — Component Model
         ↓
