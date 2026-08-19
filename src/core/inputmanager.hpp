@@ -77,6 +77,7 @@ namespace ui
 
         InputState input_;
         std::optional<Node::Id> modalRootId_;
+        bool focusTransitionInProgress_ = false;
 
         static void rememberNode(
             Node *&node,
