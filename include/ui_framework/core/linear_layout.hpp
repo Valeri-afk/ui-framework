@@ -2,6 +2,9 @@
 
 #include "ui_framework/types.hpp"
 
+#include <cstddef>
+#include <functional>
+
 namespace ui
 {
 
@@ -9,13 +12,33 @@ namespace ui
 
     namespace internal
     {
+        struct LinearMeasureContext
+        {
+            LayoutSize availableSize;
+
+            std::function<LayoutSize(
+                size_t,
+                const LayoutSize &)> measureChild;
+        };
+
+        struct LinearArrangeContext
+        {
+            LayoutPosition contentPosition;
+            LayoutSize contentSize;
+
+            std::function<void(
+                size_t,
+                const LayoutPosition &,
+                const LayoutSize &)> placeChild;
+        };
+
         LayoutSize measureLinearPanel(
             StackPanelNode &panel,
-            MeasureContext &ctx);
+            LinearMeasureContext &ctx);
 
         void arrangeLinearPanel(
             StackPanelNode &panel,
-            ArrangeContext &ctx);
+            LinearArrangeContext &ctx);
     }
 
 }
