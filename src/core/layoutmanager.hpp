@@ -3,7 +3,6 @@
 #include <SDL3/SDL.h>
 
 #include "nodetree.hpp"
-#include "ui_framework/core/node.hpp"
 #include "ui_framework/types.hpp"
 
 namespace ui
@@ -29,6 +28,10 @@ namespace ui
             Node &node,
             const LayoutSize &availableBorderBoxSize,
             NodeTree &nodeTree);
+
+        LayoutSize measureTextNode(
+            class TextNode &node,
+            const LayoutSize &availableContent) const;
 
         void arrangeRecursive(
             Node &node,
