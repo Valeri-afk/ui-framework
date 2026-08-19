@@ -115,10 +115,6 @@ namespace ui
         virtual void update(float dt) {}
         virtual void draw(SDL_Renderer *renderer) {}
 
-        // Temporary Phase 2 migration seam. New layout code must not dispatch through it.
-        virtual LayoutSize measure(MeasureContext &ctx) { return {}; }
-        virtual void arrange(ArrangeContext &ctx) {}
-
         virtual void onMount() {}
         virtual void onUnmount() {}
 
