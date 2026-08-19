@@ -300,18 +300,16 @@ visible-child access;
 visible-child indexing;
 hierarchy validation.
 
-It also establishes the generic container-side measure() / arrange()
-contract.
+PanelNode does not own the layout measurement or arrangement lifecycle.
 
-Therefore its current role is:
+Its current role is:
 
 Node
   +
 child ownership
   +
 container behavior
-  +
-layout-container interface
+
 4.1 Hierarchy Invariants
 
 A child cannot be attached when:
@@ -547,7 +545,9 @@ nearest tree root
       v
 full root layout
 
-The current system does not implement fine-grained subtree layout invalidation.
+LayoutManager is the framework-owned authority for measurement and arrangement.
+Layout containers participate through the internal layout pipeline; clients do
+not implement or invoke Measure / Arrange lifecycle methods.
 
 11. Measure
 
@@ -609,7 +609,7 @@ StackPanelNode derives from:
 
 PanelNode
 
-and implements a concrete Measure / Arrange strategy.
+and provides the concrete one-dimensional flow behavior used by LayoutManager.
 
 It supports:
 
@@ -626,10 +626,10 @@ uses the maximum child size on the cross axis;
 arranges children sequentially;
 stretches children across the cross axis.
 
-StackPanelNode is therefore an existing layout container.
+StackPanelNode is therefore an existing framework-owned layout container.
 
-It is not part of the current runtime stabilization scope and is expected to be
-revisited during the Layout phase.
+Its current behavior is part of the completed Phase 2 one-dimensional layout
+scope. More advanced flex/grid behavior remains outside Phase 2.
 
 14. Positioning
 
@@ -638,13 +638,13 @@ Node currently exposes:
 PositionMode::Layout
 PositionMode::Absolute
 
-However, the presence of PositionMode::Absolute does not mean that a complete
-absolute-positioning system currently exists.
+PositionMode::Absolute is part of the completed Phase 2 positioning scope.
 
-Absolute positioning is currently an incomplete layout concern.
+Absolute-positioned children are separated from normal one-dimensional flow
+and receive framework-owned final geometry according to the current layout
+pipeline.
 
-Its semantics belong to the Layout phase rather than to the runtime ownership
-model.
+Advanced positioning semantics beyond the Phase 2 scope are not implied.
 
 15. InputManager
 
@@ -1268,8 +1268,8 @@ backend abstraction;
 second rendering backend;
 resource abstraction.
 
-StackPanelNode is an existing layout implementation, but its behavior is not
-currently considered stabilized and will be revisited during Phase 2.
+StackPanelNode is an existing and currently implemented one-dimensional layout
+container. Its Phase 2 behavior is considered complete at source level.
 
 ControlNode is an existing deferred type whose architectural role belongs to
 the Component Model phase.
