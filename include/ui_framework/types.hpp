@@ -45,10 +45,6 @@ namespace ui
         END
     };
 
-    //==========================================================================
-    // Geometry
-    //==========================================================================
-
     enum class PositionMode
     {
         Layout,
@@ -61,30 +57,10 @@ namespace ui
         float y = 0.0f;
 
         bool operator==(const LayoutPosition &) const = default;
-
-        LayoutPosition operator+(const LayoutPosition &rhs) const
-        {
-            return {x + rhs.x, y + rhs.y};
-        }
-
-        LayoutPosition operator-(const LayoutPosition &rhs) const
-        {
-            return {x - rhs.x, y - rhs.y};
-        }
-
-        LayoutPosition &operator+=(const LayoutPosition &rhs)
-        {
-            x += rhs.x;
-            y += rhs.y;
-            return *this;
-        }
-
-        LayoutPosition &operator-=(const LayoutPosition &rhs)
-        {
-            x -= rhs.x;
-            y -= rhs.y;
-            return *this;
-        }
+        LayoutPosition operator+(const LayoutPosition &rhs) const { return {x + rhs.x, y + rhs.y}; }
+        LayoutPosition operator-(const LayoutPosition &rhs) const { return {x - rhs.x, y - rhs.y}; }
+        LayoutPosition &operator+=(const LayoutPosition &rhs) { x += rhs.x; y += rhs.y; return *this; }
+        LayoutPosition &operator-=(const LayoutPosition &rhs) { x -= rhs.x; y -= rhs.y; return *this; }
     };
 
     enum class LayoutValueType
@@ -97,125 +73,36 @@ namespace ui
     {
         LayoutValueType type = LayoutValueType::Auto;
         float value = 0.0f;
-
-        static LayoutValue autoValue() noexcept
-        {
-            return {
-                LayoutValueType::Auto,
-                0.0f};
-        }
-
-        static LayoutValue fixed(float value) noexcept
-        {
-            return {
-                LayoutValueType::Value,
-                value};
-        }
-
-        bool isAuto() const noexcept
-        {
-            return type == LayoutValueType::Auto;
-        }
-
-        bool isValue() const noexcept
-        {
-            return type == LayoutValueType::Value;
-        }
+        static LayoutValue autoValue() noexcept { return {LayoutValueType::Auto, 0.0f}; }
+        static LayoutValue fixed(float value) noexcept { return {LayoutValueType::Value, value}; }
+        bool isAuto() const noexcept { return type == LayoutValueType::Auto; }
+        bool isValue() const noexcept { return type == LayoutValueType::Value; }
     };
 
     struct LayoutSizeValue
     {
         LayoutValue width;
         LayoutValue height;
-
-        static LayoutSizeValue autoSize() noexcept
-        {
-            return {
-                LayoutValue::autoValue(),
-                LayoutValue::autoValue()};
-        }
-
-        static LayoutSizeValue fixed(
-            float width,
-            float height) noexcept
-        {
-            return {
-                LayoutValue::fixed(width),
-                LayoutValue::fixed(height)};
-        }
+        static LayoutSizeValue autoSize() noexcept { return {LayoutValue::autoValue(), LayoutValue::autoValue()}; }
+        static LayoutSizeValue fixed(float width, float height) noexcept { return {LayoutValue::fixed(width), LayoutValue::fixed(height)}; }
     };
 
     struct LayoutSize
     {
         float width = 0.0f;
         float height = 0.0f;
-
-        bool operator==(const LayoutSize &rhs) const
-        {
-            return width == rhs.width && height == rhs.height;
-        }
-
-        bool operator!=(const LayoutSize &rhs) const
-        {
-            return !(*this == rhs);
-        }
-
-        bool operator<(const LayoutSize &rhs) const
-        {
-            if (width != rhs.width)
-                return width < rhs.width;
-
-            return height < rhs.height;
-        }
-
-        bool operator>(const LayoutSize &rhs) const
-        {
-            return rhs < *this;
-        }
-
-        bool operator<=(const LayoutSize &rhs) const
-        {
-            return !(*this > rhs);
-        }
-
-        bool operator>=(const LayoutSize &rhs) const
-        {
-            return !(*this < rhs);
-        }
-
-        LayoutSize operator+(const LayoutSize &rhs) const
-        {
-            return {width + rhs.width, height + rhs.height};
-        }
-
-        LayoutSize operator-(const LayoutSize &rhs) const
-        {
-            return {width - rhs.width, height - rhs.height};
-        }
-
-        LayoutSize operator*(float scalar) const
-        {
-            return {width * scalar, height * scalar};
-        }
-
-        LayoutSize operator/(float scalar) const
-        {
-            return {width / scalar, height / scalar};
-        }
-
-        LayoutSize &operator+=(const LayoutSize &rhs)
-        {
-            width += rhs.width;
-            height += rhs.height;
-            return *this;
-        }
-
-        LayoutSize &operator-=(const LayoutSize &rhs)
-        {
-            width -= rhs.width;
-            height -= rhs.height;
-            return *this;
-        }
+        bool operator==(const LayoutSize &rhs) const { return width == rhs.width && height == rhs.height; }
+        bool operator!=(const LayoutSize &rhs) const { return !(*this == rhs); }
+        bool operator<(const LayoutSize &rhs) const { return width != rhs.width ? width < rhs.width : height < rhs.height; }
+        bool operator>(const LayoutSize &rhs) const { return rhs < *this; }
+        bool operator<=(const LayoutSize &rhs) const { return !(*this > rhs); }
+        bool operator>=(const LayoutSize &rhs) const { return !(*this < rhs); }
+        LayoutSize operator+(const LayoutSize &rhs) const { return {width + rhs.width, height + rhs.height}; }
+        LayoutSize operator-(const LayoutSize &rhs) const { return {width - rhs.width, height - rhs.height}; }
+        LayoutSize operator*(float scalar) const { return {width * scalar, height * scalar}; }
+        LayoutSize operator/(float scalar) const { return {width / scalar, height / scalar}; }
+        LayoutSize &operator+=(const LayoutSize &rhs) { width += rhs.width; height += rhs.height; return *this; }
+        LayoutSize &operator-=(const LayoutSize &rhs) { width -= rhs.width; height -= rhs.height; return *this; }
     };
 
     struct Padding
@@ -224,7 +111,6 @@ namespace ui
         float right = 0.0f;
         float top = 0.0f;
         float bottom = 0.0f;
-
         bool operator==(const Padding &) const = default;
     };
 
@@ -234,7 +120,6 @@ namespace ui
         float right = 0.0f;
         float top = 0.0f;
         float bottom = 0.0f;
-
         bool operator==(const Border &) const = default;
     };
 
@@ -242,23 +127,25 @@ namespace ui
     {
         float minWidth = 0.0f;
         float maxWidth = std::numeric_limits<float>::max();
-
         float minHeight = 0.0f;
         float maxHeight = std::numeric_limits<float>::max();
-
         LayoutSize clamp(LayoutSize size) const noexcept
         {
-            return {
-                std::clamp(
-                    size.width,
-                    minWidth,
-                    maxWidth),
-
-                std::clamp(
-                    size.height,
-                    minHeight,
-                    maxHeight)};
+            return {std::clamp(size.width, minWidth, maxWidth), std::clamp(size.height, minHeight, maxHeight)};
         }
+    };
+
+    // Temporary compatibility seam for the legacy Node virtual layout API.
+    // Phase 2 layout algorithms must not depend on these contexts.
+    struct MeasureContext
+    {
+        LayoutSize availableSize{};
+    };
+
+    struct ArrangeContext
+    {
+        LayoutPosition position{};
+        LayoutSize size{};
     };
 
     //==========================================================================
@@ -271,7 +158,6 @@ namespace ui
         uint8_t g = 255;
         uint8_t b = 255;
         uint8_t a = 255;
-
         bool operator==(const Color &) const = default;
     };
 
@@ -289,15 +175,10 @@ namespace ui
         inline constexpr Color transparent{0, 0, 0, 0};
     }
 
-    //==========================================================================
-    // Style
-    //==========================================================================
-
     struct StyleProps
     {
         Color backgroundColor = Colors::transparent;
         Color borderColor = Colors::transparent;
-
         float borderWidth = 0.0f;
         float borderRadius = 0.0f;
     };
