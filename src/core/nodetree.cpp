@@ -1023,10 +1023,7 @@ namespace ui
                 toSDLRect(node);
 
             SDL_Rect previousClip{};
-            const bool hadPreviousClip =
-                SDL_GetRenderClipRect(
-                    renderer,
-                    &previousClip) == 0;
+            const bool hadPreviousClip = SDL_GetRenderClipRect(renderer, &previousClip);
 
             SDL_Rect clipRect =
                 hadPreviousClip
