@@ -360,6 +360,7 @@ namespace ui
         modalRootId_.reset();
 
         pendingFocusNodeId_.reset();
+        pendingClearFocus_ = false;
         focusTransitionInProgress_ = false;
     }
 
@@ -388,6 +389,7 @@ namespace ui
         if (focusTransitionInProgress_)
         {
             pendingFocusNodeId_ = requestedId;
+            pendingClearFocus_ = false;
             return true;
         }
     
@@ -432,6 +434,20 @@ namespace ui
                 finishTransition();
                 return false;
             }
+
+            if (pendingClearFocus_)
+            {
+                pendingClearFocus_ = false;
+                pendingFocusNodeId_.reset();
+            
+                clearTrackedNode(
+                    input_.focusedNode,
+                    input_.focusedNodeId);
+            
+                syncState(nodeTree);
+                finishTransition();
+                return;
+            }
     
             if (pendingFocusNodeId_)
             {
@@ -470,6 +486,20 @@ namespace ui
             finishTransition();
             return false;
         }
+
+        if (pendingClearFocus_)
+        {
+            pendingClearFocus_ = false;
+            pendingFocusNodeId_.reset();
+        
+            clearTrackedNode(
+                input_.focusedNode,
+                input_.focusedNodeId);
+        
+            syncState(nodeTree);
+            finishTransition();
+            return;
+        }
     
         if (pendingFocusNodeId_)
         {
@@ -501,6 +531,7 @@ namespace ui
         if (focusTransitionInProgress_)
         {
             pendingFocusNodeId_.reset();
+            pendingClearFocus_ = true;
             return;
         }
     
