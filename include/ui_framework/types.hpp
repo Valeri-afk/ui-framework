@@ -135,19 +135,6 @@ namespace ui
         }
     };
 
-    // Temporary compatibility seam for the legacy Node virtual layout API.
-    // Phase 2 layout algorithms must not depend on these contexts.
-    struct MeasureContext
-    {
-        LayoutSize availableSize{};
-    };
-
-    struct ArrangeContext
-    {
-        LayoutPosition position{};
-        LayoutSize size{};
-    };
-
     //==========================================================================
     // Colors
     //==========================================================================
