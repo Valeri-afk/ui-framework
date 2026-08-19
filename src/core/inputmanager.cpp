@@ -558,6 +558,39 @@ namespace ui
             focusTransitionInProgress_ = false;
             return;
         }
+
+        if (pendingClearFocus_)
+        {
+            pendingClearFocus_ = false;
+            pendingFocusNodeId_.reset();
+        
+            clearTrackedNode(
+                input_.focusedNode,
+                input_.focusedNodeId);
+        
+            syncState(nodeTree);
+            focusTransitionInProgress_ = false;
+            return;
+        }
+        
+        if (pendingFocusNodeId_)
+        {
+            const Node::Id pendingId = *pendingFocusNodeId_;
+            pendingFocusNodeId_.reset();
+        
+            Node *pendingNode = nodeTree.findNode(pendingId);
+        
+            if (pendingNode)
+            {
+                focusTransitionInProgress_ = false;
+                focus(nodeTree, *pendingNode);
+                return;
+            }
+        
+            syncState(nodeTree);
+            focusTransitionInProgress_ = false;
+            return;
+        }
     
         if (!nodeTree.findNode(oldFocusedId))
         {
