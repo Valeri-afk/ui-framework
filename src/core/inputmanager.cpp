@@ -1272,6 +1272,11 @@ namespace ui
 
             Node *liveUnderNode = underNodeId ? nodeTree.findNode(underNodeId) : nullptr;
 
+            const std::optional<Node::Id> captureBeforeClick =
+                input.capturedNode
+                    ? std::optional<Node::Id>(input.capturedNode->id())
+                    : std::nullopt;
+            
             if (!input.isDragging &&
                 livePressedNode == liveReleaseNode &&
                 liveUnderNode &&
@@ -1280,15 +1285,7 @@ namespace ui
                 MouseClickEvent clickEvent;
                 clickEvent.position = event.position;
                 clickEvent.button = event.button;
-
-                if (captureBeforeClick &&
-                input.capturedNode &&
-                input.capturedNode->id() != *captureBeforeClick)
-                {
-                    syncState(nodeTree);
-                    return;
-                }
-
+            
                 if (!dispatchEvent(
                         nodeTree,
                         liveReleaseNode,
@@ -1299,20 +1296,24 @@ namespace ui
                     syncState(nodeTree);
                     return;
                 }
-
+            
+                if (captureBeforeClick &&
+                    input.capturedNode &&
+                    input.capturedNode->id() != *captureBeforeClick)
+                {
+                    syncState(nodeTree);
+                    return;
+                }
+            
                 if (nodeTree.findNode(releaseId) != liveReleaseNode)
                 {
                     syncState(nodeTree);
                     return;
                 }
             }
+
         }
 
-        const std::optional<Node::Id> captureBeforeClick =
-        input.capturedNode
-            ? std::optional<Node::Id>(input.capturedNode->id())
-            : std::nullopt;
-        
         releaseCapture(nodeTree, event.position);
     }
 
