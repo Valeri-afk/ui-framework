@@ -187,13 +187,12 @@ namespace ui
         }
         else
         {
-            // Non-layout nodes have no intrinsic measurement in the Phase 2 core.
             desiredContent = {};
         }
 
         Node *liveNode = nodeTree.findNode(nodeId);
         if (!liveNode) return;
-        liveNode->desiredSize_ = internal::resolveFinalSize(*liveNode, toBorderBoxSize(*liveNode, desiredContent));
+        liveNode->desiredSize_ = sanitizeSize(toBorderBoxSize(*liveNode, desiredContent));
     }
 
     void LayoutManager::arrangeRecursive(Node &node, NodeTree &nodeTree)
@@ -225,7 +224,6 @@ namespace ui
         }
         else if (node.getVisibleChild(0))
         {
-            // Non-linear containers have no Phase 2 arrangement algorithm yet.
         }
     }
 
