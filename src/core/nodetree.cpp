@@ -429,68 +429,6 @@ namespace ui
         removeChildInternal(*panelParent, child);
     }
 
-    Node *NodeTree::hitTest(
-        float x,
-        float y,
-        const Node *modalRoot)
-    {
-        Node *activeModalRoot = nullptr;
-
-        if (modalRoot)
-        {
-            activeModalRoot = const_cast<Node *>(modalRoot);
-        }
-        else
-        {
-            // если у тебя modalRoot хранится в другом месте,
-            // здесь его надо получать оттуда.
-            // В текущем InputManager это было:
-            // resolveModalRoot(nodeTree)
-        }
-
-        if (activeModalRoot &&
-            findNode(activeModalRoot->id()) == activeModalRoot)
-        {
-            return activeModalRoot->hitTest(x, y)
-                       ? activeModalRoot
-                       : nullptr;
-        }
-
-        for (size_t i = overlays_.size(); i > 0; --i)
-        {
-            Node *overlay = overlays_[i - 1].get();
-
-            if (!overlay)
-                continue;
-
-            Node *target =
-                overlay->hitTest(x, y)
-                    ? overlay
-                    : nullptr;
-
-            if (target)
-                return target;
-        }
-
-        for (size_t i = roots_.size(); i > 0; --i)
-        {
-            Node *root = roots_[i - 1].get();
-
-            if (!root)
-                continue;
-
-            Node *target =
-                root->hitTest(x, y)
-                    ? root
-                    : nullptr;
-
-            if (target)
-                return target;
-        }
-
-        return nullptr;
-    }
-
     Node *NodeTree::attachToContainer(
         size_t index,
         std::unique_ptr<Node> node,
@@ -1142,15 +1080,22 @@ namespace ui
 
         Node *selfHit =
             node.hitTest(x, y);
-
-        if (node.getOverflow() == Overflow::HIDDEN &&
-            !selfHit)
+        
+        if (node.getOverflow() == Overflow::HIDDEN)
         {
-            return nullptr;
+            const LayoutPosition position = node.getActualPosition();
+            const LayoutSize size = node.getActualSize();
+        
+            if (x < position.x ||
+                y < position.y ||
+                x >= position.x + size.width ||
+                y >= position.y + size.height)
+            {
+                return nullptr;
+            }
         }
 
-        auto *panel =
-            dynamic_cast<PanelNode *>(&node);
+        auto *panel = dynamic_cast<PanelNode *>(&node);
 
         if (panel)
         {
