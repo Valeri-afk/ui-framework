@@ -218,3 +218,144 @@ The following source-level criteria are complete:
 - width-dependent text measurement is integrated;
 - compound content measurement follows the framework pipeline;
 - alignment/gap semantics are stable;
+- nested containers use the same framework pipeline;
+- visibility participation is defined;
+- absolute positioning semantics are defined for the retained scope;
+- invalidation is framework-owned;
+- clients do not implement layout algorithms;
+- clients do not call layout invalidation APIs;
+- runtime ownership/lifecycle invariants remain intact;
+- numerical acceptance cases are documented.
+
+Build and runtime validation are intentionally deferred until Phase 6.
+
+---
+
+## PHASE 3 — Input / Events
+
+### Status
+
+**Next implementation phase.**
+
+### Scope
+
+- InputManager
+- hit-test
+- focus
+- capture
+- EventDispatcher
+- keyboard
+
+### Goal
+
+Establish a predictable input and event system on top of the stabilized runtime
+and layout systems.
+
+### Dependencies
+
+- Phase 1
+- Phase 2
+
+---
+
+## PHASE 4 — Component Model
+
+### Scope
+
+- ControlNode only if justified
+- Button
+- Toggle
+- Text
+- Image
+- Scroll
+- other components as required
+
+### Goal
+
+Build reusable UI components on top of the stabilized runtime, layout and
+input systems.
+
+Existing legacy component code must not be treated as the architecture.
+
+---
+
+## PHASE 5 — Modal / Navigation
+
+### Scope
+
+- ModalManager
+- focus restoration
+- navigation
+- overlays
+
+### Goal
+
+Establish higher-level interaction and navigation semantics.
+
+### Dependencies
+
+- Phase 1
+- Phase 2
+- Phase 3
+
+---
+
+## PHASE 6 — Rendering / Backend
+
+### Scope
+
+- SDL rendering
+- clipping
+- resources
+- optional RenderContext
+- optional second backend
+- build / compilation / runtime validation of the accumulated phases
+
+### Goal
+
+Separate rendering concerns from the framework's core runtime where justified
+and perform the project's deferred full validation.
+
+### Dependencies
+
+- Phase 1
+- Phase 2
+- Phase 4 where component rendering requires it
+
+RenderContext and a second backend remain optional architectural directions.
+
+---
+
+## Development Order
+
+```text
+Phase 1 — Runtime
+        ↓
+Phase 2 — Layout                    [source-level complete]
+        ↓
+Phase 3 — Input / Events            [next]
+        ↓
+Phase 4 — Component Model
+        ↓
+Phase 5 — Modal / Navigation
+        ↓
+Phase 6 — Rendering / Backend       [full build/test validation]
+```
+
+Later phases may be analyzed when necessary to validate an earlier
+architectural decision, but implementation remains focused on one primary
+phase at a time.
+
+---
+
+## Active Development Principle
+
+The existence of a file or module does not imply that it is part of the active
+implementation scope.
+
+Legacy, deprecated, experimental, or currently unused code must be verified
+against the source before being treated as an architectural contract.
+
+The current source code remains the source of truth for existing behavior.
+The roadmap defines the intended development direction, not assumed existing
+behavior.
