@@ -1,8 +1,8 @@
-# Phase 4 Checkpoint — A / B / C / D / E / F
+# Phase 4 Checkpoint — A / B / C / D / E / F / G
 
 ## Status
 
-This checkpoint records the agreed source-level state after reviewing Phase 4 rendering items A, B, C, D, E and F. It is intended to restore context without repeating the Phase 1–3 audit.
+This checkpoint records the agreed source-level architecture after reviewing all Phase 4 rendering/backend discussion points A through G. It is intended to restore context without repeating the Phase 1–3 audit.
 
 Current branch:
 
@@ -130,7 +130,7 @@ borderRadius
 future transform / translation / scale / rotation
 ```
 
-These do not change the layout box but alter effective visual geometry and therefore belong to the same canonical-geometry problem class:
+These do not change the layout box but alter effective visual shape/geometry and therefore belong to the same canonical-geometry problem class:
 
 ```text
 layout geometry
@@ -197,8 +197,6 @@ No second backend, `IRenderBackend`, `BackendFactory`, generic renderer interfac
 
 ## F — Resource Boundary
 
-### Status
-
 **Source-level architecture accepted / F closed for the current framework scope.**
 
 F is defined around ownership and backend representation, not around a generic resource-management subsystem.
@@ -223,19 +221,7 @@ TTF_Text*
 
 `TextNode` creates and destroys these objects itself. They are bound to the current `SDL_Renderer*` and are recreated when the renderer changes.
 
-Conceptually:
-
-```text
-semantic text state
-    ↓
-borrowed TTF_Font*
-    ↓
-renderer-bound TTF_TextEngine / TTF_Text
-    ↓
-SDL3 renderer path
-```
-
-### Resource abstraction decision
+### Resource representation
 
 No generic `ResourceManager`, `TextureManager`, `FontManager`, `AssetManager`, `IResource` hierarchy or public opaque resource-handle system is introduced at this stage.
 
@@ -249,16 +235,10 @@ backend-bound representation
 SDL3
 ```
 
-This distinction is already sufficient for current `TextNode` behavior.
-
-### API path differences
-
-The framework does **not** need to support every rendering path exposed by SDL3/SDL3_ttf merely because SDL supports them.
-
-The framework selects a canonical SDL3 renderer path compatible with its backend contract:
+For text, the canonical current path is:
 
 ```text
-TextNode
+TextNode semantic state
     ↓
 TTF_Text
     ↓
@@ -267,102 +247,207 @@ renderer-bound SDL_ttf text engine
 SDL_Renderer
 ```
 
-A texture used as the current SDL render target can still be rendered through the same SDL renderer path. Direct-to-window and render-to-texture therefore do not require separate framework text abstractions.
+The framework does not need to support every SDL3/SDL3_ttf rendering path merely because SDL exposes them. Other text engines are not part of the current framework contract.
 
-Other SDL_ttf engines (surface/GPU/OpenGL) are not part of the current framework contract simply because they exist; supporting them would be a backend expansion not required by the current SDL3-only architecture.
+Direct drawing and rendering into an SDL texture that is the current renderer target can use the same renderer text path; this does not require a second framework text abstraction.
 
-### Future texture/offscreen resources
+A future persistent `SDL_Texture` or offscreen-render target pipeline is a separate renderer-bound resource problem and requires a concrete requirement before being introduced.
 
-A future persistent `SDL_Texture` representation would be a renderer-bound resource whose lifetime and recreation semantics need explicit treatment. It should only be introduced with a concrete requirement such as persistent raster cache, image rendering or offscreen composition.
-
-Likewise, `RenderTarget` would be a distinct semantic concept rather than merely another generic resource.
-
-### Resource/lifecycle principle
+### Core rule
 
 ```text
-Dependency delivery
-    ≠
-resource ownership
-
-semantic resource
-    ≠
-backend representation
+Dependency delivery ≠ resource ownership
+semantic resource ≠ backend representation
 ```
-
-The framework may supply SDL3/SDL_ttf dependencies while application/client code owns externally created assets such as fonts. Framework-owned caches remain internal implementation details.
-
-### Explicitly not implemented by F
-
-- generic resource manager;
-- global asset cache;
-- opaque font handles;
-- persistent text-to-texture cache;
-- general texture pipeline;
-- offscreen render-target subsystem.
-
-These remain future extensions driven by concrete rendering requirements.
 
 ---
 
-## Current Phase 4 boundary after A / B / C / D / E / F
+## G — Animation Boundary
+
+### Status
+
+**Architecture accepted; no animation subsystem is implemented in Phase 4.**
+
+G establishes the boundary between temporal state change and the systems that consume the resulting state.
+
+### Core principle
+
+Animation is a **state transition mechanism**, not a rendering mechanism.
 
 ```text
-Layout final geometry
-        ↓
-actualPosition / actualSize
-        ↓
-Framework visual/geometry semantics
-   ┌────┼──────────────┐
-   │    │              │
-render hit-test     clipping
-   │    │              │
-   └────┼──────────────┘
-        ↓
-   semantic resources
-        ↓
-backend-bound representation
-        ↓
-      SDL3
+Animation
+    ↓
+changes framework/component state
+    ↓
+existing property semantics
+    ├── Layout
+    ├── Hit-test
+    └── Rendering
 ```
 
-Top-level traversal:
+An animation must not directly own or bypass rendering semantics:
+
+```text
+Animation
+    ✕ SDL rendering calls
+    ✕ renderer state
+    ✕ clipping policy
+```
+
+### Visual-only animation
+
+Properties such as future `opacity`, appearance values, `borderRadius` and future visual transforms may be animated without implying layout changes.
+
+Example:
+
+```text
+opacity 1.0 → 0.0
+```
+
+changes rendering state only. It does not implicitly disable hit-testing.
+
+### Layout-affecting animation
+
+If an animation changes a layout-affecting property such as position, size, padding or border width, the animation does not implement a second layout system. It changes the relevant property and the property's normal layout/invalidation semantics apply:
+
+```text
+Animation
+    ↓
+layout-affecting property
+    ↓
+existing layout invalidation
+    ↓
+measure / arrange
+    ↓
+actual geometry
+    ↓
+render
+```
+
+### Animation ownership
+
+No `AnimationManager`, timeline manager or mandatory animation list inside `Node` is introduced.
+
+The absence of a central animation subsystem does **not** mean that every animation must live inside `Node`. Ownership remains with the layer that owns the behavior/resource, according to the future concrete requirement.
+
+A component may implement local temporal behavior where appropriate. A future framework-wide animation subsystem may also be introduced if multiple concrete requirements justify one. Phase 4 does not choose or implement that subsystem.
+
+The important invariant is that animation changes state through the framework's established property semantics instead of bypassing them.
+
+### Runtime position
+
+`UIManager::runFrame(dt, renderer)` already has `update(dt)` before rendering, giving future animation a natural update point. The exact ordering between animation updates and component `Node::update()` is intentionally not fixed until a concrete animation subsystem exists.
+
+### Explicitly not implemented by G
+
+- AnimationManager;
+- generic timeline system;
+- easing library/API;
+- keyframe system;
+- automatic tweening API;
+- animation-specific renderer API.
+
+---
+
+## Final Phase 4 architectural result: A–G
+
+```text
+                        APPLICATION
+                             │
+                  owns SDL runtime lifecycle
+                             │
+                             ▼
+                           SDL3
+                             │
+                      SDL_Renderer*
+                             │
+                             ▼
+                     ┌───────────────┐
+                     │ UI Framework  │
+                     ├───────────────┤
+                     │ Geometry      │
+                     │ Traversal     │
+                     │ Hit-test      │
+                     │ Clipping      │
+                     │ Visual state  │
+                     │ Resources     │
+                     │ Rendering     │
+                     └───────┬───────┘
+                             │
+                 backend-bound representations
+                             │
+                             ▼
+                           SDL3
+```
+
+Top-level processing priority:
 
 ```text
 roots → overlays → top modal for final presentation
 ```
 
-Backend/lifecycle:
+State semantics:
 
 ```text
-framework supplies SDL3
-application owns SDL runtime lifecycle
+Layout state
+    ↓
+actual geometry
+    ↓
+visual/geometry semantics
+    ├── render
+    ├── hit-test
+    └── clip
 ```
 
-Resource ownership:
+Animation semantics:
 
 ```text
-application/external owner
-    → SDL runtime + borrowed assets such as TTF_Font*
-
-framework/node
-    → renderer-bound caches such as TTF_TextEngine* / TTF_Text*
+Animation
+    ↓
+state change
+    ↓
+normal framework semantics
 ```
 
-### Next remaining Phase 4 work
+Resource semantics:
 
-- G — Animation Boundary.
+```text
+borrowed external resources
+        +
+framework-owned renderer-bound caches
+        ↓
+canonical SDL3 rendering path
+```
 
-Animation system implementation remains out of scope unless a concrete requirement expands Phase 4.
+### What Phase 4 intentionally does NOT introduce
 
-### Resume rules
+```text
+ResourceManager
+TextureManager
+FontManager
+AnimationManager
+IRenderBackend
+BackendFactory
+second rendering backend
+premature RenderContext
+persistent text texture cache
+full offscreen resource system
+zIndex / stacking contexts
+scroll subsystem
+transform subsystem
+```
 
-1. Read this checkpoint together with `PHASE4_START_CONTEXT.md` and `ai_bootstrap.md`.
-2. Do not repeat the Phase 1–3 audit.
-3. Treat A–C as source-level settled unless a concrete contradiction appears.
-4. Treat D as the canonical Node state / geometry semantics checkpoint.
-5. Treat E as the accepted SDL3-only backend/dependency/lifecycle boundary unless a new concrete requirement appears.
-6. Treat F as the current resource ownership/representation boundary.
-7. Continue with G — Animation Boundary.
-8. Do not begin Phase 5 implementation.
-9. Do not run compilation, tests or runtime validation before Phase 6.
-10. Do not modify `main` before Phase 4 completion.
+These are not rejected as universally bad designs. They are deferred because the current framework has no concrete requirement that justifies their added semantics and ownership complexity.
+
+### Next step
+
+The architectural review A–G is complete.
+
+The next task is **implementation reconciliation**:
+
+1. Compare the agreed A–G contract against the actual `phase4-rendering` source.
+2. Mark each contract as `implemented`, `partially implemented`, `contract-only`, or `missing`.
+3. Identify the minimal implementation scope required to bring source into alignment.
+4. Only then modify code.
+5. Do not run compilation/tests/runtime validation until Phase 6.
+6. Do not modify `main`.
