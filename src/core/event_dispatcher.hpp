@@ -27,6 +27,7 @@ namespace ui
                 return;
 
             event.target = target;
+            event.currentTarget = nullptr;
             event.propagationStopped = false;
 
             if (!tunneling && !bubbling)
@@ -54,6 +55,9 @@ namespace ui
                 {
                     const Node::Id nodeId = *it;
 
+                    if (nodeId == target->id())
+                        break;
+
                     Node *node = nodeTree.findNode(nodeId);
 
                     if (!node)
@@ -71,12 +75,25 @@ namespace ui
                 }
             }
 
+            if (!nodeTree.findNode(target->id()))
+                return;
+
+            dispatchTarget(nodeTree, target, event);
+
+            if (event.propagationStopped)
+                return;
+
+            if (!nodeTree.findNode(target->id()))
+                return;
+
             if (bubbling)
             {
                 event.phase = UIEvent::Phase::BUBBLING;
 
-                for (Node::Id nodeId : pathIds)
+                for (std::size_t index = 1; index < pathIds.size(); ++index)
                 {
+                    const Node::Id nodeId = pathIds[index];
+
                     Node *node = nodeTree.findNode(nodeId);
 
                     if (!node)
