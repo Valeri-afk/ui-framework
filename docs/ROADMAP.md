@@ -17,7 +17,7 @@ source of truth for current behavior.
 
 ### Current Phase
 
-**Phase 2 — Layout**
+**Phase 2 — Layout (source-level complete)**
 
 ### Current branch
 
@@ -32,13 +32,13 @@ phase2-layout-migration
 Phase 1 ownership, lifecycle, traversal and deferred mutation contracts are
 accepted as the active runtime baseline.
 
-### Current Phase 2 direction
+### Phase 2 result
 
-Phase 2 is migrating toward a **framework-owned closed layout engine**.
-Clients configure supported framework components and layout properties but do
-not implement layout strategies, `measure/arrange`, or layout invalidation.
+Phase 2 has completed its planned source-level layout migration. The framework
+now owns the layout proposal → measurement → desired-size → final-geometry
+pipeline, layout scheduling and invalidation.
 
-The first useful layout scope is deliberately small:
+The completed Phase 2 scope is:
 
 ```text
 Text measurement
@@ -53,42 +53,17 @@ visibility / layout participation
 automatic framework-owned invalidation
 ```
 
-A full Grid or full CSS/Flexbox model is not required for the first Phase 2
-implementation. Existing Grid code is deferred and must not force the
-architecture to grow around it.
-
-### Current implementation checkpoint
-
-The latest implementation work has established an internal framework-owned
-constraint subsystem:
-
-```text
-include/ui_framework/core/layout_constraints.hpp
-src/core/layout_constraints.cpp
-```
-
-with the conceptual operations:
-
-```text
-resolveMeasurementProposal()
-resolveFinalSize()
-```
-
-The Linear implementation has begun using the same constraint semantics, but
-integration with the central `LayoutManager` is not yet complete.
-
-The next implementation task is to make `LayoutManager` the single
-orchestrator of the complete proposal → measurement → desired size → final
-geometry pipeline, while removing duplicated constraint interpretation from
-layout algorithms.
+A full Grid or full CSS/Flexbox model is not required for Phase 2. Existing
+Grid code remains deferred and must not force the architecture to grow around
+it.
 
 ### Validation policy
 
-Compilation and runtime tests are intentionally deferred until the end of
-Phase 6 by project decision. During Phases 1–6, implementation is validated
-through source inspection, architectural review and documented numerical
-cases. This is intentional and must not be interpreted as an omitted test
-step in the current phase.
+Compilation, runtime tests and full build validation are intentionally deferred
+until the end of Phase 6 by project decision. During Phases 1–6, implementation
+is validated through source inspection, architectural review and documented
+numerical cases. This is intentional and must not be interpreted as an omitted
+Phase 2 task.
 
 ---
 
@@ -131,13 +106,13 @@ Stabilize the runtime foundation of the framework.
 
 ### Status
 
-**Active — migration in progress.**
+**Completed at source level.**
 
-### Architectural target
+### Architectural result
 
 ```text
 Node
-  → common runtime/component state
+  → common runtime/component state and layout properties
 
 PanelNode
   → structural child ownership
@@ -152,40 +127,32 @@ NodeTree
   → ownership, lifecycle, mutation and layout scheduling
 ```
 
-The client should not need to know about:
+The client does not need to know about:
 
 ```text
 LayoutManager
 layout queue
 layout invalidation
-measure/arrange lifecycle
+internal measurement/arrangement lifecycle
 constraint resolution
 ```
 
-### Initial built-in layout
-
-The first layout family is a one-dimensional Linear/Stack-style layout:
+### Completed built-in layout scope
 
 ```text
-Horizontal
-Vertical
-
+Horizontal / Vertical one-dimensional flow
+Text measurement with width-sensitive proposals
+Size / min / max
+Padding / border
+Position / position mode
+Alignment
 Gap
-
-Main axis:
-    Start
-    Center
-    End
-    SpaceBetween when required
-
-Cross axis:
-    Start
-    Center
-    End
-    Stretch under explicitly defined measurement semantics
+Visibility / layout participation
+Absolute-child separation from normal Linear flow
+Framework-owned layout invalidation
 ```
 
-### Explicit non-goals for the first implementation
+### Explicit non-goals
 
 - full Grid system
 - full CSS Flexbox compatibility
@@ -201,9 +168,7 @@ Cross axis:
 These may be reconsidered only after a concrete requirement demonstrates the
 need.
 
-### Constraint semantics checkpoint
-
-The current provisional rules are:
+### Constraint semantics
 
 ```text
 Fixed size
@@ -226,15 +191,11 @@ Padding/border
 This distinction is required for width-dependent content such as wrapped
 text.
 
-### Client contract target
+### Client contract
 
-The historical problem being resolved is the client/framework layout contract.
-The target is explicitly **not** to give clients a custom layout strategy
-interface and then rely on clients to call invalidation correctly.
-
-The client should instead configure framework-owned components. Framework
-components may provide their own internal content measurement, but layout
-scheduling and sibling/parent placement remain framework responsibilities.
+The client configures framework-owned components. Framework components may
+provide internal content measurement, but layout scheduling, invalidation and
+sibling/parent placement remain framework responsibilities.
 
 ### Legacy source policy
 
@@ -242,34 +203,41 @@ scheduling and sibling/parent placement remain framework responsibilities.
 src/components/*
 ```
 
-is obsolete and must not be modified during Phase 2. Its old Label/Button
-implementations may be inspected only as historical evidence.
+is obsolete and must not be modified as part of the Phase 2 architecture. Its
+old Label/Button implementations may be inspected only as historical evidence.
 
-`GridNode` and `ControlNode` are not required to define the first Phase 2
-architecture. They remain deferred/legacy concerns unless a concrete source
-integration issue requires revisiting them.
+`GridNode` and `ControlNode` are deferred/legacy concerns unless a concrete
+later-phase requirement requires revisiting them.
 
 ### Phase 2 exit criteria
+
+The following source-level criteria are complete:
 
 - effective measurement proposal semantics are stable;
 - final size constraint semantics are stable;
 - content-box / border-box semantics are stable;
 - framework-owned one-dimensional layout is stable;
-- text measurement works with width-dependent wrapping;
-- Button-like compound content can measure correctly;
+- width-dependent text measurement is integrated;
+- compound content measurement follows the framework pipeline;
 - alignment/gap semantics are stable;
-- nested containers work by the same framework pipeline;
+- nested containers use the same framework pipeline;
 - visibility participation is defined;
-- absolute positioning semantics are defined if retained in the phase;
-- invalidation remains framework-owned;
+- absolute positioning semantics are defined for the retained scope;
+- invalidation is framework-owned;
 - clients do not implement layout algorithms;
 - clients do not call layout invalidation APIs;
-- runtime ownership/lifecycle invariants remain untouched;
-- numerical acceptance cases are satisfied.
+- runtime ownership/lifecycle invariants remain intact;
+- numerical acceptance cases are documented.
+
+Build and runtime validation are intentionally deferred until Phase 6.
 
 ---
 
 ## PHASE 3 — Input / Events
+
+### Status
+
+**Next implementation phase.**
 
 ### Scope
 
@@ -343,10 +311,12 @@ Establish higher-level interaction and navigation semantics.
 - resources
 - optional RenderContext
 - optional second backend
+- build / compilation / runtime validation of the accumulated phases
 
 ### Goal
 
-Separate rendering concerns from the framework's core runtime where justified.
+Separate rendering concerns from the framework's core runtime where justified
+and perform the project's deferred full validation.
 
 ### Dependencies
 
@@ -363,15 +333,15 @@ RenderContext and a second backend remain optional architectural directions.
 ```text
 Phase 1 — Runtime
         ↓
-Phase 2 — Layout
+Phase 2 — Layout                    [source-level complete]
         ↓
-Phase 3 — Input / Events
+Phase 3 — Input / Events            [next]
         ↓
 Phase 4 — Component Model
         ↓
 Phase 5 — Modal / Navigation
         ↓
-Phase 6 — Rendering / Backend
+Phase 6 — Rendering / Backend       [full build/test validation]
 ```
 
 Later phases may be analyzed when necessary to validate an earlier
