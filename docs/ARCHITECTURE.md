@@ -220,6 +220,9 @@ onMount()
 onUnmount()
 hitTest()
 
+Layout measurement and arrangement are framework-owned by LayoutManager.
+Node does not expose the legacy measure()/arrange() lifecycle to clients.
+
 Therefore Node currently combines several responsibilities:
 
 runtime state
