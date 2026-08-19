@@ -17,8 +17,10 @@ namespace ui
 
         const float left = std::isfinite(position.x) ? position.x : 0.0f;
         const float top = std::isfinite(position.y) ? position.y : 0.0f;
-        const float right = left + (std::isfinite(size.width) ? std::max(0.0f, size.width) : 0.0f);
-        const float bottom = top + (std::isfinite(size.height) ? std::max(0.0f, size.height) : 0.0f);
+        const float width = std::isfinite(size.width) ? std::max(0.0f, size.width) : 0.0f;
+        const float height = std::isfinite(size.height) ? std::max(0.0f, size.height) : 0.0f;
+        const float right = left + width;
+        const float bottom = top + height;
 
         const auto clampInt = [](float value) noexcept -> int
         {
@@ -29,11 +31,16 @@ namespace ui
             return static_cast<int>(safe);
         };
 
+        const int x = clampInt(std::floor(left));
+        const int y = clampInt(std::floor(top));
+        const int rightInt = clampInt(std::ceil(right));
+        const int bottomInt = clampInt(std::ceil(bottom));
+
         return {
-            clampInt(std::floor(left)),
-            clampInt(std::floor(top)),
-            std::max(0, clampInt(std::ceil(right)) - clampInt(std::floor(left))),
-            std::max(0, clampInt(std::ceil(bottom)) - clampInt(std::floor(top)))};
+            x,
+            y,
+            std::max(0, rightInt - x),
+            std::max(0, bottomInt - y)};
     }
 
     inline SDL_Rect intersectRects(
@@ -62,6 +69,7 @@ namespace ui
 
             target_ = SDL_GetRenderTarget(renderer_);
             hasViewport_ = SDL_GetRenderViewport(renderer_, &viewport_);
+            viewportSet_ = SDL_RenderViewportSet(renderer_);
             clipEnabled_ = SDL_RenderClipEnabled(renderer_);
             hasClip_ = SDL_GetRenderClipRect(renderer_, &clip_);
             hasScale_ = SDL_GetRenderScale(renderer_, &scaleX_, &scaleY_);
@@ -79,7 +87,12 @@ namespace ui
                 SDL_SetRenderTarget(renderer_, target_);
 
             if (hasViewport_)
-                SDL_SetRenderViewport(renderer_, &viewport_);
+            {
+                if (viewportSet_)
+                    SDL_SetRenderViewport(renderer_, &viewport_);
+                else
+                    SDL_SetRenderViewport(renderer_, nullptr);
+            }
 
             if (hasScale_)
                 SDL_SetRenderScale(renderer_, scaleX_, scaleY_);
@@ -116,6 +129,7 @@ namespace ui
         Uint8 a_ = 255;
         SDL_BlendMode blendMode_ = SDL_BLENDMODE_NONE;
         bool hasViewport_ = false;
+        bool viewportSet_ = false;
         bool clipEnabled_ = false;
         bool hasClip_ = false;
         bool hasScale_ = false;
