@@ -446,7 +446,7 @@ namespace ui
             
                 syncState(nodeTree);
                 finishTransition();
-                return;
+                return input_.focusedNode == nullptr;
             }
     
             if (pendingFocusNodeId_)
@@ -498,7 +498,7 @@ namespace ui
         
             syncState(nodeTree);
             finishTransition();
-            return;
+            return input_.focusedNode == nullptr;
         }
     
         if (pendingFocusNodeId_)
