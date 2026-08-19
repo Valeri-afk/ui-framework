@@ -133,44 +133,6 @@ namespace
 
         keepMinAtMostMax(minSize, maxSize);
     }
-
-    ui::LayoutSize subtractPaddingBorder(
-        ui::LayoutSize borderBoxSize,
-        const ui::Padding &padding,
-        const ui::Border &border) noexcept
-    {
-        const float horizontal =
-            finiteOrZero(padding.left) +
-            finiteOrZero(padding.right) +
-            finiteOrZero(border.left) +
-            finiteOrZero(border.right);
-
-        const float vertical =
-            finiteOrZero(padding.top) +
-            finiteOrZero(padding.bottom) +
-            finiteOrZero(border.top) +
-            finiteOrZero(border.bottom);
-
-        const float width = finiteOrZero(borderBoxSize.width) - horizontal;
-        const float height = finiteOrZero(borderBoxSize.height) - vertical;
-
-        return {
-            std::max(0.0f, width),
-            std::max(0.0f, height)};
-    }
-
-    ui::LayoutSize measurePreferredSize(
-        const ui::Node &node,
-        ui::LayoutSize preferredSize)
-    {
-        preferredSize = sanitizeSize(preferredSize);
-
-        return subtractPaddingBorder(
-            preferredSize,
-            sanitizePadding(node.getPadding()),
-            sanitizeBorder(node.getBorder()));
-    }
-
 }
 
 namespace ui
