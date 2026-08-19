@@ -731,10 +731,38 @@ Focus transitions dispatch:
 FocusLostEvent
 FocusGainedEvent
 
-Focus state is validated against the live-node registry.
+Tracked focus state uses both:
 
-When a tracked node disappears or becomes invalid, InputManager::syncState()
-clears or repairs the corresponding state.
+Node*
+Node::Id
+
+The NodeId is the authoritative identity used to resolve the current live node
+through NodeTree.
+
+InputManager separates stale-reference reconciliation from semantic focus
+validation:
+
+syncState()
+    → repairs references to nodes that are no longer live.
+
+validateInputState()
+    → validates live focused nodes against visibility, enabled state,
+      focusability and the active modal boundary.
+
+When a live focused node becomes invalid, InputManager performs the semantic
+focus transition through clearFocus(), which dispatches FocusLostEvent.
+
+When the focused node has already disappeared from the live NodeTree,
+InputManager only repairs the stale reference; no event is dispatched to a dead
+node.
+
+The active modal root is therefore a focus boundary. A live focused node
+outside the active modal subtree is invalidated through the normal focus
+transition rather than being silently removed by state synchronization.
+
+Focus transitions are reentrancy-safe. A focus request or clear operation made
+during FocusLostEvent or FocusGainedEvent is reconciled by InputManager before
+the enclosing transition completes.
 
 18. Pointer Capture
 
@@ -756,6 +784,18 @@ dragging state
 The current default drag threshold is:
 
 5.0f
+
+Capture state is tracked using both Node* and Node::Id and is reconciled
+against the NodeTree live-node registry.
+
+Capture is protected against reentrant callback mutation. An operation that
+begins with an existing capture only releases that interaction. If a callback
+establishes a different capture during MouseUp, Click or DragEnd processing,
+the newly established capture is preserved.
+
+A captured node that is no longer live or no longer satisfies the active input
+state or modal boundary is invalidated by InputManager.
+
 19. Event System
 
 The event system consists of:
@@ -795,7 +835,7 @@ Handlers receive:
 Event&
 Node&
 
-Handlers receive a token when registered.
+Handlers receive a HandlerToken when registered.
 
 Handlers can be:
 
@@ -805,15 +845,17 @@ cleared.
 
 The storage uses event-type-indexed tables.
 
-The current implementation creates a handler snapshot inside
-forEachHandler(), but the snapshot is currently not iterated and the
-provided callback is not invoked.
+During dispatch, EventHandlerStorage creates a snapshot of the current handler
+entries and invokes handlers from that snapshot.
 
-Therefore the intended mutation-safe handler dispatch model is not fully
-implemented in the current source.
+Therefore mutation of the live handler table during callback does not invalidate
+the current iteration.
 
-This is a current implementation issue rather than a stabilized
-architectural invariant.
+Handlers added during the current dispatch are not included in the existing
+snapshot.
+
+Handlers removed or cleared during the current dispatch remain part of the
+current snapshot and therefore do not alter the already-started iteration.
 
 21. EventDispatcher
 
@@ -827,22 +869,46 @@ The propagation path is constructed from:
 
 target -> parent -> ... -> root
 
-It supports:
+The dispatcher supports:
 
 TUNNELING
 TARGET
 BUBBLING
 
-The dispatcher allows the caller to independently enable tunneling and
-bubbling.
+The caller independently selects whether tunneling and bubbling are enabled.
 
 The propagation path stores NodeId values rather than relying exclusively on
 raw pointers.
 
-After dispatching to a node, the dispatcher checks whether the corresponding
-node is still live.
+For each propagation step, the current Node is resolved again through
+NodeTree::findNode(). A node that is no longer live is not dispatched to.
 
-This provides protection against node deletion during event callbacks.
+EventDispatcher performs propagation only. InputManager owns the surrounding
+input-event orchestration and establishes the NodeTree mutation scope during
+framework input dispatch.
+
+Event propagation therefore operates together with the framework's deferred
+mutation model.
+
+The current event model uses:
+
+event.target
+    → original dispatch target
+
+event.currentTarget
+    → node currently receiving the event
+
+event.phase
+    → TUNNELING, TARGET or BUBBLING
+
+Event propagation can be stopped with:
+
+UIEvent::stopPropagation()
+
+When propagation is stopped, dispatch does not continue to subsequent
+propagation nodes or phases.
+
+EventDispatcher does not own Node lifetime, mutation queues or input state.
 
 22. ModalManager
 
