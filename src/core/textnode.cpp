@@ -12,11 +12,6 @@ namespace
     {
         return std::isfinite(value) ? value : 0.0f;
     }
-
-    float finiteOrInfinity(float value) noexcept
-    {
-        return std::isfinite(value) ? value : kInfinity;
-    }
 }
 
 namespace ui
@@ -102,42 +97,6 @@ namespace ui
             {
                 static_cast<TextNode &>(node).verticalAlignment_ = alignment;
             });
-    }
-
-    LayoutSize TextNode::measure(MeasureContext &ctx)
-    {
-        if (!font_ || text_.empty())
-            return {};
-
-        const float availableWidth =
-            finiteOrInfinity(ctx.availableSize.width);
-
-        int width = 0;
-        int height = 0;
-
-        const bool measured =
-            availableWidth < kInfinity
-                ? TTF_GetStringSizeWrapped(
-                      font_,
-                      text_.c_str(),
-                      text_.size(),
-                      static_cast<int>(std::round(
-                          std::max(0.0f, availableWidth))),
-                      &width,
-                      &height)
-                : TTF_GetStringSize(
-                      font_,
-                      text_.c_str(),
-                      text_.size(),
-                      &width,
-                      &height);
-
-        if (!measured)
-            return {};
-
-        return {
-            static_cast<float>(width),
-            static_cast<float>(height)};
     }
 
     void TextNode::draw(SDL_Renderer *renderer)
