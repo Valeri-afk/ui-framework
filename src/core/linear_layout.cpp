@@ -78,12 +78,18 @@ namespace ui::internal
 
         LayoutSize contentSize{};
         size_t visibleIndex = 0;
+        size_t flowChildCount = 0;
 
         for (size_t i = 0; i < panel.childCount(); ++i)
         {
             Node *child = panel.getChildAt(i);
 
             if (!child || !child->isVisible())
+                continue;
+
+            const size_t childVisibleIndex = visibleIndex++;
+
+            if (child->getPositionMode() == PositionMode::Absolute)
                 continue;
 
             LayoutSize childAvailable = ctx.availableSize;
@@ -94,16 +100,16 @@ namespace ui::internal
                 childAvailable.width = kInfinity;
 
             const LayoutSize childSize =
-                ctx.measureChild(visibleIndex, childAvailable);
+                ctx.measureChild(childVisibleIndex, childAvailable);
 
             accumulateContentSize(contentSize, childSize, vertical);
-            ++visibleIndex;
+            ++flowChildCount;
         }
 
-        if (visibleIndex > 1)
+        if (flowChildCount > 1)
         {
             const float totalGap =
-                gap * static_cast<float>(visibleIndex - 1);
+                gap * static_cast<float>(flowChildCount - 1);
 
             if (vertical)
                 contentSize.height = safeAdd(contentSize.height, totalGap);
@@ -143,12 +149,16 @@ namespace ui::internal
             if (!child || !child->isVisible())
                 continue;
 
+            const size_t childVisibleIndex = visibleIndex++;
+
+            if (child->getPositionMode() == PositionMode::Absolute)
+                continue;
+
             const LayoutSize desired = child->getDesiredSize();
             const float mainSize = vertical ? desired.height : desired.width;
 
             occupiedMain = safeAdd(occupiedMain, finiteOrZero(mainSize));
-            children.push_back({visibleIndex, desired});
-            ++visibleIndex;
+            children.push_back({childVisibleIndex, desired});
         }
 
         if (children.size() > 1)
