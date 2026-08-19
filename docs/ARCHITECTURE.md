@@ -216,8 +216,6 @@ It also provides virtual hooks for:
 
 update()
 draw()
-measure()
-arrange()
 onMount()
 onUnmount()
 hitTest()
