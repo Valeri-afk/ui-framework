@@ -35,9 +35,6 @@ namespace ui
         bool canAttach(const Node &child) const noexcept;
         bool isAncestorOf(const Node *node) const noexcept;
 
-        LayoutSize measure(MeasureContext &ctx) override = 0;
-        void arrange(ArrangeContext &ctx) override = 0;
-
     private:
         Node *attachLocal(std::unique_ptr<Node> child, size_t index);
         std::unique_ptr<Node> detachLocal(Node &child);
