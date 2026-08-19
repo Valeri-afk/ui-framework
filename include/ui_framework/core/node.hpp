@@ -164,7 +164,16 @@ namespace ui
             LayoutSize maxSize) const;
 
         template <typename Event>
-        void dispatchEvent(Event &event, NodeTree &nodeTree);
+        void Node::dispatchEvent(Event &event, NodeTree &nodeTree)
+        {
+            (void)nodeTree;
+        
+            eventHandlers_.forEachHandler<Event>(
+                [this, &event](auto &handler)
+                {
+                    handler(event, *this);
+                });
+        }
 
         friend class NodeTree;
         friend class PanelNode;
