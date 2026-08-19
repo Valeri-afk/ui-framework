@@ -1231,19 +1231,15 @@ namespace ui
             return;
         }
 
-        if (initialCaptureId)
-        {
-            if (!input.capturedNode)
-            {
-                syncState(nodeTree);
-                return;
-            }
+        const std::optional<Node::Id> captureAfterMouseUp =
+            input.capturedNode
+                ? std::optional<Node::Id>(input.capturedNode->id())
+                : std::nullopt;
         
-            if (input.capturedNode->id() != *initialCaptureId)
-            {
-                syncState(nodeTree);
-                return;
-            }
+        if (captureAfterMouseUp != initialCaptureId)
+        {
+            syncState(nodeTree);
+            return;
         }
 
         Node *pressedNode = input.pressedNode;
@@ -1297,9 +1293,12 @@ namespace ui
                     return;
                 }
             
-                if (captureBeforeClick &&
-                    input.capturedNode &&
-                    input.capturedNode->id() != *captureBeforeClick)
+                const std::optional<Node::Id> captureAfterClick =
+                    input.capturedNode
+                        ? std::optional<Node::Id>(input.capturedNode->id())
+                        : std::nullopt;
+                
+                if (captureAfterClick != captureBeforeClick)
                 {
                     syncState(nodeTree);
                     return;
