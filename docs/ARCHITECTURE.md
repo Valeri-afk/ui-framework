@@ -1223,9 +1223,10 @@ mutation;
 traversal.
 Layout
 
-LayoutManager orchestrates Measure / Arrange.
+LayoutManager owns the framework-level measurement and arrangement pipeline.
 
-Individual layout containers implement their own layout behavior.
+Individual layout containers provide layout-specific behavior through that
+pipeline. They do not own or expose the Measure / Arrange lifecycle.
 
 Input
 
@@ -1258,8 +1259,6 @@ The following areas exist in the repository or are represented by current
 types, but are not currently stabilized architectural layers:
 
 ControlNode;
-StackPanelNode;
-absolute positioning;
 advanced alignment;
 Grid;
 complete component hierarchy;
