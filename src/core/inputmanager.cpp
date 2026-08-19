@@ -110,8 +110,8 @@ namespace ui
     {
         setModalRootId(modalRoot);
         
-        syncState(nodeTree);
         validateInputState(nodeTree);
+        syncState(nodeTree);
         
         const bool modalIsActive = modalRoot != nullptr;
 
@@ -252,24 +252,27 @@ namespace ui
 
         nodeTree.flushMutationQueue();
         
-        syncState(nodeTree);
         validateInputState(nodeTree);
+        syncState(nodeTree);
         
         nodeTree.flushMutationQueue();
+        
+        validateInputState(nodeTree);
         syncState(nodeTree);
     }
 
     void InputManager::validateInputState(NodeTree &nodeTree)
     {
-        if (input_.focusedNode)
+        if (input_.focusedNodeId)
         {
             Node *focused = nodeTree.findNode(
-                input_.focusedNode->id());
+                *input_.focusedNodeId);
     
             if (!focused)
             {
-                input_.focusedNode = nullptr;
-                input_.focusedNodeId.reset();
+                clearTrackedNode(
+                    input_.focusedNode,
+                    input_.focusedNodeId);
             }
             else if (!isNodeAllowedByModal(nodeTree, focused) ||
                      !focused->isVisible() ||
@@ -281,19 +284,20 @@ namespace ui
             else
             {
                 input_.focusedNode = focused;
-                input_.focusedNodeId = focused->id();
             }
         }
     
-        if (input_.capturedNode)
+        if (input_.capturedNodeId)
         {
             Node *captured = nodeTree.findNode(
-                input_.capturedNode->id());
+                *input_.capturedNodeId);
     
             if (!captured)
             {
-                input_.capturedNode = nullptr;
-                input_.capturedNodeId.reset();
+                clearTrackedNode(
+                    input_.capturedNode,
+                    input_.capturedNodeId);
+    
                 clearDragState();
             }
             else if (!isNodeAllowedByModal(nodeTree, captured) ||
@@ -306,7 +310,6 @@ namespace ui
             else
             {
                 input_.capturedNode = captured;
-                input_.capturedNodeId = captured->id();
             }
         }
     }
