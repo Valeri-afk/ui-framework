@@ -31,10 +31,6 @@ namespace ui
         void setCrossAlignment(CrossAxisAlignment alignment);
         CrossAxisAlignment getCrossAlignment() const noexcept;
 
-    protected:
-        LayoutSize measure(MeasureContext &ctx) override;
-        void arrange(ArrangeContext &ctx) override;
-
     private:
         Orientation orientation_ = Orientation::Vertical;
         float gap_ = 0.0f;
