@@ -1,19 +1,5 @@
 #include "ui_framework/core/textnode.hpp"
 
-#include <algorithm>
-#include <cmath>
-#include <limits>
-
-namespace
-{
-    constexpr float kInfinity = std::numeric_limits<float>::max();
-
-    float finiteOrZero(float value) noexcept
-    {
-        return std::isfinite(value) ? value : 0.0f;
-    }
-}
-
 namespace ui
 {
 
