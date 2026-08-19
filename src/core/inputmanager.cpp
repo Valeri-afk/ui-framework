@@ -306,7 +306,7 @@ namespace ui
 
             if (input.focusedNode &&
                 !nodeTree.isDescendant(
-                    input.hoveredNode,
+                    input.focusedNode,
                     modalRoot))
             {
                 clearTrackedNode(
@@ -316,7 +316,7 @@ namespace ui
 
             if (input.capturedNode &&
                 !nodeTree.isDescendant(
-                    input.hoveredNode,
+                    input.capturedNode,
                     modalRoot))
             {
                 clearTrackedNode(
@@ -332,7 +332,7 @@ namespace ui
 
             if (input.pressedNode &&
                 !nodeTree.isDescendant(
-                    input.hoveredNode,
+                    input.pressedNode,
                     modalRoot))
             {
                 clearTrackedNode(
@@ -754,7 +754,7 @@ namespace ui
     void InputManager::handleMouseMoveEvent(
         Node *node,
         NodeTree &nodeTree,
-        const MouseMoveEvent &event)
+        MouseMoveEvent &event)
     {
         InputState &input = input_;
 
@@ -933,7 +933,7 @@ namespace ui
     void InputManager::handleMouseDownEvent(
         Node *node,
         NodeTree &nodeTree,
-        const MouseDownEvent &event,
+        MouseDownEvent &event,
         bool modalIsActive)
     {
         InputState &input = input_;
@@ -999,7 +999,7 @@ namespace ui
     void InputManager::handleMouseUpEvent(
         Node *node,
         NodeTree &nodeTree,
-        const MouseUpEvent &event,
+        MouseUpEvent &event,
         bool modalIsActive)
     {
         InputState &input = input_;
@@ -1093,7 +1093,7 @@ namespace ui
     void InputManager::handleMouseWheelEvent(
         Node *node,
         NodeTree &nodeTree,
-        const MouseWheelEvent &event)
+        MouseWheelEvent &event)
     {
         if (!node)
             return;
@@ -1119,7 +1119,7 @@ namespace ui
 
     void InputManager::handleKeyDownEvent(
         NodeTree &nodeTree,
-        const KeyDownEvent &event)
+        KeyDownEvent &event)
     {
         Node *target = input_.focusedNode;
 
@@ -1147,7 +1147,7 @@ namespace ui
 
     void InputManager::handleKeyUpEvent(
         NodeTree &nodeTree,
-        const KeyUpEvent &event)
+        KeyUpEvent &event)
     {
         Node *target = input_.focusedNode;
 
