@@ -1,23 +1,30 @@
 #pragma once
 
-#include <cstddef>
-#include <memory>
+#include "ui_framework/types.hpp"
+#include "ui_framework/events.hpp"
 
 #include <SDL3/SDL.h>
 
-#include "ui_framework/core/event_handler_storage.hpp"
-#include "ui_framework/types.hpp"
+#include <atomic>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace ui
 {
+
     class NodeTree;
     class PanelNode;
+    class LayoutManager;
+    class EventDispatcher;
 
     class Node
     {
     public:
-        using Id = std::uint64_t;
-        using HandlerToken = std::uint64_t;
+        using Id = uint64_t;
 
         Node();
         virtual ~Node();
@@ -27,75 +34,54 @@ namespace ui
 
         Id id() const noexcept;
 
-        Node *parent() const noexcept;
+        Node *getParent() const noexcept;
+        NodeTree *getNodeTree() const noexcept;
 
-        void setVisible(bool visible);
         bool isVisible() const noexcept;
+        void setVisible(bool visible);
 
-        void setEnabled(bool enabled) noexcept;
         bool isEnabled() const noexcept;
+        void setEnabled(bool enabled);
 
-        void setFocusable(bool focusable) noexcept;
         bool isFocusable() const noexcept;
+        void setFocusable(bool focusable) noexcept;
 
-        void setCapturable(bool capturable) noexcept;
         bool isCapturable() const noexcept;
+        void setCapturable(bool capturable) noexcept;
 
-        void setPosition(const LayoutPosition &position);
+        LayoutSizeValue getWidth() const noexcept;
+        void setWidth(LayoutSizeValue value);
+
+        LayoutSizeValue getHeight() const noexcept;
+        void setHeight(LayoutSizeValue value);
+
         LayoutPosition getPosition() const noexcept;
+        void setPosition(LayoutPosition position);
 
-        LayoutSize getDesiredSize() const noexcept;
-
-        void setPositionMode(PositionMode positionMode);
         PositionMode getPositionMode() const noexcept;
-
-        void setSize(const LayoutSizeValue &size);
-        LayoutSizeValue getSize() const noexcept;
-
-        void setMinSize(const LayoutSize &size);
-        void setMaxSize(const LayoutSize &size);
-
-        void setMinWidth(float width);
-        void setMinHeight(float height);
-
-        void setMaxWidth(float width);
-        void setMaxHeight(float height);
-
-        LayoutSize getMinSize() const noexcept;
-        LayoutSize getMaxSize() const noexcept;
-
-        float getMinWidth() const noexcept;
-        float getMinHeight() const noexcept;
-
-        float getMaxWidth() const noexcept;
-        float getMaxHeight() const noexcept;
-
-        void setPadding(const Padding &padding);
-        Padding getPadding() const noexcept;
-
-        void setLeftPadding(float value);
-        void setRightPadding(float value);
-        void setTopPadding(float value);
-        void setBottomPadding(float value);
-
-        void setBorder(const Border &border);
-        Border getBorder() const noexcept;
-
-        void setLeftBorder(float value);
-        void setRightBorder(float value);
-        void setTopBorder(float value);
-        void setBottomBorder(float value);
-
-        void setOverflow(Overflow overflow);
-        Overflow getOverflow() const noexcept;
+        void setPositionMode(PositionMode mode);
 
         LayoutPosition getActualPosition() const noexcept;
         LayoutSize getActualSize() const noexcept;
+        LayoutSize getDesiredSize() const noexcept;
 
-        virtual Node *getVisibleChild(size_t visibleIndex) const noexcept;
+        LayoutSize getMinSize() const noexcept;
+        void setMinSize(LayoutSize size);
+
+        LayoutSize getMaxSize() const noexcept;
+        void setMaxSize(LayoutSize size);
+
+        Padding getPadding() const noexcept;
+        void setPadding(Padding padding);
+
+        Border getBorder() const noexcept;
+        void setBorder(Border border);
+
+        Overflow getOverflow() const noexcept;
+        void setOverflow(Overflow overflow);
 
         template <typename Event>
-        HandlerToken addHandler(std::function<void(Event &, Node &)> handler)
+        HandlerToken addHandler(std::function<void(Event &)> handler)
         {
             return eventHandlers_.add<Event>(std::move(handler));
         }
@@ -115,9 +101,6 @@ namespace ui
     protected:
         virtual void update(float dt) {};
         virtual void draw(SDL_Renderer *renderer) {};
-
-        virtual LayoutSize measure(MeasureContext &ctx) { return {}; };
-        virtual void arrange(ArrangeContext &ctx) {};
 
         virtual void onMount() {};
         virtual void onUnmount() {};
@@ -178,32 +161,4 @@ namespace ui
         friend class EventDispatcher;
     };
 
-    template <typename Event>
-    void Node::dispatchEvent(
-        Event &event,
-        NodeTree &nodeTree)
-    {
-        event.currentTarget = this;
-
-        const Node::Id selfId = id_;
-
-        eventHandlers_.forEachHandler<Event>(
-            [&](auto &handler)
-            {
-                handler(event, *this);
-
-                if (event.propagationStopped)
-                    return false;
-
-                Node *live = nodeTree.findNode(selfId);
-
-                if (!live || live != this)
-                {
-                    event.propagationStopped = true;
-                    return false;
-                }
-
-                return true;
-            });
-    }
 }
