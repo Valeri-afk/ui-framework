@@ -117,32 +117,32 @@ namespace ui
         void handleMouseMoveEvent(
             Node *node,
             NodeTree &nodeTree,
-            const MouseMoveEvent &event);
-
+            MouseMoveEvent &event);
+        
         void handleMouseDownEvent(
             Node *node,
             NodeTree &nodeTree,
-            const MouseDownEvent &event,
+            MouseDownEvent &event,
             bool modalIsActive);
-
+        
         void handleMouseUpEvent(
             Node *node,
             NodeTree &nodeTree,
-            const MouseUpEvent &event,
+            MouseUpEvent &event,
             bool modalIsActive);
-
+        
         void handleMouseWheelEvent(
             Node *node,
             NodeTree &nodeTree,
-            const MouseWheelEvent &event);
-
+            MouseWheelEvent &event);
+        
         void handleKeyDownEvent(
             NodeTree &nodeTree,
-            const KeyDownEvent &event);
-
+            KeyDownEvent &event);
+        
         void handleKeyUpEvent(
             NodeTree &nodeTree,
-            const KeyUpEvent &event);
+            KeyUpEvent &event);
 
         KeyCode convertSDLKeyCodeToKeyCode(SDL_Keycode sdlKey) const;
 
