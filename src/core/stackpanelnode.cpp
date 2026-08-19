@@ -50,7 +50,7 @@ namespace ui
         return gap_;
     }
 
-    void StackPanelNode::setMainAlignment(Alignment alignment)
+    void StackPanelNode::setMainAlignment(MainAxisAlignment alignment)
     {
         if (mainAlignment_ == alignment)
             return;
@@ -63,12 +63,12 @@ namespace ui
             });
     }
 
-    Alignment StackPanelNode::getMainAlignment() const noexcept
+    MainAxisAlignment StackPanelNode::getMainAlignment() const noexcept
     {
         return mainAlignment_;
     }
 
-    void StackPanelNode::setCrossAlignment(Alignment alignment)
+    void StackPanelNode::setCrossAlignment(CrossAxisAlignment alignment)
     {
         if (crossAlignment_ == alignment)
             return;
@@ -81,7 +81,7 @@ namespace ui
             });
     }
 
-    Alignment StackPanelNode::getCrossAlignment() const noexcept
+    CrossAxisAlignment StackPanelNode::getCrossAlignment() const noexcept
     {
         return crossAlignment_;
     }
