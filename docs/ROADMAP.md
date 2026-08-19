@@ -15,12 +15,12 @@ source of truth for current behavior.
 
 ### Current Phase
 
-**Phase 3 — Input / Events (source-level complete on `phase3-input-events`)**
+**Phase 4 — Component Model (started)**
 
 ### Current branch
 
 ```text
-phase3-input-events
+main
 ```
 
 ### Previous completed phases
@@ -28,6 +28,8 @@ phase3-input-events
 **Phase 1 — Runtime**
 
 **Phase 2 — Layout**
+
+**Phase 3 — Input / Events**
 
 Phase 1 ownership, lifecycle, traversal and deferred mutation contracts are
 accepted as the active runtime baseline.
@@ -294,6 +296,10 @@ Phase 3 does not introduce:
 
 ## PHASE 4 — Component Model
 
+### Status
+
+**Started.**
+
 ### Scope
 
 - ControlNode only if justified
@@ -310,6 +316,12 @@ Build reusable UI components on top of the stabilized runtime, layout and
 input systems.
 
 Existing legacy component code must not be treated as the architecture.
+
+### Dependencies
+
+- Phase 1
+- Phase 2
+- Phase 3
 
 ---
 
@@ -369,7 +381,7 @@ Phase 2 — Layout                    [source-level complete]
         ↓
 Phase 3 — Input / Events            [source-level complete]
         ↓
-Phase 4 — Component Model
+Phase 4 — Component Model           [started]
         ↓
 Phase 5 — Modal / Navigation
         ↓
