@@ -253,6 +253,44 @@ namespace ui
         syncState(nodeTree);
     }
 
+    void InputManager::validateInputState(NodeTree &nodeTree)
+    {
+        if (input_.focusedNode)
+        {
+            Node *focused = nodeTree.findNode(
+                input_.focusedNode->id());
+    
+            if (focused &&
+                isNodeAllowedByModal(nodeTree, focused) &&
+                focused->isVisible() &&
+                focused->isEnabled() &&
+                focused->isFocusable())
+            {
+                input_.focusedNode = focused;
+                input_.focusedNodeId = focused->id();
+            }
+            else if (focused)
+            {
+                clearFocus(nodeTree);
+            }
+        }
+    
+        if (input_.capturedNode)
+        {
+            Node *captured = nodeTree.findNode(
+                input_.capturedNode->id());
+    
+            if (!captured ||
+                !isNodeAllowedByModal(nodeTree, captured) ||
+                !captured->isVisible() ||
+                !captured->isEnabled() ||
+                !captured->isCapturable())
+            {
+                cancelPointerInteraction(nodeTree);
+            }
+        }
+    }
+
     void InputManager::syncState(NodeTree &nodeTree)
     {
         InputState &input = input_;
