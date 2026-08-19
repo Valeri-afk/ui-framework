@@ -79,6 +79,7 @@ namespace ui
         std::optional<Node::Id> modalRootId_;
 
         std::optional<Node::Id> pendingFocusNodeId_;
+        bool pendingClearFocus_ = false;
         bool focusTransitionInProgress_ = false;
 
         static void rememberNode(
