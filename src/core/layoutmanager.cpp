@@ -1,6 +1,7 @@
 #include "ui_framework/core/linear_layout.hpp"
 #include "ui_framework/core/layout_constraints.hpp"
 #include "ui_framework/core/stackpanelnode.hpp"
+#include "ui_framework/core/textnode.hpp"
 #include "layoutmanager.hpp"
 
 #include <algorithm>
@@ -262,6 +263,44 @@ namespace ui
         nodeTree.flushMutationQueue();
     }
 
+    LayoutSize LayoutManager::measureTextNode(
+        TextNode &node,
+        const LayoutSize &availableContent) const
+    {
+        if (!node.font_ || node.text_.empty())
+            return {};
+
+        const float availableWidth =
+            finiteOrInfinity(availableContent.width);
+
+        int width = 0;
+        int height = 0;
+
+        const bool measured =
+            availableWidth < kInfinity
+                ? TTF_GetStringSizeWrapped(
+                      node.font_,
+                      node.text_.c_str(),
+                      node.text_.size(),
+                      static_cast<int>(std::round(
+                          std::max(0.0f, availableWidth))),
+                      &width,
+                      &height)
+                : TTF_GetStringSize(
+                      node.font_,
+                      node.text_.c_str(),
+                      node.text_.size(),
+                      &width,
+                      &height);
+
+        if (!measured)
+            return {};
+
+        return {
+            static_cast<float>(width),
+            static_cast<float>(height)};
+    }
+
     void LayoutManager::measureRecursive(
         Node &node,
         const LayoutSize &availableBorderBoxSize,
@@ -342,6 +381,14 @@ namespace ui
                     childAvailableBorder,
                     nodeTree);
             }
+        }
+        else if (auto *textNode = dynamic_cast<TextNode *>(&node))
+        {
+            desiredContent =
+                sanitizeSize(
+                    measureTextNode(
+                        *textNode,
+                        availableContent));
         }
         else
         {
@@ -448,41 +495,4 @@ namespace ui
 
         return sanitizeSize(size);
     }
-
-    LayoutSize LayoutManager::toContentSize(
-        const Node &node,
-        const LayoutSize &borderBoxSize) const
-    {
-        return subtractPaddingBorder(
-            sanitizeProposal(borderBoxSize),
-            sanitizePadding(node.getPadding()),
-            sanitizeBorder(node.getBorder()));
-    }
-
-    LayoutSize LayoutManager::toBorderBoxSize(
-        const Node &node,
-        const LayoutSize &contentSize) const
-    {
-        return addPaddingBorder(
-            sanitizeProposal(contentSize),
-            sanitizePadding(node.getPadding()),
-            sanitizeBorder(node.getBorder()));
-    }
-
-    LayoutSize LayoutManager::applyMeasureRules(
-        const Node &node,
-        const LayoutSize &measuredBorderBoxSize) const
-    {
-        return internal::resolveFinalSize(
-            node,
-            sanitizeSize(measuredBorderBoxSize));
-    }
-
-    void LayoutManager::sanitizeLayoutSize(
-        LayoutSize &size) const noexcept
-    {
-        size.width = finiteOrZero(size.width);
-        size.height = finiteOrZero(size.height);
-    }
-
 }
