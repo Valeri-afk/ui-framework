@@ -71,6 +71,19 @@ namespace
             finiteOrInfinity(value) - finiteOrZero(inset));
     }
 
+    ui::LayoutSize subtractPaddingBorder(
+        ui::LayoutSize borderBoxSize,
+        const ui::Padding &padding,
+        const ui::Border &border) noexcept
+    {
+        const ui::LayoutSize insets =
+            paddingBorderSize(padding, border);
+
+        return {
+            subtractInset(borderBoxSize.width, insets.width),
+            subtractInset(borderBoxSize.height, insets.height)};
+    }
+
     ui::LayoutSize toContentSize(
         ui::Node &node,
         ui::LayoutSize borderBoxSize) noexcept
@@ -92,19 +105,6 @@ namespace
         return {
             safeAdd(contentSize.width, insets.width),
             safeAdd(contentSize.height, insets.height)};
-    }
-
-    ui::LayoutSize subtractPaddingBorder(
-        ui::LayoutSize borderBoxSize,
-        const ui::Padding &padding,
-        const ui::Border &border) noexcept
-    {
-        const ui::LayoutSize insets =
-            paddingBorderSize(padding, border);
-
-        return {
-            subtractInset(borderBoxSize.width, insets.width),
-            subtractInset(borderBoxSize.height, insets.height)};
     }
 
     ui::LayoutPosition getContentPosition(const ui::Node &node) noexcept
@@ -204,34 +204,21 @@ namespace ui
                     if (!root.isVisible())
                         return;
 
-                    const Node::Id rootId =
-                        root.id();
-
+                    const Node::Id rootId = root.id();
                     const LayoutSize rootAvailable =
                         makeRootAvailableSize(root);
 
-                    measureRecursive(
-                        root,
-                        rootAvailable,
-                        nodeTree);
+                    measureRecursive(root, rootAvailable, nodeTree);
 
-                    Node *liveRoot =
-                        nodeTree.findNode(rootId);
-
+                    Node *liveRoot = nodeTree.findNode(rootId);
                     if (!liveRoot)
                         return;
 
                     liveRoot->actualSize_ =
-                        internal::resolveFinalSize(
-                            *liveRoot,
-                            rootAvailable);
+                        internal::resolveFinalSize(*liveRoot, rootAvailable);
+                    liveRoot->actualPosition_ = liveRoot->position_;
 
-                    liveRoot->actualPosition_ =
-                        liveRoot->position_;
-
-                    arrangeRecursive(
-                        *liveRoot,
-                        nodeTree);
+                    arrangeRecursive(*liveRoot, nodeTree);
                 });
         }
 
@@ -285,105 +272,75 @@ namespace ui
             return;
 
         const Node::Id nodeId = node.id();
-
         LayoutSize availableBorder =
-            sanitizeProposal(availableBorderBoxSize);
-
-        availableBorder =
             internal::resolveMeasurementProposal(
                 node,
-                availableBorder);
-
+                sanitizeProposal(availableBorderBoxSize));
         const LayoutSize availableContent =
             toContentSize(node, availableBorder);
 
         internal::LinearMeasureContext ctx;
         ctx.availableSize = availableContent;
-
         ctx.measureChild =
             [this, &nodeTree, &node](
                 size_t visibleChildIndex,
                 const LayoutSize &childAvailableContent) -> LayoutSize
         {
             Node *child = node.getVisibleChild(visibleChildIndex);
-
             if (!child)
                 return {};
 
             const Node::Id childId = child->id();
-
             const LayoutSize childAvailableBorder =
                 toBorderBoxSize(*child, childAvailableContent);
 
-            measureRecursive(
-                *child,
-                childAvailableBorder,
-                nodeTree);
+            measureRecursive(*child, childAvailableBorder, nodeTree);
 
             Node *liveChild = nodeTree.findNode(childId);
-
-            return liveChild
-                       ? liveChild->desiredSize_
-                       : LayoutSize{};
+            return liveChild ? liveChild->desiredSize_ : LayoutSize{};
         };
 
         LayoutSize desiredContent{};
 
         if (auto *stackPanel = dynamic_cast<StackPanelNode *>(&node))
         {
-            desiredContent =
-                sanitizeSize(
-                    internal::measureLinearPanel(
-                        *stackPanel,
-                        ctx));
+            desiredContent = sanitizeSize(
+                internal::measureLinearPanel(*stackPanel, ctx));
 
             for (size_t i = 0; i < stackPanel->childCount(); ++i)
             {
                 Node *child = stackPanel->getChildAt(i);
-
-                if (!child ||
-                    !child->isVisible() ||
+                if (!child || !child->isVisible() ||
                     child->getPositionMode() != PositionMode::Absolute)
-                {
                     continue;
-                }
-
-                const LayoutSize childAvailableBorder =
-                    toBorderBoxSize(*child, availableContent);
 
                 measureRecursive(
                     *child,
-                    childAvailableBorder,
+                    toBorderBoxSize(*child, availableContent),
                     nodeTree);
             }
         }
         else if (auto *textNode = dynamic_cast<TextNode *>(&node))
         {
-            desiredContent =
-                sanitizeSize(
-                    measureTextNode(
-                        *textNode,
-                        availableContent));
+            desiredContent = sanitizeSize(
+                measureTextNode(*textNode, availableContent));
         }
         else
         {
-            desiredContent =
-                sanitizeSize(
-                    node.measure(ctx));
+            MeasureContext legacyCtx;
+            legacyCtx.availableSize = ctx.availableSize;
+            legacyCtx.measureChild = ctx.measureChild;
+            desiredContent = sanitizeSize(node.measure(legacyCtx));
         }
 
         Node *liveNode = nodeTree.findNode(nodeId);
-
         if (!liveNode)
             return;
 
         LayoutSize desiredBorder =
-            toBorderBoxSize(*liveNode, desiredContent);
-
-        desiredBorder =
             internal::resolveFinalSize(
                 *liveNode,
-                desiredBorder);
+                toBorderBoxSize(*liveNode, desiredContent));
 
         liveNode->desiredSize_ = desiredBorder;
     }
@@ -396,10 +353,8 @@ namespace ui
             return;
 
         internal::LinearArrangeContext ctx;
-
         ctx.contentPosition = getContentPosition(node);
         ctx.contentSize = getContentSize(node);
-
         ctx.placeChild =
             [this, &nodeTree, &node](
                 size_t visibleChildIndex,
@@ -407,46 +362,33 @@ namespace ui
                 const LayoutSize &size)
         {
             Node *child = node.getVisibleChild(visibleChildIndex);
-
             if (!child || !child->isVisible())
                 return;
 
-            LayoutSize finalSize =
-                internal::resolveFinalSize(
-                    *child,
-                    sanitizeSize(size));
-
             child->actualPosition_ = position;
-            child->actualSize_ = finalSize;
+            child->actualSize_ = internal::resolveFinalSize(
+                *child,
+                sanitizeSize(size));
 
             arrangeRecursive(*child, nodeTree);
         };
 
         if (auto *stackPanel = dynamic_cast<StackPanelNode *>(&node))
         {
-            internal::arrangeLinearPanel(
-                *stackPanel,
-                ctx);
+            internal::arrangeLinearPanel(*stackPanel, ctx);
 
             for (size_t i = 0; i < stackPanel->childCount(); ++i)
             {
                 Node *child = stackPanel->getChildAt(i);
-
-                if (!child ||
-                    !child->isVisible() ||
+                if (!child || !child->isVisible() ||
                     child->getPositionMode() != PositionMode::Absolute)
-                {
                     continue;
-                }
-
-                LayoutSize finalSize =
-                    internal::resolveFinalSize(
-                        *child,
-                        sanitizeSize(child->desiredSize_));
 
                 child->actualPosition_ =
                     ctx.contentPosition + child->position_;
-                child->actualSize_ = finalSize;
+                child->actualSize_ = internal::resolveFinalSize(
+                    *child,
+                    sanitizeSize(child->desiredSize_));
 
                 arrangeRecursive(*child, nodeTree);
             }
