@@ -667,10 +667,12 @@ namespace ui
         std::optional<MousePosition> position)
     {
         Node *captured = input_.capturedNode;
-
+        
         if (!captured)
             return;
-
+        
+        const Node::Id capturedId = captured->id();
+        
         if (!dispatchDragEndIfNeeded(
                 nodeTree,
                 captured,
@@ -678,15 +680,30 @@ namespace ui
         {
             return;
         }
-
+        
+        // DragEndEvent may have changed pointer capture.
+        // Never overwrite a callback-established state.
+        if (input_.capturedNode &&
+            input_.capturedNode->id() != capturedId)
+        {
+            syncState(nodeTree);
+            return;
+        }
+        
+        if (!input_.capturedNode)
+        {
+            syncState(nodeTree);
+            return;
+        }
+        
         clearTrackedNode(
             input_.capturedNode,
             input_.capturedNodeId);
-
+        
         clearTrackedNode(
             input_.pressedNode,
             input_.pressedNodeId);
-
+        
         clearDragState();
     }
 
