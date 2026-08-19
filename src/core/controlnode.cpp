@@ -39,11 +39,8 @@ namespace
         const int x = clampToInt(std::floor(safeX));
         const int y = clampToInt(std::floor(safeY));
 
-        const int right =
-            clampToInt(std::ceil(safeX + safeWidth));
-
-        const int bottom =
-            clampToInt(std::ceil(safeY + safeHeight));
+        const int right = clampToInt(std::ceil(safeX + safeWidth));
+        const int bottom = clampToInt(std::ceil(safeY + safeHeight));
 
         return {
             x,
@@ -75,7 +72,6 @@ namespace
                 return;
 
             SDL_GetRenderDrawBlendMode(renderer_, &previousBlendMode_);
-
             SDL_GetRenderDrawColor(
                 renderer_,
                 &previousR_,
@@ -90,7 +86,6 @@ namespace
                 return;
 
             SDL_SetRenderDrawBlendMode(renderer_, previousBlendMode_);
-
             SDL_SetRenderDrawColor(
                 renderer_,
                 previousR_,
@@ -104,9 +99,7 @@ namespace
 
     private:
         SDL_Renderer *renderer_ = nullptr;
-
         SDL_BlendMode previousBlendMode_ = SDL_BLENDMODE_BLEND;
-
         Uint8 previousR_ = 255;
         Uint8 previousG_ = 255;
         Uint8 previousB_ = 255;
@@ -129,13 +122,12 @@ namespace ui
         return styleProps_;
     }
 
-    void ControlNode::drawSelf(SDL_Renderer *renderer)
+    void ControlNode::draw(SDL_Renderer *renderer)
     {
         if (!renderer)
             return;
 
         RendererDrawStateScope state(renderer);
-
         const SDL_Rect rect = toSDLRect(*this);
 
         if (rect.w <= 0 || rect.h <= 0)
@@ -150,30 +142,20 @@ namespace ui
         const float borderWidth =
             std::max(0.0f, finiteOrZero(styleProps_.borderWidth));
 
-        if (borderWidth > 0.0f &&
-            styleProps_.borderColor.a > 0)
+        if (borderWidth > 0.0f && styleProps_.borderColor.a > 0)
         {
             const int border =
                 std::max(1, static_cast<int>(std::ceil(borderWidth)));
 
             const SDL_Rect top{
-                rect.x,
-                rect.y,
-                rect.w,
-                std::min(border, rect.h)};
-
+                rect.x, rect.y, rect.w, std::min(border, rect.h)};
             const SDL_Rect bottom{
                 rect.x,
                 std::max(rect.y, rect.y + rect.h - border),
                 rect.w,
                 std::min(border, rect.h)};
-
             const SDL_Rect left{
-                rect.x,
-                rect.y,
-                std::min(border, rect.w),
-                rect.h};
-
+                rect.x, rect.y, std::min(border, rect.w), rect.h};
             const SDL_Rect right{
                 std::max(rect.x, rect.x + rect.w - border),
                 rect.y,
@@ -181,7 +163,6 @@ namespace ui
                 rect.h};
 
             setDrawColor(renderer, styleProps_.borderColor);
-
             SDL_RenderFillRect(renderer, &top);
             SDL_RenderFillRect(renderer, &bottom);
             SDL_RenderFillRect(renderer, &left);
