@@ -1,5 +1,4 @@
 #include "ui_framework/core/linear_layout.hpp"
-#include "ui_framework/core/layout_constraints.hpp"
 #include "ui_framework/core/stackpanelnode.hpp"
 
 #include <algorithm>
@@ -93,9 +92,6 @@ namespace ui::internal
                 childAvailable.height = kInfinity;
             else
                 childAvailable.width = kInfinity;
-
-            childAvailable =
-                resolveMeasurementProposal(*child, childAvailable);
 
             const LayoutSize childSize =
                 ctx.measureChild(visibleIndex, childAvailable);
@@ -238,11 +234,6 @@ namespace ui::internal
                     finalSize.height = availableCross;
                 break;
             }
-
-            Node *child = panel.getVisibleChild(placement.visibleIndex);
-
-            if (child)
-                finalSize = resolveFinalSize(*child, finalSize);
 
             LayoutPosition childPosition = position;
 
