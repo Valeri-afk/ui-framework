@@ -31,19 +31,19 @@ TabItem
 Checkbox
 RadioButton
 Slider
+Dropdown
 ```
 
 These components have a distinct generic contract and are intended to be reusable independently of the chess application.
 
+`Dropdown` is a composite of `Button` and `Menu/MenuItem`. Its Phase 5 implementation keeps the menu as a child and uses the existing absolute-position layout capability. It does not introduce global overlay or modality behavior.
+
 ### Analyze before implementation
 
 ```text
-Dropdown
 TextField / Input
 Image
 ```
-
-`Dropdown` should reuse `Menu/MenuItem` semantics but its popup ownership and placement must be defined without turning it into an implicit Modal. Implement after that contract is settled.
 
 `TextField / Input` requires a proper text-input contract, including text editing and potentially composition/IME handling. Do not create a partial key-only text field.
 
