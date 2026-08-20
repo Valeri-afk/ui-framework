@@ -1,26 +1,18 @@
 # Phase 6 — Core Development Status Checkpoint
 
-This document records the exact development point reached after the Phase 5 component work and the initial Phase 6 modality work.
+This document records the exact development point reached after the Phase 5 component work and the initial Phase 6 modality and scrolling work.
 
 It is intentionally separate from `ARCHITECTURE.md`. It is a working checkpoint for continuing development and for knowing when the framework core is ready for real compilation/runtime validation.
 
 ## 1. Current development point
 
-The repository is currently on the transition from:
-
-```text
-Phase 5 — Component Development
-```
-
-to:
+The repository is currently in:
 
 ```text
 Phase 6 — Framework Core / Subsystem Development
 ```
 
 Phase 5 is considered complete as a component-development phase.
-
-The standard component layer required as the current framework target has been implemented. The framework is not being expanded into a large generic widget toolkit.
 
 ## 2. Phase 5 result
 
@@ -44,7 +36,7 @@ The following remain deferred or are not framework components at this stage:
 ```text
 TextField / Input    → deferred to text-input infrastructure
 Image                → deferred to resource/texture infrastructure
-Scroll               → deferred to scrolling infrastructure
+Scroll               → framework-level scrolling behavior is now core infrastructure; a public Scroll / ScrollArea component remains deferred
 Modal                → currently not required as a standalone component
 Paper                → not a framework component
 Label                → covered by text primitives / text nodes
@@ -91,23 +83,38 @@ The backdrop itself is an internal framework overlay node, not a public standard
 
 A separate `Modal` component is intentionally not required yet. A client may use ordinary framework nodes/panels as modal content through the modality service.
 
-### Scrolling — not implemented yet
+### Scrolling — core behavior implemented; public component deferred
 
-Scrolling remains the next major core subsystem.
+Scrolling is now implemented as framework-level behavior through `ScrollManager`, without introducing a standalone `Scroll` / `ScrollArea` component.
 
-It is expected to require a reusable framework contract for:
+Implemented responsibilities:
 
 ```text
-viewport
-content extent
-scroll offset/range
-coordinate conversion
-clipping integration
-wheel/gesture/drag routing
-hit-test through transformed/clipped content
-layout integration
-nested scrolling policy
+scroll state
+viewport/content extent relationship
+scroll offset/range and clamping
+SDL wheel routing
+nested scroll chaining with residual delta
+presentation coordinate transform
+hit-testing through transformed content
+existing Overflow::HIDDEN clipping integration
+layout-derived viewport/content extent
+nested scroll container boundaries
+scroll-state lifecycle cleanup
 ```
+
+The current ownership model is:
+
+```text
+ScrollManager → scroll state and input routing
+Node / UIManager → presentation coordinate transform
+NodeTree → traversal, clipping and hit-test integration
+LayoutManager → layout geometry; scroll does not mutate layout positions
+```
+
+Layout positions remain unchanged by scrolling. Scroll offset is stored separately from layout state.
+
+A standard `Scroll` / `ScrollArea` component and scrollbar visuals remain intentionally deferred until the framework-level contract is validated by compilation/runtime behavior.
 
 Reference: `SCROLL_ARCHITECTURE.md`.
 
@@ -159,36 +166,23 @@ Modality currently uses the existing overlay mechanism and does not require a se
 The remaining core-development work is:
 
 ```text
-1. Scrolling infrastructure
-2. Text input / editing infrastructure
-3. Image / minimal resource ownership infrastructure
-4. Re-evaluate generic overlay/popup infrastructure only if evidence requires it
-5. Final subsystem integration review
-6. Source-tree consistency review
-7. Documentation checkpoint for completed Phase 6 core work
+1. Text input / editing infrastructure
+2. Image / minimal resource ownership infrastructure
+3. Re-evaluate generic overlay/popup infrastructure only if evidence requires it
+4. Final subsystem integration review
+5. Source-tree consistency review
+6. Documentation checkpoint for completed Phase 6 core work
 ```
 
-Not every deferred component is guaranteed to become a framework component. The infrastructure is implemented only when a concrete reusable framework contract exists.
+Scrolling is no longer on the implementation queue; it is now at the validation/stabilization boundary for core behavior.
 
-## 5. Core-complete boundary
+Not every deferred component is guaranteed to become a framework component. Infrastructure is implemented only when a concrete reusable framework contract exists.
 
-The framework core should be considered development-complete only when the required reusable infrastructure is present for the current scope and there are no known architectural placeholders that are required for the target component set.
+## 5. Validation boundary
 
-At that point the project moves from:
+Scroll and modality are now treated as implemented core infrastructure. The project should move to validation/stabilization rather than adding scrollbar visuals or a public Scroll component first.
 
-```text
-core implementation
-```
-
-to:
-
-```text
-validation / stabilization
-```
-
-## 6. The validation phase after core development
-
-The following work is intentionally postponed until the core-development boundary:
+The following work is required before declaring the current core boundary fully validated:
 
 ```text
 full compilation
@@ -198,23 +192,22 @@ component interaction tests
 NodeTree/input/layout/render integration tests
 modal interaction tests
 scroll interaction tests
-text-input tests
-resource/image lifecycle tests
 memory/lifetime checks
 source/include consistency checks
 ```
 
-The project should then use the real build and runtime behavior to expose integration defects that static/source inspection cannot reliably prove.
+The project should then use real build/runtime behavior to expose integration defects that static/source inspection cannot reliably prove.
 
-## 7. Current operating rule
+## 6. Current operating rule
 
-Until the core-development boundary:
+Until the remaining core-development boundary:
 
 ```text
 Do not optimize for build cleanliness.
 Do not expand the framework's component catalog unnecessarily.
 Do not create application-specific chess functionality.
 Do not add infrastructure without a concrete reusable responsibility.
+Do not add a public Scroll / ScrollArea component before validation of the core behavior.
 ```
 
 At the core-complete boundary:
@@ -227,15 +220,16 @@ Fix integration defects.
 Only then decide whether additional Phase 6 work is justified.
 ```
 
-## 8. Immediate next step
+## 7. Immediate next step
 
-The immediate next subsystem is:
+The immediate next step is:
 
 ```text
-Scrolling
+Validation / stabilization of the implemented framework core,
+starting with compilation and source/include consistency.
 ```
 
-Modality should be treated as completed infrastructure unless new evidence appears while implementing the remaining core subsystems.
+Modality and scrolling should be treated as completed infrastructure unless new evidence appears during validation.
 
 Reference set:
 
