@@ -14,7 +14,6 @@ namespace ui
     void ScrollState::clampOffset() noexcept
     {
         const ScrollOffset maximum = maxOffset();
-
         offset.x = std::clamp(offset.x, 0.0f, maximum.x);
         offset.y = std::clamp(offset.y, 0.0f, maximum.y);
     }
@@ -99,32 +98,84 @@ namespace ui
         return true;
     }
 
-    std::optional<ScrollState> ScrollManager::getState(
-        Node::Id nodeId) const
+    std::optional<ScrollState> ScrollManager::getState(Node::Id nodeId) const
     {
         const auto it = states_.find(nodeId);
         if (it == states_.end())
             return std::nullopt;
-
         return it->second;
     }
 
     ScrollOffset ScrollManager::getOffset(Node::Id nodeId) const noexcept
     {
         const auto it = states_.find(nodeId);
-        if (it == states_.end())
-            return {};
-
-        return it->second.offset;
+        return it == states_.end() ? ScrollOffset{} : it->second.offset;
     }
 
     ScrollOffset ScrollManager::getMaxOffset(Node::Id nodeId) const noexcept
     {
         const auto it = states_.find(nodeId);
-        if (it == states_.end())
-            return {};
+        return it == states_.end() ? ScrollOffset{} : it->second.maxOffset();
+    }
 
-        return it->second.maxOffset();
+    ScrollOffset ScrollManager::getAccumulatedOffset(const Node &node) const noexcept
+    {
+        ScrollOffset result{};
+        const Node *current = &node;
+
+        while (current)
+        {
+            const auto it = states_.find(current->id());
+            if (it != states_.end())
+                result = result + it->second.offset;
+
+            current = current->parent();
+        }
+
+        return result;
+    }
+
+    Node *ScrollManager::findNearestScrollableAncestor(
+        NodeTree &nodeTree,
+        Node *target) const noexcept
+    {
+        Node *current = target;
+        while (current)
+        {
+            if (nodeTree.findNode(current->id()) != current)
+                return nullptr;
+
+            if (isRegistered(current->id()))
+                return current;
+
+            current = current->parent();
+        }
+        return nullptr;
+    }
+
+    bool ScrollManager::handleWheel(
+        NodeTree &nodeTree,
+        float x,
+        float y,
+        float deltaX,
+        float deltaY,
+        const Node *modalRoot)
+    {
+        Node *target = nodeTree.hitTest(x, y, modalRoot);
+        Node *scrollNode = findNearestScrollableAncestor(nodeTree, target);
+        if (!scrollNode)
+            return false;
+
+        auto it = states_.find(scrollNode->id());
+        if (it == states_.end())
+            return false;
+
+        const ScrollOffset before = it->second.offset;
+        it->second.offset.x += deltaX;
+        it->second.offset.y += deltaY;
+        it->second.clampOffset();
+
+        return it->second.offset != before;
     }
 
     void ScrollManager::sync(NodeTree &nodeTree)
