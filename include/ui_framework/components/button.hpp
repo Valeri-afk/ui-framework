@@ -1,113 +1,97 @@
 #pragma once
 
-#include <string>
 #include <functional>
-#include <memory>
-#include <SDL3_ttf/SDL_ttf.h>
-#include "ui_framework/components/component.hpp"
-#include "ui_framework/components/label.hpp"
-#include "ui_framework/types.hpp"
+#include <string>
+
+#include "ui_framework/core/node.hpp"
+#include "ui_framework/core/text_primitive.hpp"
 
 namespace ui
 {
-    class Button : public Component
+    class Button : public Node
     {
     public:
-        enum class Type
+        enum class Variant
         {
-            FILLED,   // залитый фон
-            OUTLINED, // только рамка
-            TEXT      // только текст, без фона и рамки
+            FILLED,
+            OUTLINED,
+            TEXT
         };
 
-        using OnClickCallback = std::function<void(MouseClickEvent &)>;
-        using OnMouseDownCallback = std::function<void(MouseDownEvent &)>;
-        using OnMouseUpCallback = std::function<void(MouseUpEvent &)>;
-        using OnMouseEnterCallback = std::function<void(MouseEnterEvent &)>;
-        using OnMouseLeaveCallback = std::function<void(MouseLeaveEvent &)>;
+        using ActivateCallback = std::function<void(Button &)>;
 
-        Button() = default;
+        Button();
         explicit Button(float borderRadius);
+        ~Button() override = default;
 
-        // Прокси к Label
-        void setText(const std::string &text, SDL_Renderer *renderer = nullptr);
-        const std::string &getText() const;
+        void setText(std::string text);
+        const std::string &getText() const noexcept;
 
-        void setFont(TTF_Font *font, SDL_Renderer *renderer = nullptr);
-        TTF_Font *getFont() const;
+        void setFont(TTF_Font *font);
+        TTF_Font *getFont() const noexcept;
 
-        void setTextColor(const Color &color);
-        Color getTextColor() const;
+        void setTextColor(Color color) noexcept;
+        Color getTextColor() const noexcept;
 
-        void setTextAlignment(TextAlignment hAlign, TextAlignment vAlign);
-        TextAlignment getHorizontalTextAlignment() const;
-        TextAlignment getVerticalTextAlignment() const;
+        void setVariant(Variant variant) noexcept;
+        Variant getVariant() const noexcept;
 
-        // Стили кнопки
-        void setBackgroundColor(const Color &color);
-        Color getBackgroundColor() const;
+        void setBackgroundColor(Color color) noexcept;
+        Color getBackgroundColor() const noexcept;
 
-        void setBorderColor(const Color &color);
-        Color getBorderColor() const;
+        void setBorderColor(Color color) noexcept;
+        Color getBorderColor() const noexcept;
 
-        void setBorderRadius(float radius);
-        float getBorderRadius() const;
+        void setBorderRadius(float radius) noexcept;
+        float getBorderRadius() const noexcept;
 
-        // Тип и масштаб
-        void setType(Type type);
-        Type getType() const { return type_; }
+        void setPressScale(float scale) noexcept;
+        float getPressScale() const noexcept;
 
-        void setResizeScale(float scale);
-        void setResizeEffectEnabled(bool enabled);
-        float getScale() const { return currentScale_; } // текущий масштаб (для отладки)
+        void setPressAnimationEnabled(bool enabled) noexcept;
+        bool isPressAnimationEnabled() const noexcept;
 
-        // Колбэки
-        void setOnClick(OnClickCallback cb);
-        void setOnMouseDown(OnMouseDownCallback cb);
-        void setOnMouseUp(OnMouseUpCallback cb);
-        void setOnMouseEnter(OnMouseEnterCallback cb);
-        void setOnMouseLeave(OnMouseLeaveCallback cb);
+        void setPressAnimationSpeed(float speed) noexcept;
+        float getPressAnimationSpeed() const noexcept;
 
-        // Component overrides
-        void onMount(Node &node) override;
-        void onUnmount(Node &node) override;
-        void update(Node &node, float dt) override;
-        LayoutSize measure(const MeasureContext &ctx) const override;
-        void arrange(const ArrangeContext &ctx) override;
-        void draw(const Node &node, SDL_Renderer *renderer) override;
+        bool isPressed() const noexcept;
+        bool isHovered() const noexcept;
 
-        // События
-        void onMouseDown(Node &node, MouseDownEvent &event) override;
-        void onMouseUp(Node &node, MouseUpEvent &event) override;
-        void onMouseClick(Node &node, MouseClickEvent &event) override;
-        void onMouseEnter(Node &node, MouseEnterEvent &event) override;
-        void onMouseLeave(Node &node, MouseLeaveEvent &event) override;
+        void setOnActivate(ActivateCallback callback);
+        void activate();
+
+    protected:
+        void update(float dt) override;
+        LayoutSize measureContent(const LayoutSize &availableContent) const override;
+        void draw(SDL_Renderer *renderer) override;
 
     private:
-        void createLabel(Node &node);
+        void setDefaultGeometry();
+        void handleMouseDown(MouseDownEvent &event);
+        void handleMouseUp(MouseUpEvent &event);
+        void handleMouseClick(MouseClickEvent &event);
+        void handleMouseEnter(MouseEnterEvent &event);
+        void handleMouseLeave(MouseLeaveEvent &event);
 
-        // Дочерний Label
-        Node *labelNode_ = nullptr;
-        Label *label_ = nullptr;
+        static Color multiplyAlpha(Color color, float factor) noexcept;
+        static Color lighten(Color color, float amount) noexcept;
 
-        // Стили
+        TextPrimitive text_;
+
+        Variant variant_ = Variant::FILLED;
         Color backgroundColor_ = Colors::gray;
         Color borderColor_ = Colors::black;
         float borderRadius_ = 4.0f;
-        Type type_ = Type::FILLED;
 
-        // Масштабирование (визуальный эффект)
-        float resizeScale_ = 1.1f;
-        bool resizeEnabled_ = true;
-        mutable float currentScale_ = 1.0f;
-        mutable float targetScale_ = 1.0f;
-        mutable bool pressed_ = false;
+        float pressScale_ = 0.96f;
+        bool pressAnimationEnabled_ = true;
+        float pressAnimationSpeed_ = 14.0f;
+        float currentScale_ = 1.0f;
+        float targetScale_ = 1.0f;
 
-        // Колбэки
-        OnClickCallback onClickCb_;
-        OnMouseDownCallback onMouseDownCb_;
-        OnMouseUpCallback onMouseUpCb_;
-        OnMouseEnterCallback onMouseEnterCb_;
-        OnMouseLeaveCallback onMouseLeaveCb_;
+        bool pressed_ = false;
+        bool hovered_ = false;
+
+        ActivateCallback onActivate_;
     };
 }
