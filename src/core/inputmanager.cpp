@@ -432,6 +432,87 @@ namespace ui
         focusTransitionInProgress_ = false;
     }
 
+    void InputManager::refreshHover(
+        NodeTree &nodeTree,
+        float x,
+        float y,
+        const Node *modalRoot)
+    {
+        // A captured pointer owns the current interaction.
+        // Scrolling must not synthesize hover transitions for a captured node.
+        if (input_.capturedNode)
+            return;
+    
+        const MousePosition position{x, y};
+        input_.pointerPosition_ = position;
+    
+        Node *newHovered =
+            nodeTree.hitTest(
+                position.x,
+                position.y,
+                modalRoot);
+    
+        Node *oldHovered = input_.hoveredNode;
+    
+        if (oldHovered == newHovered)
+            return;
+    
+        if (oldHovered)
+        {
+            const Node::Id oldHoveredId = oldHovered->id();
+    
+            MouseLeaveEvent leaveEvent;
+            leaveEvent.position = position;
+    
+            if (!dispatchEvent(
+                    nodeTree,
+                    oldHovered,
+                    leaveEvent,
+                    false,
+                    false))
+            {
+                syncState(nodeTree);
+                return;
+            }
+    
+            if (nodeTree.findNode(oldHoveredId) != oldHovered)
+            {
+                syncState(nodeTree);
+                return;
+            }
+        }
+    
+        if (newHovered)
+        {
+            const Node::Id newHoveredId = newHovered->id();
+    
+            MouseEnterEvent enterEvent;
+            enterEvent.position = position;
+    
+            if (!dispatchEvent(
+                    nodeTree,
+                    newHovered,
+                    enterEvent,
+                    false,
+                    false))
+            {
+                syncState(nodeTree);
+                return;
+            }
+    
+            if (nodeTree.findNode(newHoveredId) != newHovered)
+            {
+                syncState(nodeTree);
+                return;
+            }
+        }
+    
+        setTrackedNode(
+            input_.hoveredNode,
+            input_.hoveredNodeId,
+            newHovered);
+    }
+
     bool InputManager::focus(
         NodeTree &nodeTree,
         Node &node)
