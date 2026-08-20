@@ -4,7 +4,7 @@
 #include <cmath>
 #include <memory>
 
-#include <SDL3/SDL.h>
+#include "ui_framework/core/primitives.hpp"
 
 namespace ui
 {
@@ -37,27 +37,19 @@ namespace ui
                     0,
                     255));
 
-            SDL_SetRenderDrawBlendMode(
-                renderer,
-                SDL_BLENDMODE_BLEND);
+            const LayoutPosition position = getActualPosition();
+            const LayoutSize size = getActualSize();
 
-            SDL_SetRenderDrawColor(
+            primitives::boxRGBA(
                 renderer,
+                position.x,
+                position.y,
+                position.x + size.width,
+                position.y + size.height,
                 color_.r,
                 color_.g,
                 color_.b,
                 alpha);
-
-            const LayoutPosition position = getActualPosition();
-            const LayoutSize size = getActualSize();
-
-            SDL_FRect rect{
-                position.x,
-                position.y,
-                size.width,
-                size.height};
-
-            SDL_RenderFillRect(renderer, &rect);
         }
 
     private:
@@ -65,66 +57,14 @@ namespace ui
         float opacity_ = 0.0f;
     };
 
-    bool ModalManager::showModal(
-        NodeTree &nodeTree,
-        InputManager &input,
-        Node &node,
-        BackdropClickBehavior backdropClickBehavior)
-    {
-        if (!showModal(nodeTree, input, node))
-            return false;
-
-        if (!modals_.empty())
-        {
-            modals_.back().backdropClickBehavior =
-                backdropClickBehavior;
-        }
-
-        ensureBackdrop(nodeTree);
-        updateBackdropState();
-        return true;
-    }
-
-    bool ModalManager::handlePointerDown(
-        NodeTree &nodeTree,
-        InputManager &input,
-        const MousePosition &position,
-        MouseButton button)
-    {
-        (void)button;
-
-        Node *modal = topModalNode(nodeTree);
-
-        if (!modal)
-            return false;
-
-        Node *target = nodeTree.hitTest(
-            position.x,
-            position.y,
-            modal);
-
-        if (target)
-            return false;
-
-        if (modals_.back().backdropClickBehavior ==
-            BackdropClickBehavior::Close)
-        {
-            closeModal(nodeTree, input);
-        }
-        else
-        {
-            input.cancelPointerInteraction(nodeTree, position);
-        }
-
-        return true;
-    }
-
     void ModalManager::setViewportSize(const LayoutSize &size) noexcept
     {
-        viewportSize_ = size;
+        viewportSize_ = {
+            std::max(0.0f, size.width),
+            std::max(0.0f, size.height)};
 
         if (backdropNode_)
-            backdropNode_->setViewport(size);
+            backdropNode_->setViewport(viewportSize_);
     }
 
     void ModalManager::setBackdropColor(const Color &color) noexcept
@@ -174,7 +114,12 @@ namespace ui
             backdropColor_,
             backdropOpacity_);
 
-        Node *raw = nodeTree.attachOverlay(0, std::move(backdrop));
+        // The backdrop must be after every normal overlay and before the
+        // separately-rendered top modal. This lets it cover lower overlays
+        // while leaving the active modal visible above it.
+        Node *raw = nodeTree.attachOverlay(
+            nodeTree.overlaysCount(),
+            std::move(backdrop));
 
         if (!raw)
             return;
@@ -202,6 +147,7 @@ namespace ui
 
         if (backdropNode_)
         {
+            backdropNode_->setViewport(viewportSize_);
             backdropNode_->setBackdrop(
                 backdropColor_,
                 backdropOpacity_);
@@ -220,7 +166,8 @@ namespace ui
         }
         else
         {
-            const float step = dt / backdropFadeDuration_;
+            const float step = std::max(0.0f, dt) /
+                               backdropFadeDuration_;
 
             if (backdropOpacity_ < backdropTargetOpacity_)
             {
@@ -266,4 +213,5 @@ namespace ui
         backdropOpacity_ = 0.0f;
         removeBackdrop(nodeTree);
     }
+
 }
