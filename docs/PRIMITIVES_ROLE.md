@@ -24,7 +24,7 @@ circle / ellipse helpers
 
 The purpose is to centralize small drawing algorithms that would otherwise be duplicated across components.
 
-For example, a `Button` may use primitive drawing operations for its background and border while remaining a `Node` component. cite_placeholder
+For example, a `Button` may use primitive drawing operations for its background and border while remaining a `Node` component.
 
 ## Architectural boundary
 
