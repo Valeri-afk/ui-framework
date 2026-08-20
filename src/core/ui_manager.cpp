@@ -224,32 +224,6 @@ namespace ui
         return modalManager_->topModalNode(*nodeTree_);
     }
 
-    void UIManager::setBackdropColor(const Color &color) noexcept
-    {
-        if (modalManager_)
-            modalManager_->setBackdropColor(color);
-    }
-
-    Color UIManager::getBackdropColor() const noexcept
-    {
-        return modalManager_
-                   ? modalManager_->getBackdropColor()
-                   : Colors::transparent;
-    }
-
-    void UIManager::setBackdropFadeDuration(float seconds) noexcept
-    {
-        if (modalManager_)
-            modalManager_->setBackdropFadeDuration(seconds);
-    }
-
-    float UIManager::getBackdropFadeDuration() const noexcept
-    {
-        return modalManager_
-                   ? modalManager_->getBackdropFadeDuration()
-                   : 0.0f;
-    }
-
     void UIManager::prepareForTreeOperation()
     {
         if (!nodeTree_)
