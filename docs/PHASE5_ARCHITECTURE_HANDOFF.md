@@ -1,23 +1,16 @@
 # Phase 5 → Architecture Manual Handoff
 
-This document records the architectural statements in `ARCHITECTURE.md` that became stale or incomplete during Phase 5.
+This document is a temporary checklist for the manual reconciliation of `ARCHITECTURE.md` after Phase 5.
 
-`ARCHITECTURE.md` is intentionally not edited automatically. This handoff is the checklist for the manual architecture review at the Phase 5 → Phase 6 boundary.
+`ARCHITECTURE.md` is intentionally not edited automatically. Phase 6 implementation has already started; this file only records the remaining manual architecture review points.
 
-## 1. Repository scope / active components
+## Manual review points
 
-`ARCHITECTURE.md` currently describes:
+### Active components
 
-```text
-src/components/
-include/ui_framework/components/
-```
+Ensure `ARCHITECTURE.md` distinguishes the active `components/` layer from removed legacy implementations.
 
-as excluded legacy component directories.
-
-This is no longer correct.
-
-The `components` directories are now an active framework layer containing the standard Phase 5 component set:
+Active standard components include:
 
 ```text
 Button
@@ -32,162 +25,84 @@ Slider
 Dropdown
 ```
 
-The document should distinguish these active components from removed legacy implementations.
+`components/` is **not deprecated**.
 
-## 2. ControlNode
+### ControlNode
 
-`ARCHITECTURE.md` currently documents `ControlNode` as an existing deferred class and references:
+Remove/replace any current-architecture wording that presents `ControlNode` as an active base class.
+
+The legacy `ControlNode` experiment is removed and is not an accepted universal component base.
+
+### Component architecture
+
+The architecture should describe the active component layer as concrete responsibilities built on the small runtime hierarchy rather than introducing a universal Control/Interactive/Composite hierarchy.
+
+### Modal
+
+Clarify the distinction between:
 
 ```text
-include/ui_framework/core/controlnode.hpp
-src/core/controlnode.cpp
+ModalManager
+    active framework-level modality infrastructure
+
+legacy Modal component
+    removed/deprecated
+
+public Modal component
+    deferred unless service-level modality later proves insufficient
 ```
 
-Those files have been deliberately removed.
+### Scroll
 
-The manual revision should state that the legacy `ControlNode` experiment is no longer part of the active source tree and is not an accepted component base.
-
-The design rule that remains valid is:
+Add only the responsibilities that are now actually accepted by the implementation:
 
 ```text
-Node
-PanelNode
-StackPanelNode
-```
-
-with concrete components choosing their base according to responsibility.
-
-## 3. Component System section
-
-The current wording says that a complete component architecture does not exist and presents `components/` as outside active architecture.
-
-This section should be rewritten to reflect that Phase 5 established an active standard component layer while keeping the base runtime hierarchy intentionally small.
-
-The architecture should describe component roles rather than inventing a universal hierarchy.
-
-## 4. Modal
-
-The architecture document already describes the current ModalManager mechanics in significant detail. Phase 5 did not remove that underlying runtime preparation.
-
-However, the manual review should distinguish:
-
-```text
-existing Phase 6 preparation
-```
-
-from:
-
-```text
-final Modal component architecture
-```
-
-The old Modal component itself was removed from the active source tree because it depended on the legacy Widget model.
-
-The Phase 6 modality requirements document remains the authoritative design input for the next implementation.
-
-## 5. Scroll
-
-The architecture document currently describes clipping as an existing rendering concern but does not define a final scroll subsystem.
-
-The manual Phase 6 review should add only the scroll responsibilities that are actually accepted:
-
-```text
-viewport
-content extent
-offset/range
-coordinate conversion
+viewport/content extent
+offset/range/clamping
+coordinate transform
 clipping interaction
-input/wheel routing
+wheel routing
 hit-test interaction
-layout integration
+layout-derived content extent
 nested scrolling policy
 ```
 
-Do not treat `Overflow::HIDDEN` as equivalent to a complete scroll implementation.
-
 Reference: `SCROLL_ARCHITECTURE.md`.
 
-## 6. Text input
+### Text input
 
-The current architecture correctly lists keyboard events but does not define a text-input/editing subsystem.
+Keep `TextField / Input` deferred until the framework has a proper text-input/editing contract covering the requirements that actually prove necessary.
 
-Phase 5 established that `TextField / Input` must remain deferred until the framework has a proper text-input contract.
+### Image / resources
 
-Candidate requirements for Phase 6:
+Do not introduce a generic `ResourceManager` merely because `Image` is a candidate. First determine the smallest resource/texture ownership abstraction required by the implementation.
+
+### Primitives
+
+Keep the boundary:
 
 ```text
-text-input events
-composition / IME
-caret
-selection
-editing commands
-clipboard
-focus/input lifecycle
+primitives ≠ resource system ≠ component system
 ```
 
-Reference: `PHASE6_SCOPE_CANDIDATES.md`.
+Reference: `PRIMITIVES_ROLE.md`.
 
-## 7. Image / resources
+### Dropdown / overlays
 
-The architecture document currently says that renderer-bound resources remain local to the node/component and that no generic resource manager exists.
+Do not promote `Dropdown` into a global overlay subsystem unless concrete requirements emerge around clipping escape, root-level placement, popup ordering, collision handling, or outside-click behavior.
 
-This remains a valid constraint for Phase 5.
+### Animation
 
-Phase 6 should not automatically introduce a generic `ResourceManager`. The manual review should first determine the smallest useful resource abstraction required by `Image` or future icon/texture use.
+Do not introduce a mandatory global animation manager without a concrete framework-level requirement.
 
-The likely requirement is a resource handle/lifetime abstraction rather than a global dumping-ground manager.
+## Final Phase 6 references
 
-## 8. Primitives
-
-The current architecture describes primitives as low-level rendering support. This remains correct.
-
-The manual review should preserve the explicit boundary:
+After manually reviewing `ARCHITECTURE.md`, use these living documents as the current Phase 6 references:
 
 ```text
-primitives
-    ≠
-resource system
-    ≠
-component system
-```
-
-`PRIMITIVES_ROLE.md` is the more detailed current reference.
-
-## 9. Dropdown / overlays
-
-The current architecture already has overlay roots and top-level render/hit-test ordering.
-
-Phase 5 `Dropdown` does not currently require global overlay behavior; it remains a local composite with a child `Menu` using absolute positioning.
-
-Do not assume that the existence of `Dropdown` alone justifies a new overlay subsystem.
-
-Promote overlay infrastructure into Phase 6 only if concrete popup requirements require:
-
-```text
-escaping parent clipping
-root-level placement
-cross-subtree outside-click handling
-global popup ordering
-collision/placement policy
-```
-
-## 10. Animation
-
-Phase 5 component development used animation only as a component-local state/presentation mechanism where existing infrastructure was sufficient.
-
-The architecture should continue to avoid a mandatory global animation manager unless a concrete framework-level requirement emerges.
-
-## 11. Phase 5 architectural conclusion
-
-The manual architecture update should characterize Phase 5 as the establishment of a small standard component layer on top of the existing runtime/layout/input/event/rendering infrastructure.
-
-It should not redefine Phase 5 as a new core subsystem phase.
-
-## 12. Phase 6 handoff
-
-After the manual `ARCHITECTURE.md` review, confirm the Phase 6 scope against:
-
-```text
+ROADMAP.md
+FRAMEWORK_SCOPE.md
+PHASE6_CORE_STATUS_CHECKPOINT.md
 PHASE6_SCOPE_CANDIDATES.md
 PHASE6_MODALITY_REQUIREMENTS.md
 SCROLL_ARCHITECTURE.md
@@ -195,4 +110,4 @@ PRIMITIVES_ROLE.md
 COMPONENT_DESIGN_GUIDE.md
 ```
 
-Only after this review should Phase 6 implementation begin.
+Once the manual architecture review is complete, this handoff can itself be archived or removed. It should not become a second architecture source of truth.
