@@ -145,6 +145,13 @@ namespace ui
             if (wheelHandled)
             {
                 prepareForTreeOperation();
+                
+                inputManager_->refreshHover(
+                    *nodeTree_,
+                    mouseX,
+                    mouseY,
+                    topModalNode());
+                
                 return;
             }
         }
