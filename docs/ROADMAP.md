@@ -17,15 +17,25 @@ source of truth for current behavior.
 
 **Phase 5 — Component Model**
 
-Phase 4 — Rendering / Backend is **completed at source level** on the current
-`main` branch. Compilation, automated tests, runtime validation and full-build
+Phase 4 — Rendering / Backend is completed at source level on the Phase 4
+baseline. Compilation, automated tests, runtime validation and full-build
 validation remain intentionally deferred until the end of Phase 6.
 
 ### Current branch
 
 ```text
-main
+phase5-components
 ```
+
+The Phase 5 component architecture is consolidated in:
+
+```text
+docs/PHASE5_COMPONENT_ARCHITECTURE.md
+```
+
+That document is the primary architecture checkpoint for component design.
+Older Phase 5 notes are historical/supporting records and should not be treated
+as a second source of architectural truth.
 
 ### Previous completed phases
 
@@ -42,7 +52,7 @@ accepted as the active runtime baseline.
 
 ### Phase 2 result
 
-Phase 2 has completed its planned source-level layout migration. The framework
+Phase 2 completed its planned source-level layout migration. The framework
 now owns the layout proposal → measurement → desired-size → final-geometry
 pipeline, layout scheduling and invalidation.
 
@@ -384,29 +394,74 @@ runtime validation and full-build validation remain deferred to Phase 6.
 
 ### Status
 
-**Current / Planned.**
+**Current — architecture checkpoint complete; concrete component implementation pending.**
+
+### Primary architecture document
+
+```text
+docs/PHASE5_COMPONENT_ARCHITECTURE.md
+```
+
+This is the primary Phase 5 architecture checkpoint. It consolidates the
+component responsibility, Node/PanelNode, content/composition, property,
+primitive, abstraction and custom-component-authoring decisions established
+before implementation.
 
 ### Scope
 
-- ControlNode only if justified;
-- Button;
-- Toggle;
-- Text;
-- Image;
-- Scroll;
-- other components as required;
-- Modal component abstraction only where it is a consumer of the existing
-  ModalManager infrastructure.
+Initial concrete work is expected to cover:
 
-### Goal
+```text
+Button
+ToggleButton
+TextNode integration where needed
+ImageNode only if concrete requirements justify it
+```
 
-Build reusable UI components on top of the stabilized runtime, layout, input,
-event and rendering systems.
+Later component families include:
 
-The component layer does not redefine NodeTree ownership, layout orchestration,
-input dispatch or event propagation.
+```text
+Menu / MenuItem
+TabControl / TabItem
+ListBox / ListItem
+Accordion / Section
+Dialog / Modal
+```
 
-Existing legacy component code must not be treated as the architecture.
+Scrolling remains a separate framework architecture topic and is not assumed
+to require a fundamental `ScrollNode`.
+
+### Architectural constraints
+
+Phase 5 components do not redefine:
+
+```text
+NodeTree ownership/lifecycle
+layout orchestration
+hit-test traversal
+input/event dispatch
+focus/capture
+render traversal
+clipping
+framework-owned scrolling mechanics
+```
+
+Components own domain semantics, presentation and intentional composition.
+
+`PanelNode` is a structural/layout primitive, not a universal visual/content
+base. A component becomes a `PanelNode` when child ownership/composition and
+layout flow are actually part of its responsibility.
+
+The framework does not adopt a universal `content` model in which everything
+is content of everything.
+
+Framework-recognized Node properties are not split into a mandatory
+`FrameworkProps`/`ComponentProps` public hierarchy. Props structures are
+introduced only when they represent a genuinely reusable/cohesive semantic
+group.
+
+Shared base classes must emerge from concrete repeated semantics rather than
+from symmetry with WPF, Qt, React/Material UI, or another framework.
 
 ### Dependencies
 
@@ -415,12 +470,11 @@ Existing legacy component code must not be treated as the architecture.
 - Phase 3
 - Phase 4
 
-### Modal component boundary
+### Validation policy
 
-A future Modal component may use the existing ModalManager as infrastructure.
-It may configure presentation and invoke modal open/close behavior, but it does
-not redefine modal stacking, focus restoration or navigation policy.
-Those higher-level semantics remain in Phase 6.
+Phase 5 is still source-level architectural/development work. Compilation,
+automated tests, runtime validation and full-build validation remain deferred
+to Phase 6.
 
 ---
 
