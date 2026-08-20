@@ -8,7 +8,7 @@ The repository contains the current framework source code and architecture docum
 
 The framework is developed in independent architectural phases.
 
-Current development is in **Phase 6 — Framework Core / Subsystem Development** on `phase5-components`.
+Current development is in **Phase 6 — Framework Core / Subsystem Development** on `main`.
 
 For recovering the current development context, start with:
 
@@ -17,7 +17,7 @@ For recovering the current development context, start with:
 - [Component Design Guide](docs/COMPONENT_DESIGN_GUIDE.md)
 - [Phase 5 Final Checkpoint](docs/PHASE5_FINAL_CHECKPOINT.md)
 - [Phase 6 Core Status Checkpoint](docs/PHASE6_CORE_STATUS_CHECKPOINT.md)
-- [Phase 6 Scope Candidates](docs/PHASE6_SCOPE_CANDIDATES.md)
+- [Phase 6 Scope](docs/PHASE6_SCOPE_CANDIDATES.md)
 - [Scroll Architecture](docs/SCROLL_ARCHITECTURE.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development Instructions](docs/INSTRUCTIONS.md)
