@@ -14,6 +14,19 @@ namespace ui
         InputManager &input,
         Node &node)
     {
+        return showModal(
+            nodeTree,
+            input,
+            node,
+            BackdropClickBehavior::Consume);
+    }
+
+    bool ModalManager::showModal(
+        NodeTree &nodeTree,
+        InputManager &input,
+        Node &node,
+        BackdropClickBehavior backdropClickBehavior)
+    {
         if (!nodeTree.isNodeLive(node.id()))
             return false;
 
@@ -27,8 +40,7 @@ namespace ui
             return false;
 
         const Node::Id modalId = node.id();
-
-        std::optional<Node::Id> previousFocusId =
+        const std::optional<Node::Id> previousFocusId =
             input.focusedNodeId();
 
         input.cancelPointerInteraction(nodeTree);
@@ -46,14 +58,13 @@ namespace ui
         modals_.push_back(
             ModalSession{
                 modalId,
-                previousFocusId});
+                previousFocusId,
+                backdropClickBehavior});
 
         if (Node *focus = findFirstFocusable(*liveModal))
         {
             if (!input.focus(nodeTree, *focus))
-            {
                 input.clearFocus(nodeTree);
-            }
         }
         else
         {
@@ -71,7 +82,6 @@ namespace ui
             return false;
 
         ModalSession session = modals_.back();
-
         modals_.pop_back();
 
         input.cancelPointerInteraction(nodeTree);
@@ -100,6 +110,48 @@ namespace ui
         }
 
         return closeModal(nodeTree, input);
+    }
+
+    bool ModalManager::handlePointerDown(
+        NodeTree &nodeTree,
+        InputManager &input,
+        const MousePosition &position,
+        MouseButton)
+    {
+        if (modals_.empty())
+            return false;
+
+        Node *modalRoot = topModalNode(nodeTree);
+
+        if (!modalRoot)
+        {
+            sync(nodeTree, input);
+            return false;
+        }
+
+        Node *target = nodeTree.hitTest(
+            position.x,
+            position.y,
+            modalRoot);
+
+        // A hit inside the modal must continue through the normal input path.
+        if (target)
+            return false;
+
+        const BackdropClickBehavior behavior =
+            modals_.back().backdropClickBehavior;
+
+        input.cancelPointerInteraction(
+            nodeTree,
+            position);
+
+        if (behavior == BackdropClickBehavior::Close)
+        {
+            closeModal(nodeTree, input);
+        }
+
+        // The modal barrier consumed the outside interaction.
+        return true;
     }
 
     bool ModalManager::isModal(
@@ -147,9 +199,7 @@ namespace ui
         }
 
         if (!modals_.empty())
-        {
             syncFocusForTopModal(nodeTree, input);
-        }
     }
 
     Node *ModalManager::findFirstFocusable(Node &node) const
@@ -336,7 +386,9 @@ namespace ui
 
         if (modalNode &&
             isLiveVisibleEnabledModal(nodeTree, *modalNode))
+        {
             return false;
+        }
 
         const ModalSession removedSession = session;
 
@@ -363,13 +415,9 @@ namespace ui
         Node *focus) const
     {
         if (focus)
-        {
             input.focus(nodeTree, *focus);
-        }
         else
-        {
             input.clearFocus(nodeTree);
-        }
     }
 
 }
