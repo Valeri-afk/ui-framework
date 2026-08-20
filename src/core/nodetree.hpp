@@ -102,9 +102,6 @@ namespace ui
         template <typename Callback>
         void forEachRoot(Callback &&cb)
         {
-            if (!cb)
-                return;
-
             {
                 ScopedMutationGuard guard(*this);
 
@@ -133,9 +130,6 @@ namespace ui
         template <typename Callback>
         void rForEachRoot(Callback &&cb)
         {
-            if (!cb)
-                return;
-
             {
                 ScopedMutationGuard guard(*this);
 
@@ -164,9 +158,6 @@ namespace ui
         template <typename Callback>
         void forEachOverlay(Callback &&cb)
         {
-            if (!cb)
-                return;
-
             {
                 ScopedMutationGuard guard(*this);
 
@@ -195,9 +186,6 @@ namespace ui
         template <typename Callback>
         void rForEachOverlay(Callback &&cb)
         {
-            if (!cb)
-                return;
-
             {
                 ScopedMutationGuard guard(*this);
 
