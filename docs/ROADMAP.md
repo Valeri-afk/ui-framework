@@ -27,16 +27,27 @@ validation remain intentionally deferred until the end of Phase 6.
 phase5-components
 ```
 
-The current Phase 5 component architecture is consolidated in:
+The current Phase 5 component work is consolidated in:
 
 ```text
-docs/PHASE5_COMPONENT_ARCHITECTURE_CHECKPOINT.md
 docs/COMPONENT_DESIGN_GUIDE.md
+docs/PHASE5_COMPONENT_ARCHITECTURE_CHECKPOINT.md
 docs/PHASE5_COMPONENT_CATALOG.md
+docs/PHASE5_COMPONENT_SET.md
+docs/PHASE5_FINAL_CHECKPOINT.md
 ```
 
-These are the current Phase 5 component references. Superseded architecture
-notes must not become competing sources of truth.
+The Phase 6 handoff is captured in:
+
+```text
+docs/PHASE6_SCOPE_CANDIDATES.md
+docs/PHASE6_MODALITY_REQUIREMENTS.md
+docs/SCROLL_ARCHITECTURE.md
+```
+
+These documents are phase-specific sources of truth. `ARCHITECTURE.md` remains
+the large architectural document and is not automatically rewritten during
+Phase 5 work.
 
 ### Previous completed phases
 
@@ -216,8 +227,9 @@ renderer state isolation / clipping
 SDL3 backend
 ```
 
-Top-level presentation ordering is coordinated through roots, overlays and
-modal handling. The framework is SDL3-only.
+Top-level presentation ordering may later involve roots, overlays and modal
+handling, but these remain framework-level concerns rather than standard
+component responsibilities.
 
 Renderer-bound resources remain local to the node/component that owns them.
 No generic resource manager was introduced. Animation remains a future
@@ -242,27 +254,26 @@ validation and full-build validation remain deferred to Phase 6.
 
 ---
 
-## PHASE 5 — Component Model
+## PHASE 5 — Component Development
 
 ### Status
 
-**Current — component architecture checkpoint complete; minimal standard component layer implemented in the current branch.**
+**Current — standard component set established; final validation and Phase 6 handoff remain.**
 
-### Current architecture references
+Phase 5 is intentionally a component-development phase. It should not absorb
+unresolved framework subsystems into individual components.
 
-```text
-docs/COMPONENT_DESIGN_GUIDE.md
-docs/PHASE5_COMPONENT_ARCHITECTURE_CHECKPOINT.md
-docs/PHASE5_COMPONENT_CATALOG.md
-```
-
-### Active standard component scope
+### Active standard component set
 
 ```text
 Button
 ToggleButton
 Menu / MenuItem
 TabControl / TabItem
+Checkbox
+RadioButton
+Slider
+Dropdown
 ```
 
 These are standard framework UI components with distinct generic contracts.
@@ -270,14 +281,25 @@ These are standard framework UI components with distinct generic contracts.
 ### Deferred components
 
 ```text
+TextField / Input
+Image
 List
+IconButton
 Scroll / ScrollArea
 Modal
-IconButton
 ```
 
-`List` is deferred until it has a distinct generic contract beyond a thin
-alias over an existing layout primitive.
+`TextField / Input` is deferred until a proper text-input/editing path exists,
+including future composition/IME, caret, selection and clipboard semantics.
+
+`Image` is deferred until a framework resource/texture ownership contract
+exists. The current `primitives` layer remains deliberately separate from
+resource management.
+
+`List` is deferred until it has a distinct generic contract beyond existing
+panel/layout primitives.
+
+`IconButton` is deferred until a stable graphics/icon/resource contract exists.
 
 `Scroll / ScrollArea` remains a separate framework architecture topic. Its
 final design must account for content extent, viewport extent, offset/range,
@@ -285,11 +307,19 @@ clipping, coordinate conversion, layout integration and input/hit-test
 integration before implementation.
 
 `Modal` is deferred until Phase 6 modality infrastructure is complete. The
-legacy Modal implementation is removed from the active component API; its
-useful behavioral requirements are preserved in `PHASE6_MODALITY_REQUIREMENTS.md`.
+legacy Modal implementation is removed from the active component API; useful
+behavioral requirements are preserved in `PHASE6_MODALITY_REQUIREMENTS.md`.
 
-`IconButton` is deferred until a stable graphics/icon primitive and resource
-contract exists.
+### Cancelled standalone components
+
+```text
+Paper
+Label
+Card
+```
+
+These remain client-level composition/style concepts rather than independent
+framework runtime components.
 
 ### Component architecture constraints
 
@@ -304,6 +334,8 @@ focus/capture
 render traversal
 clipping
 framework-owned scrolling mechanics
+resource ownership infrastructure
+text-input infrastructure
 ```
 
 Components own semantic state, presentation and intentional specialized
@@ -318,6 +350,17 @@ The framework does not use a universal arbitrary `content` model.
 Shared base classes must emerge from concrete repeated semantics rather than
 from hierarchy symmetry with another UI toolkit.
 
+### Phase 5 completion procedure
+
+Before declaring Phase 5 complete:
+
+1. Verify the active component set against `COMPONENT_DESIGN_GUIDE.md`.
+2. Verify no removed legacy abstractions remain referenced by active source.
+3. Verify every retained source file has a current architectural role.
+4. Review the Phase 5 architecture/component documents.
+5. Manually review `ARCHITECTURE.md`; do not rewrite it automatically.
+6. Promote only justified framework-level requirements into the Phase 6 scope.
+
 ### Dependencies
 
 - Phase 1
@@ -327,41 +370,115 @@ from hierarchy symmetry with another UI toolkit.
 
 ### Validation policy
 
-Phase 5 remains source-level development. Compilation, automated tests,
-runtime validation and full-build validation remain deferred to Phase 6.
+Phase 5 remains source-level component development. Compilation, automated tests,
+runtime validation and full-build validation remain intentionally deferred until
+Phase 6.
 
 ---
 
-## PHASE 6 — Modal / Navigation / Validation
+## PHASE 6 — Framework Infrastructure and Validation
 
 ### Status
 
-**Planned.**
+**Planned. Final scope to be confirmed during the Phase 5 handoff.**
 
-### Scope
+Phase 6 is not predefined as only a Modal or navigation phase. Its scope is
+derived from real framework-level requirements discovered during component
+development and the final architecture review.
 
-- ModalManager hardening and final integration;
-- modal stacking semantics;
-- focus restoration policy;
-- keyboard navigation and focus traversal;
-- navigation semantics;
-- overlay integration;
-- integration of the component layer with modal/navigation behavior;
-- compilation;
-- automated tests;
-- runtime validation;
-- full accumulated-phase validation.
+### Current scope candidates
+
+```text
+Modality
+Scrolling
+Text input / editing
+Image / resource management
+Overlay / popup infrastructure, if concretely required
+Compilation / automated tests / runtime validation / full build
+```
+
+See `PHASE6_SCOPE_CANDIDATES.md` for the rationale and current candidate
+responsibility boundaries.
+
+### Modality candidate
+
+Potential responsibilities include:
+
+```text
+active modal registration
+modal stack/order
+exclusive hit-testing
+input routing restrictions
+focus/capture policy
+Escape routing
+background interaction blocking
+focus restoration
+optional scroll-lock policy
+modal/overlay rendering order
+```
+
+Reference: `PHASE6_MODALITY_REQUIREMENTS.md`.
+
+### Scrolling candidate
+
+Potential responsibilities include:
+
+```text
+viewport bounds
+content extent
+scroll offset/range
+coordinate conversion
+clipping
+wheel/gesture/drag input routing
+hit-test through clipped/offset content
+layout integration
+nested scrolling policy
+```
+
+Reference: `SCROLL_ARCHITECTURE.md`.
+
+### Text input candidate
+
+Potential responsibilities include:
+
+```text
+text input events
+composition / IME
+caret
+selection
+editing commands
+clipboard
+focus/input lifecycle
+```
+
+### Image/resource candidate
+
+Potential responsibilities include:
+
+```text
+resource ownership/lifetime
+shared texture references
+renderer/resource relationship
+TextureHandle or equivalent
+source rectangle
+fit/crop/scale
+opacity/tint/flip/rotation
+```
+
+This must remain separate from `primitives`.
+
+### Overlay candidate
+
+Overlay infrastructure should only be promoted into Phase 6 if a concrete
+component requirement cannot be satisfied by the current NodeTree structure,
+for example global popup ordering, escaping parent clipping, or outside-click
+handling across unrelated subtrees.
 
 ### Goal
 
-Establish higher-level interaction/navigation semantics and perform the full
-technical validation intentionally deferred from Phases 1–5.
-
-### Existing modal infrastructure
-
-`ModalManager` already exists as Phase 6 preparation. Its current source is
-not treated as the final Phase 6 contract until the modality architecture is
-completed.
+Build only the missing framework infrastructure justified by Phase 5
+component requirements and perform the full validation intentionally deferred
+from earlier phases.
 
 ### Dependencies
 
@@ -384,9 +501,13 @@ Phase 3 — Input / Events            [source-level complete]
         ↓
 Phase 4 — Rendering / Backend       [source-level complete]
         ↓
-Phase 5 — Component Model           [current]
+Phase 5 — Component Development     [current]
         ↓
-Phase 6 — Modal / Navigation        [full build/test validation]
+Phase 5 final document/architecture review
+        ↓
+Phase 6 scope confirmation
+        ↓
+Phase 6 — Framework Infrastructure + Validation
 ```
 
 Later phases may be analyzed when necessary to validate an earlier
