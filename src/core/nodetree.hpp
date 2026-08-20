@@ -235,8 +235,7 @@ namespace ui
         void update(float dt);
         void draw(
             SDL_Renderer *renderer,
-            std::optional<NodeId> topModalId = std::nullopt,
-            std::optional<NodeId> backdropId = std::nullopt);
+            std::optional<NodeId> topModalId = std::nullopt);
 
         bool isDescendant(
             const Node *node,
