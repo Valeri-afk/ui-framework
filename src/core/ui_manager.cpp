@@ -29,16 +29,13 @@ namespace ui
             return;
 
         if (layoutManager_ &&
-            layoutManager_->syncViewportFromRenderer(
-                renderer))
+            layoutManager_->syncViewportFromRenderer(renderer))
         {
             nodeTree_->requestFullLayout();
         }
 
         prepareForTreeOperation();
-
         update(dt);
-
         draw(renderer);
     }
 
@@ -64,18 +61,38 @@ namespace ui
             }
         }
 
+        if (inputManager_ && modalManager_ &&
+            sdlEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
+            topModalNode())
+        {
+            const MousePosition position{
+                sdlEvent.button.x,
+                sdlEvent.button.y};
+
+            const MouseButton button =
+                static_cast<MouseButton>(sdlEvent.button.button);
+
+            if (modalManager_->handlePointerDown(
+                    *nodeTree_,
+                    *inputManager_,
+                    position,
+                    button))
+            {
+                prepareForTreeOperation();
+                return;
+            }
+        }
+
         if (inputManager_)
         {
-            inputManager_->setModalRoot(
-                topModalNode());
+            inputManager_->setModalRoot(topModalNode());
 
             inputManager_->processEvent(
                 sdlEvent,
                 *nodeTree_,
                 topModalNode());
 
-            inputManager_->setModalRoot(
-                topModalNode());
+            inputManager_->setModalRoot(topModalNode());
         }
 
         prepareForTreeOperation();
@@ -90,8 +107,7 @@ namespace ui
 
         if (layoutManager_)
         {
-            layoutManager_->processLayoutQueue(
-                *nodeTree_);
+            layoutManager_->processLayoutQueue(*nodeTree_);
         }
 
         syncState();
@@ -123,23 +139,20 @@ namespace ui
     void UIManager::removeRoot(Node *node)
     {
         if (nodeTree_)
-        {
             nodeTree_->removeRoot(node);
-        }
     }
 
     void UIManager::removeOverlay(Node *node)
     {
         if (nodeTree_)
-        {
             nodeTree_->removeOverlay(node);
-        }
     }
 
     void UIManager::setViewportSize(const LayoutSize &size) noexcept
     {
-        layoutManager_->setViewportSize({std::max(0.0f, size.width),
-                                         std::max(0.0f, size.height)});
+        layoutManager_->setViewportSize({
+            std::max(0.0f, size.width),
+            std::max(0.0f, size.height)});
 
         if (nodeTree_)
             nodeTree_->requestFullLayout();
@@ -152,49 +165,45 @@ namespace ui
 
     bool UIManager::showModal(Node &node)
     {
-        if (!nodeTree_ ||
-            !modalManager_ ||
-            !inputManager_)
-        {
+        return showModal(
+            node,
+            BackdropClickBehavior::Consume);
+    }
+
+    bool UIManager::showModal(
+        Node &node,
+        BackdropClickBehavior behavior)
+    {
+        if (!nodeTree_ || !modalManager_ || !inputManager_)
             return false;
-        }
 
         prepareForTreeOperation();
 
-        const bool shown =
-            modalManager_->showModal(
-                *nodeTree_,
-                *inputManager_,
-                node);
+        const bool shown = modalManager_->showModal(
+            *nodeTree_,
+            *inputManager_,
+            node,
+            behavior);
 
         if (shown)
-        {
             prepareForTreeOperation();
-        }
 
         return shown;
     }
 
     bool UIManager::closeModal()
     {
-        if (!nodeTree_ ||
-            !modalManager_ ||
-            !inputManager_)
-        {
+        if (!nodeTree_ || !modalManager_ || !inputManager_)
             return false;
-        }
 
         prepareForTreeOperation();
 
-        const bool closed =
-            modalManager_->closeModal(
-                *nodeTree_,
-                *inputManager_);
+        const bool closed = modalManager_->closeModal(
+            *nodeTree_,
+            *inputManager_);
 
         if (closed)
-        {
             prepareForTreeOperation();
-        }
 
         return closed;
     }
@@ -215,24 +224,46 @@ namespace ui
         return modalManager_->topModalNode(*nodeTree_);
     }
 
+    void UIManager::setBackdropColor(const Color &color) noexcept
+    {
+        if (modalManager_)
+            modalManager_->setBackdropColor(color);
+    }
+
+    Color UIManager::getBackdropColor() const noexcept
+    {
+        return modalManager_
+                   ? modalManager_->getBackdropColor()
+                   : Colors::transparent;
+    }
+
+    void UIManager::setBackdropFadeDuration(float seconds) noexcept
+    {
+        if (modalManager_)
+            modalManager_->setBackdropFadeDuration(seconds);
+    }
+
+    float UIManager::getBackdropFadeDuration() const noexcept
+    {
+        return modalManager_
+                   ? modalManager_->getBackdropFadeDuration()
+                   : 0.0f;
+    }
+
     void UIManager::prepareForTreeOperation()
     {
         if (!nodeTree_)
             return;
 
         applyMutationQueue();
-
         layoutManager_->processLayoutQueue(*nodeTree_);
-
         syncState();
     }
 
     void UIManager::syncModalInputState()
     {
         if (inputManager_)
-        {
             inputManager_->setModalRoot(topModalNode());
-        }
     }
 
     void UIManager::drawNodesForFrame(
@@ -245,27 +276,18 @@ namespace ui
 
         if (modalManager_)
         {
-            if (Node *topModal =
-                    modalManager_->topModalNode(
-                        *nodeTree_))
-            {
+            if (Node *topModal = modalManager_->topModalNode(*nodeTree_))
                 topModalId = topModal->id();
-            }
         }
 
-        nodeTree_->draw(
-            renderer,
-            topModalId);
-
+        nodeTree_->draw(renderer, topModalId);
         syncState();
     }
 
     void UIManager::applyMutationQueue()
     {
         if (nodeTree_)
-        {
             nodeTree_->flushMutationQueue();
-        }
     }
 
     void UIManager::syncState()
@@ -281,7 +303,6 @@ namespace ui
         }
 
         inputManager_->syncState(*nodeTree_);
-
         syncModalInputState();
     }
 
