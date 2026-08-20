@@ -1,6 +1,6 @@
 # Phase 5 — Component Architecture Checkpoint
 
-This document is the practical checkpoint for further component development. It complements the consolidated architecture document without replacing it.
+This document records the component architecture established during Phase 5. It is historical/operational context for the current framework and does not replace `ARCHITECTURE.md`.
 
 ## Framework layers
 
@@ -56,7 +56,7 @@ render traversal
 clipping
 mutation/update scheduling
 modality
-scroll mechanics when implemented
+scroll mechanics
 ```
 
 Boundary rule: if a component cannot reasonably implement a behavior with the tools exposed by its framework APIs, that behavior is a strong infrastructure candidate.
@@ -74,6 +74,8 @@ TextNode / text-bearing components
 ```
 
 A primitive becomes a Node/component only when independent lifecycle, layout participation, hit-testing, or semantic behavior makes that useful.
+
+`primitives` remain the low-level geometric drawing layer. They do not define component semantics or resource ownership.
 
 ## Children and content
 
@@ -121,7 +123,7 @@ If no → `Node`.
 
 If yes → `PanelNode` or an existing specialized panel such as `StackPanelNode`.
 
-## Current standard components
+## Phase 5 standard components
 
 ```text
 Button
@@ -130,67 +132,57 @@ Menu
 MenuItem
 TabControl
 TabItem
+Checkbox
+RadioButton
+Slider
+Dropdown
 ```
 
-These have a distinct generic contract and are the current Phase 5 component set.
+These are the standard component layer established by Phase 5.
+
+## Concepts intentionally not promoted to components
+
+```text
+Paper
+Label
+Card
+```
+
+They are currently styling/composition patterns covered by generic nodes, text primitives and layout/visual properties.
 
 ## Deferred components
 
 ```text
+TextField / Input
+Image
 List
-Scroll / ScrollArea
-Modal
 IconButton
 ```
 
-`List` is deferred because a thin `StackPanelNode` alias does not justify a separate abstraction.
+Their implementation depends on unresolved or incomplete framework infrastructure rather than a missing simple component class.
 
-`Scroll / ScrollArea` is deferred until the framework-level scroll contract is finalized.
+## Phase 6 infrastructure discovered from Phase 5
 
-`Modal` is deferred until Phase 6 modality infrastructure is complete. The current Modal implementation is deprecated/inactive and retained only as a reference. The `components` layer itself is **not deprecated**.
-
-`IconButton` is deferred until a stable graphics/icon primitive and resource contract exists.
-
-## Application boundary
-
-Framework:
+The following responsibilities have already moved below the component layer:
 
 ```text
-Button
-Menu
-List
-Dialog
-Scroll
+Modality → ModalManager
+Scrolling → ScrollManager + UIManager/NodeTree integration
 ```
 
-Application:
+The legacy `Modal` implementation is deprecated/inactive and is retained only as historical reference. The `components` layer itself is **not deprecated**.
+
+A public `Modal` component is not currently required. A public `Scroll` / `ScrollArea` component is also not currently required; the framework-level scrolling behavior is the reusable contract being validated first.
+
+## Current phase boundary
+
+Phase 5 is complete as a component-development phase.
+
+Current framework work belongs to Phase 6 and is focused on:
 
 ```text
-ChessBoard
-MoveList
-PlayerCard
-GameClock
-PromotionDialog
-AnalysisPanel
+text input/editing infrastructure
+image/resource infrastructure
+validation/stabilization of modality and scrolling
+full source/build/runtime integration
 ```
-
-The application validates framework sufficiency; it does not define framework-specific domain components.
-
-## New component checklist
-
-Before implementation:
-
-1. Is this a generic UI concept?
-2. Does it have an independent contract?
-3. Is it more than a renamed existing node/layout primitive?
-4. Does it actually require structural children?
-5. Which state belongs to the component?
-6. Which state belongs to specialized children?
-7. Can an existing component be reused?
-8. Is inheritance sharing a stable contract?
-9. Is framework infrastructure being duplicated?
-10. Does the abstraction preserve the minimal framework goal?
-
-## Phase boundary
-
-If a component depends on an unfinished framework subsystem, document its requirements and defer implementation rather than forcing an incomplete architecture into the current phase.
