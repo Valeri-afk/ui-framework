@@ -1,17 +1,20 @@
 #include "ui_framework/components/menu.hpp"
 
-#include <algorithm>
 #include <utility>
 
 namespace ui
 {
     Menu::Menu()
+        : StackPanelNode(Orientation::Vertical)
     {
         setFocusable(false);
         setCapturable(false);
+        setGap(0.0f);
+        setMainAlignment(MainAxisAlignment::START);
+        setCrossAlignment(CrossAxisAlignment::STRETCH);
     }
 
-    Node *Menu::addItem(std::unique_ptr<MenuItem> item, size_t index)
+    MenuItem *Menu::addItem(std::unique_ptr<MenuItem> item, size_t index)
     {
         if (!item)
             return nullptr;
@@ -23,15 +26,18 @@ namespace ui
                 handleItemActivation(activatedItem);
             });
 
-        return add(std::move(item), index);
+        add(std::move(item), index);
+        return rawItem;
     }
 
     void Menu::removeItem(MenuItem &item)
     {
         if (&item == activeItem_)
-            activeItem_ = nullptr;
+            syncActiveItem(nullptr);
+
         if (&item == selectedItem_)
-            selectedItem_ = nullptr;
+            syncSelectedItem(nullptr);
+
         remove(item);
     }
 
@@ -39,85 +45,47 @@ namespace ui
     {
         if (item == activeItem_)
             return;
+
+        if (item && item->parent() != this)
+            return;
+
         syncActiveItem(item);
     }
 
-    MenuItem *Menu::getActiveItem() const noexcept { return activeItem_; }
+    MenuItem *Menu::getActiveItem() const noexcept
+    {
+        return activeItem_;
+    }
 
     void Menu::setSelectedItem(MenuItem *item) noexcept
     {
         if (item == selectedItem_)
             return;
+
+        if (item && item->parent() != this)
+            return;
+
         syncSelectedItem(item);
     }
 
-    MenuItem *Menu::getSelectedItem() const noexcept { return selectedItem_; }
-
-    void Menu::setItemSpacing(float spacing) noexcept
+    MenuItem *Menu::getSelectedItem() const noexcept
     {
-        itemSpacing_ = std::max(0.0f, spacing);
-        invalidateLayout();
+        return selectedItem_;
     }
 
-    float Menu::getItemSpacing() const noexcept { return itemSpacing_; }
+    void Menu::setItemSpacing(float spacing)
+    {
+        setGap(spacing);
+    }
+
+    float Menu::getItemSpacing() const noexcept
+    {
+        return getGap();
+    }
 
     void Menu::setOnItemActivate(ItemActivationCallback callback)
     {
         onItemActivate_ = std::move(callback);
-    }
-
-    LayoutSize Menu::measureContent(const LayoutSize &availableContent) const
-    {
-        LayoutSize result{};
-        size_t visibleCount = 0;
-
-        for (size_t i = 0; i < getChildCount(); ++i)
-        {
-            Node *child = getChild(i);
-            if (!child || !child->isVisible())
-                continue;
-
-            const LayoutSize childSize = child->getDesiredSize();
-            result.width = std::max(result.width, childSize.width);
-            result.height += childSize.height;
-            ++visibleCount;
-        }
-
-        if (visibleCount > 1)
-            result.height += itemSpacing_ * static_cast<float>(visibleCount - 1);
-
-        if (availableContent.width >= 0.0f)
-            result.width = std::min(result.width, availableContent.width);
-
-        return result;
-    }
-
-    void Menu::arrangeContent(
-        const LayoutPosition &contentPosition,
-        const LayoutSize &contentSize)
-    {
-        float y = contentPosition.y;
-
-        for (size_t i = 0; i < getChildCount(); ++i)
-        {
-            Node *child = getChild(i);
-            if (!child || !child->isVisible())
-                continue;
-
-            const LayoutSize desired = child->getDesiredSize();
-            child->setPosition({contentPosition.x, y});
-            child->setSize({contentSize.width, desired.height});
-            y += desired.height + itemSpacing_;
-        }
-    }
-
-    void Menu::update(float)
-    {
-        if (activeItem_ && !activeItem_->isVisible())
-            syncActiveItem(nullptr);
-
-        if (selectedItem_ && !selectedItem_->isVisible())
-            syncSelectedItem(nullptr);
     }
 
     void Menu::syncActiveItem(MenuItem *item) noexcept
@@ -147,7 +115,9 @@ namespace ui
         if (!item.isEnabled())
             return;
 
+        setActiveItem(&item);
         setSelectedItem(&item);
+
         if (onItemActivate_)
             onItemActivate_(item);
     }
