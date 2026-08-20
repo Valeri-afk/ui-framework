@@ -77,14 +77,14 @@ namespace ui
             }
         }
 
-        Node::ScopedCoordinateTransform scrollTransform(
-            makeScrollTransform(scrollManager_.get()));
-
         if (inputManager_ && modalManager_ &&
             sdlEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN && topModalNode())
         {
             const MousePosition position{sdlEvent.button.x, sdlEvent.button.y};
             const MouseButton button = static_cast<MouseButton>(sdlEvent.button.button);
+
+            Node::ScopedCoordinateTransform scrollTransform(
+                makeScrollTransform(scrollManager_.get()));
 
             if (modalManager_->handlePointerDown(*nodeTree_, *inputManager_, position, button))
             {
@@ -102,6 +102,9 @@ namespace ui
             const float deltaX = -sdlEvent.wheel.x;
             const float deltaY = -sdlEvent.wheel.y;
 
+            Node::ScopedCoordinateTransform scrollTransform(
+                makeScrollTransform(scrollManager_.get()));
+
             if (scrollManager_->handleWheel(
                     *nodeTree_,
                     mouseX,
@@ -118,7 +121,14 @@ namespace ui
         if (inputManager_)
         {
             inputManager_->setModalRoot(topModalNode());
-            inputManager_->processEvent(sdlEvent, *nodeTree_, topModalNode());
+
+            {
+                Node::ScopedCoordinateTransform scrollTransform(
+                    makeScrollTransform(scrollManager_.get()));
+
+                inputManager_->processEvent(sdlEvent, *nodeTree_, topModalNode());
+            }
+
             inputManager_->setModalRoot(topModalNode());
         }
 
@@ -337,10 +347,13 @@ namespace ui
                 topModalId = topModal->id();
         }
 
-        Node::ScopedCoordinateTransform scrollTransform(
-            makeScrollTransform(scrollManager_.get()));
+        {
+            Node::ScopedCoordinateTransform scrollTransform(
+                makeScrollTransform(scrollManager_.get()));
 
-        nodeTree_->draw(renderer, topModalId);
+            nodeTree_->draw(renderer, topModalId);
+        }
+
         syncState();
     }
 
