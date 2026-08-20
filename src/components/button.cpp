@@ -1,277 +1,228 @@
 #include "ui_framework/components/button.hpp"
-#include "ui_framework/core/node.hpp"
+
 #include "ui_framework/core/primitives.hpp"
+#include "ui_framework/event_types.hpp"
+
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace ui
 {
+    Button::Button()
+    {
+        setDefaultGeometry();
+        setFocusable(true);
+        setCapturable(true);
+
+        addHandler<MouseDownEvent>([this](MouseDownEvent &event, Node &) { handleMouseDown(event); });
+        addHandler<MouseUpEvent>([this](MouseUpEvent &event, Node &) { handleMouseUp(event); });
+        addHandler<MouseClickEvent>([this](MouseClickEvent &event, Node &) { handleMouseClick(event); });
+        addHandler<MouseEnterEvent>([this](MouseEnterEvent &event, Node &) { handleMouseEnter(event); });
+        addHandler<MouseLeaveEvent>([this](MouseLeaveEvent &event, Node &) { handleMouseLeave(event); });
+    }
+
     Button::Button(float borderRadius)
-        : borderRadius_(std::max(0.0f, borderRadius))
+        : Button()
     {
+        setBorderRadius(borderRadius);
     }
 
-    // ============================================================
-    // Прокси к Label
-    // ============================================================
-
-    void Button::setText(const std::string &text, SDL_Renderer *renderer)
+    void Button::setDefaultGeometry()
     {
-        if (label_)
-            label_->setText(text, renderer);
+        setPadding({12.0f, 12.0f, 8.0f, 8.0f});
+        setBorder({1.0f, 1.0f, 1.0f, 1.0f});
     }
 
-    const std::string &Button::getText() const
+    void Button::setText(std::string text)
     {
-        static const std::string empty;
-        return label_ ? label_->getText() : empty;
-    }
-
-    void Button::setFont(TTF_Font *font, SDL_Renderer *renderer)
-    {
-        if (label_)
-            label_->setFont(font, renderer);
-    }
-
-    TTF_Font *Button::getFont() const
-    {
-        return label_ ? label_->getFont() : nullptr;
-    }
-
-    void Button::setTextColor(const Color &color)
-    {
-        if (label_)
-            label_->setColor(color);
-    }
-
-    Color Button::getTextColor() const
-    {
-        return label_ ? label_->getColor() : Colors::white;
-    }
-
-    void Button::setTextAlignment(TextAlignment hAlign, TextAlignment vAlign)
-    {
-        if (label_)
-        {
-            label_->setHorizontalAlignment(hAlign);
-            label_->setVerticalAlignment(vAlign);
-        }
-    }
-
-    TextAlignment Button::getHorizontalTextAlignment() const
-    {
-        return label_ ? label_->getHorizontalAlignment() : TextAlignment::START;
-    }
-
-    TextAlignment Button::getVerticalTextAlignment() const
-    {
-        return label_ ? label_->getVerticalAlignment() : TextAlignment::START;
-    }
-
-    // ============================================================
-    // Стили кнопки
-    // ============================================================
-
-    void Button::setBackgroundColor(const Color &color) { backgroundColor_ = color; }
-    Color Button::getBackgroundColor() const { return backgroundColor_; }
-
-    void Button::setBorderColor(const Color &color) { borderColor_ = color; }
-    Color Button::getBorderColor() const { return borderColor_; }
-
-    void Button::setBorderRadius(float radius) { borderRadius_ = std::max(0.0f, radius); }
-    float Button::getBorderRadius() const { return borderRadius_; }
-
-    void Button::setType(Type type) { type_ = type; }
-
-    void Button::setResizeScale(float scale) { resizeScale_ = std::max(0.0f, scale); }
-    void Button::setResizeEffectEnabled(bool enabled) { resizeEnabled_ = enabled; }
-
-    // ============================================================
-    // Колбэки
-    // ============================================================
-
-    void Button::setOnClick(OnClickCallback cb) { onClickCb_ = std::move(cb); }
-    void Button::setOnMouseDown(OnMouseDownCallback cb) { onMouseDownCb_ = std::move(cb); }
-    void Button::setOnMouseUp(OnMouseUpCallback cb) { onMouseUpCb_ = std::move(cb); }
-    void Button::setOnMouseEnter(OnMouseEnterCallback cb) { onMouseEnterCb_ = std::move(cb); }
-    void Button::setOnMouseLeave(OnMouseLeaveCallback cb) { onMouseLeaveCb_ = std::move(cb); }
-
-    // ============================================================
-    // Жизненный цикл
-    // ============================================================
-
-    void Button::createLabel(Node &node)
-    {
-        auto childNode = std::make_unique<Node>();
-        auto labelComponent = std::make_unique<Label>();
-        label_ = labelComponent.get();
-        childNode->setComponent(std::move(labelComponent));
-
-        labelNode_ = node.attachChild(std::move(childNode), 0);
-        if (labelNode_ && label_)
-        {
-            // Настройки по умолчанию
-            label_->setVerticalAlignment(TextAlignment::CENTER);
-            label_->setHorizontalAlignment(TextAlignment::CENTER);
-            label_->setColor(Colors::white);
-        }
-    }
-
-    void Button::onMount(Node &node)
-    {
-        createLabel(node);
-    }
-
-    void Button::onUnmount(Node &node)
-    {
-        if (labelNode_)
-        {
-            node.detachChild(labelNode_);
-            labelNode_ = nullptr;
-            label_ = nullptr;
-        }
-    }
-
-    void Button::update(Node & /*node*/, float dt)
-    {
-        targetScale_ = pressed_ ? resizeScale_ : 1.0f;
-
-        if (resizeEnabled_)
-        {
-            const float speed = 0.15f * 60.0f * dt;
-            currentScale_ += (targetScale_ - currentScale_) * speed;
-            if (std::abs(currentScale_ - targetScale_) < 0.001f)
-                currentScale_ = targetScale_;
-        }
-        else
-        {
-            currentScale_ = 1.0f;
-        }
-    }
-
-    // ============================================================
-    // Измерение и расположение
-    // ============================================================
-
-    LayoutSize Button::measure(const MeasureContext &ctx) const
-    {
-        if (ctx.preferredContentSize)
-            return *ctx.preferredContentSize;
-
-        if (!labelNode_)
-            return {};
-
-        // Передаём Label те же ограничения, что и кнопке (content-box)
-        return ctx.measureChild(0, ctx.constraints);
-    }
-
-    void Button::arrange(const ArrangeContext &ctx)
-    {
-        if (!labelNode_ || ctx.childrenMeasure.empty())
+        if (text_.getText() == text)
             return;
 
-        LayoutSize childSize = ctx.childrenMeasure[0];
-        LayoutPosition childPos = ctx.contentPosition;
-
-        // Центрируем текст внутри контента кнопки
-        const float availableW = ctx.contentSize.width;
-        const float availableH = ctx.contentSize.height;
-        const float textW = childSize.width;
-        const float textH = childSize.height;
-
-        childPos.x += (availableW - textW) * 0.5f;
-        childPos.y += (availableH - textH) * 0.5f;
-
-        ctx.placeChild(0, childPos, childSize);
+        deferLayoutMutation([text = std::move(text)](Node &node)
+        {
+            static_cast<Button &>(node).text_.setText(text);
+        });
     }
 
-    // ============================================================
-    // Отрисовка
-    // ============================================================
+    const std::string &Button::getText() const noexcept { return text_.getText(); }
 
-    void Button::draw(const Node &node, SDL_Renderer *renderer)
+    void Button::setFont(TTF_Font *font)
+    {
+        if (text_.getFont() == font)
+            return;
+
+        deferLayoutMutation([font](Node &node)
+        {
+            static_cast<Button &>(node).text_.setFont(font);
+        });
+    }
+
+    TTF_Font *Button::getFont() const noexcept { return text_.getFont(); }
+
+    void Button::setTextColor(Color color) noexcept { text_.setColor(color); }
+    Color Button::getTextColor() const noexcept { return text_.getColor(); }
+
+    void Button::setVariant(Variant variant) noexcept { variant_ = variant; }
+    Button::Variant Button::getVariant() const noexcept { return variant_; }
+
+    void Button::setBackgroundColor(Color color) noexcept { backgroundColor_ = color; }
+    Color Button::getBackgroundColor() const noexcept { return backgroundColor_; }
+
+    void Button::setBorderColor(Color color) noexcept { borderColor_ = color; }
+    Color Button::getBorderColor() const noexcept { return borderColor_; }
+
+    void Button::setBorderRadius(float radius) noexcept { borderRadius_ = std::max(0.0f, radius); }
+    float Button::getBorderRadius() const noexcept { return borderRadius_; }
+
+    void Button::setPressScale(float scale) noexcept { pressScale_ = std::clamp(scale, 0.0f, 1.0f); }
+    float Button::getPressScale() const noexcept { return pressScale_; }
+
+    void Button::setPressAnimationEnabled(bool enabled) noexcept
+    {
+        pressAnimationEnabled_ = enabled;
+        if (!enabled)
+        {
+            currentScale_ = 1.0f;
+            targetScale_ = 1.0f;
+        }
+    }
+
+    bool Button::isPressAnimationEnabled() const noexcept { return pressAnimationEnabled_; }
+
+    void Button::setPressAnimationSpeed(float speed) noexcept { pressAnimationSpeed_ = std::max(0.0f, speed); }
+    float Button::getPressAnimationSpeed() const noexcept { return pressAnimationSpeed_; }
+
+    bool Button::isPressed() const noexcept { return pressed_; }
+    bool Button::isHovered() const noexcept { return hovered_; }
+
+    void Button::setOnActivate(ActivateCallback callback) { onActivate_ = std::move(callback); }
+
+    void Button::activate()
+    {
+        if (!isVisible() || !isEnabled())
+            return;
+
+        if (onActivate_)
+            onActivate_(*this);
+    }
+
+    void Button::update(float dt)
+    {
+        if (!isEnabled())
+            pressed_ = false;
+
+        targetScale_ = pressAnimationEnabled_ && pressed_ ? pressScale_ : 1.0f;
+
+        if (!pressAnimationEnabled_ || pressAnimationSpeed_ <= 0.0f)
+        {
+            currentScale_ = targetScale_;
+            return;
+        }
+
+        const float t = std::clamp(dt * pressAnimationSpeed_, 0.0f, 1.0f);
+        currentScale_ += (targetScale_ - currentScale_) * t;
+
+        if (std::fabs(currentScale_ - targetScale_) < 0.0001f)
+            currentScale_ = targetScale_;
+    }
+
+    LayoutSize Button::measureContent(const LayoutSize &availableContent) const
+    {
+        return text_.measure(availableContent.width);
+    }
+
+    void Button::draw(SDL_Renderer *renderer)
     {
         if (!renderer)
             return;
 
-        const LayoutPosition pos = node.getActualPosition();
-        const LayoutSize size = node.getActualSize();
+        const LayoutPosition position = getActualPosition();
+        const LayoutSize size = getActualSize();
+        const float scale = std::max(0.0f, currentScale_);
+        const float scaledWidth = size.width * scale;
+        const float scaledHeight = size.height * scale;
+        const float x = position.x + (size.width - scaledWidth) * 0.5f;
+        const float y = position.y + (size.height - scaledHeight) * 0.5f;
+        const float right = x + scaledWidth;
+        const float bottom = y + scaledHeight;
 
-        const float w = size.width * currentScale_;
-        const float h = size.height * currentScale_;
-        const float ox = (w - size.width) * 0.5f;
-        const float oy = (h - size.height) * 0.5f;
+        Color background = backgroundColor_;
+        Color border = borderColor_;
+        Color textColor = text_.getColor();
 
-        const float x = pos.x - ox;
-        const float y = pos.y - oy;
-        const float rad = borderRadius_ * currentScale_;
+        if (hovered_ && !pressed_)
+            background = lighten(background, 0.08f);
 
-        // Рисуем фон (только для FILLED)
-        if (type_ == Type::FILLED)
+        if (!isEnabled())
         {
-            const Color bg = backgroundColor_;
-            if (rad > 0.0f)
-                primitives::roundedBoxRGBA(renderer, x, y, x + w, y + h, rad, bg.r, bg.g, bg.b, bg.a);
-            else
-                primitives::boxRGBA(renderer, x, y, x + w, y + h, bg.r, bg.g, bg.b, bg.a);
+            background = multiplyAlpha(background, 0.5f);
+            border = multiplyAlpha(border, 0.5f);
+            textColor = multiplyAlpha(textColor, 0.5f);
         }
 
-        // Рисуем рамку (для OUTLINED и, опционально, для FILLED если borderColor не прозрачный)
-        if (type_ == Type::OUTLINED || (type_ == Type::FILLED && borderColor_.a > 0))
+        if (variant_ == Variant::FILLED)
         {
-            const Color brd = borderColor_;
-            if (rad > 0.0f)
-                primitives::roundedRectangleRGBA(renderer, x, y, x + w, y + h, rad, brd.r, brd.g, brd.b, brd.a);
-            else
-                primitives::rectangleRGBA(renderer, x, y, x + w, y + h, brd.r, brd.g, brd.b, brd.a);
+            primitives::roundedBoxRGBA(renderer, x, y, right, bottom, borderRadius_,
+                                        background.r, background.g, background.b, background.a);
+        }
+        else if (variant_ == Variant::OUTLINED)
+        {
+            primitives::roundedRectangleRGBA(renderer, x, y, right, bottom, borderRadius_,
+                                              border.r, border.g, border.b, border.a);
         }
 
-        // Type::TEXT – ничего не рисуем, только Label
+        text_.setColor(textColor);
+        text_.setHorizontalAlignment(TextAlignment::CENTER);
+        text_.setVerticalAlignment(TextAlignment::CENTER);
+
+        const Padding padding = getPadding();
+        const Border nodeBorder = getBorder();
+        const float insetX = (nodeBorder.left + padding.left) * scale;
+        const float insetY = (nodeBorder.top + padding.top) * scale;
+        const float insetRight = (nodeBorder.right + padding.right) * scale;
+        const float insetBottom = (nodeBorder.bottom + padding.bottom) * scale;
+
+        text_.draw(
+            renderer,
+            {x + insetX, y + insetY},
+            {std::max(0.0f, scaledWidth - insetX - insetRight),
+             std::max(0.0f, scaledHeight - insetY - insetBottom)});
     }
 
-    // ============================================================
-    // Обработчики событий
-    // ============================================================
-
-    void Button::onMouseDown(Node & /*node*/, MouseDownEvent &event)
+    void Button::handleMouseDown(MouseDownEvent &event)
     {
-        if (event.button == MouseButton::Left)
-        {
+        if (event.button == MouseButton::Left && isEnabled())
             pressed_ = true;
-            if (onMouseDownCb_)
-                onMouseDownCb_(event);
-        }
     }
 
-    void Button::onMouseUp(Node & /*node*/, MouseUpEvent &event)
+    void Button::handleMouseUp(MouseUpEvent &event)
     {
         if (event.button == MouseButton::Left)
-        {
             pressed_ = false;
-            if (onMouseUpCb_)
-                onMouseUpCb_(event);
-        }
     }
 
-    void Button::onMouseClick(Node & /*node*/, MouseClickEvent &event)
+    void Button::handleMouseClick(MouseClickEvent &event)
     {
         if (event.button == MouseButton::Left)
-        {
-            if (onClickCb_)
-                onClickCb_(event);
-        }
+            activate();
     }
 
-    void Button::onMouseEnter(Node & /*node*/, MouseEnterEvent &event)
+    void Button::handleMouseEnter(MouseEnterEvent &) { hovered_ = true; }
+    void Button::handleMouseLeave(MouseLeaveEvent &) { hovered_ = false; }
+
+    Color Button::multiplyAlpha(Color color, float factor) noexcept
     {
-        if (onMouseEnterCb_)
-            onMouseEnterCb_(event);
+        color.a = static_cast<uint8_t>(std::clamp(static_cast<float>(color.a) * factor, 0.0f, 255.0f));
+        return color;
     }
 
-    void Button::onMouseLeave(Node & /*node*/, MouseLeaveEvent &event)
+    Color Button::lighten(Color color, float amount) noexcept
     {
-        pressed_ = false;
-        if (onMouseLeaveCb_)
-            onMouseLeaveCb_(event);
+        const float factor = std::clamp(amount, 0.0f, 1.0f);
+        color.r = static_cast<uint8_t>(color.r + (255 - color.r) * factor);
+        color.g = static_cast<uint8_t>(color.g + (255 - color.g) * factor);
+        color.b = static_cast<uint8_t>(color.b + (255 - color.b) * factor);
+        return color;
     }
 }
