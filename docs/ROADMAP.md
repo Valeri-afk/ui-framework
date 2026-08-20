@@ -8,12 +8,12 @@ This document defines the planned development order of the framework. The source
 
 **Phase 6 — Framework Core / Subsystem Development**
 
-The repository is on `phase5-components`. Phase 5 component development has produced the current standard component set and the framework-level requirements that are now being carried into Phase 6.
+The repository is now consolidated on `main`. Phase 5 component development produced the current standard component set and the framework-level requirements that were carried into Phase 6.
 
 ### Current branch
 
 ```text
-phase5-components
+main
 ```
 
 ### Phase 5 result
@@ -43,24 +43,27 @@ TextField/Input and Image remain dependent on framework infrastructure that is n
 
 Modal was not promoted as the primary API surface. Modality is implemented through `ModalManager` as a framework service.
 
-Scroll is likewise being treated as framework-level behavior/infrastructure rather than as a mandatory standalone Scroll component.
+Scroll is likewise treated as framework-level behavior/infrastructure rather than as a mandatory standalone Scroll component.
 
-### Current Phase 6 source-level work
+### Current Phase 6 source-level status
 
-The current source already contains framework-level implementations for:
+The current source contains framework-level implementations for:
 
 ```text
 ModalManager
 ScrollManager
 SDL logical viewport synchronization
+SDL render/logical input-coordinate conversion
 scroll coordinate transformation
 wheel-to-scroll routing
+nested scroll chaining
 content/viewport extent calculation
+hover refresh after scroll
 ```
 
 These are **source-level implementations**, not yet runtime-validated releases.
 
-Full compilation, runtime smoke tests, integration testing and final stabilization remain outstanding.
+The project is now at the **validation/stabilization boundary** for this core work. New subsystem expansion should not precede source/documentation consistency review and later runtime validation.
 
 ## Phase 1 — Runtime
 
@@ -88,9 +91,9 @@ Its important architectural result is that components do not redefine ownership,
 
 ### Current status
 
-**In progress.**
+**Core implementation at validation/stabilization boundary.**
 
-Phase 6 is where framework-level infrastructure discovered during Phase 5 is implemented and validated.
+Phase 6 is where framework-level infrastructure discovered during Phase 5 is implemented and validated. The current core behavior for modality, scrolling, viewport handling and input-coordinate conversion is implemented at source level.
 
 ### Current subsystem work
 
@@ -117,9 +120,9 @@ wheel routing
 layout-derived content extent
 ```
 
-`UIManager` applies the accumulated scroll offset as a coordinate transform during input/render traversal.
+`UIManager` applies the accumulated scroll offset as a coordinate transform during input/render traversal. Pointer input is normalized to renderer/logical coordinates before entering the framework, and hover is refreshed after a handled scroll operation.
 
-The remaining work is to validate the implementation against the actual NodeTree render/hit-test semantics and then determine whether further clipping/gesture/scrollbar infrastructure is justified.
+A standalone `Scroll` / `ScrollArea` component and scrollbar presentation remain intentionally deferred.
 
 #### Viewport
 
@@ -127,17 +130,14 @@ The framework viewport is the SDL logical presentation size when logical present
 
 If logical presentation is unavailable, the renderer output size is used as fallback.
 
-### Remaining Phase 6 candidates
+### Remaining framework work before broader feature expansion
 
 ```text
-Scroll integration validation
+Source/documentation consistency review
+Validation/stabilization of existing core behavior
 Text input / editing
 Image / resource ownership
 Overlay/popup infrastructure only if concretely required
-Full build
-Runtime validation
-Automated/integration tests
-Source cleanup
 ```
 
 Not every candidate must become a subsystem. Each must be justified by an actual framework requirement.
@@ -171,5 +171,7 @@ Phase 5 — Component Development
         ↓
 Phase 6 — Framework Core / Subsystem Development
         ↓
-Runtime validation / stabilization
+Validation / stabilization
+        ↓
+Only then decide on additional framework capabilities
 ```
