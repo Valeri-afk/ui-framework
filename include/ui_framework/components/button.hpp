@@ -63,6 +63,9 @@ namespace ui
 
     protected:
         virtual void onActivate();
+        virtual Color presentationBackgroundColor() const noexcept;
+        virtual Color presentationBorderColor() const noexcept;
+        virtual Color presentationTextColor() const noexcept;
 
         void update(float dt) override;
         LayoutSize measureContent(const LayoutSize &availableContent) const override;
