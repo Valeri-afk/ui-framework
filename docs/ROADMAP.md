@@ -27,15 +27,16 @@ validation remain intentionally deferred until the end of Phase 6.
 phase5-components
 ```
 
-The Phase 5 component architecture is consolidated in:
+The current Phase 5 component architecture is consolidated in:
 
 ```text
-docs/PHASE5_COMPONENT_ARCHITECTURE.md
+docs/PHASE5_COMPONENT_ARCHITECTURE_CHECKPOINT.md
+docs/COMPONENT_DESIGN_GUIDE.md
+docs/PHASE5_COMPONENT_CATALOG.md
 ```
 
-That document is the primary architecture checkpoint for component design.
-Older Phase 5 notes are historical/supporting records and should not be treated
-as a second source of architectural truth.
+These are the current Phase 5 component references. Superseded architecture
+notes must not become competing sources of truth.
 
 ### Previous completed phases
 
@@ -49,39 +50,6 @@ as a second source of architectural truth.
 
 Phase 1 ownership, lifecycle, traversal and deferred mutation contracts are
 accepted as the active runtime baseline.
-
-### Phase 2 result
-
-Phase 2 completed its planned source-level layout migration. The framework
-now owns the layout proposal → measurement → desired-size → final-geometry
-pipeline, layout scheduling and invalidation.
-
-The completed Phase 2 scope is:
-
-```text
-Text measurement
-container composition
-one-dimensional flow
-size / min / max
-padding / border
-position / position mode
-alignment
-gap
-visibility / layout participation
-automatic framework-owned invalidation
-```
-
-A full Grid or full CSS/Flexbox model is not required for Phase 2. Existing
-Grid code remains deferred and must not force the architecture to grow around
-it.
-
-### Validation policy
-
-Compilation, runtime tests and full build validation are intentionally deferred
-until the end of Phase 6 by project decision. During Phases 1–6, implementation
-is validated through source inspection, architectural review and documented
-numerical cases. This is intentional and must not be interpreted as an omitted
-Phase 2 task.
 
 ---
 
@@ -145,15 +113,9 @@ NodeTree
   → ownership, lifecycle, mutation and layout scheduling
 ```
 
-The client does not need to know about:
-
-```text
-LayoutManager
-layout queue
-layout invalidation
-internal measurement/arrangement lifecycle
-constraint resolution
-```
+The client does not need to know about LayoutManager, layout queues,
+layout invalidation, internal measurement/arrangement lifecycle or constraint
+resolution.
 
 ### Completed built-in layout scope
 
@@ -169,6 +131,8 @@ Visibility / layout participation
 Absolute-child separation from normal Linear flow
 Framework-owned layout invalidation
 ```
+
+A full Grid or CSS/Flexbox model is not part of the current scope.
 
 ### Explicit non-goals
 
@@ -186,68 +150,15 @@ Framework-owned layout invalidation
 These may be reconsidered only after a concrete requirement demonstrates the
 need.
 
-### Constraint semantics
-
-```text
-Fixed size
-    → constrains measurement proposal and final geometry
-
-Max size
-    → can narrow measurement proposal and constrains final geometry
-
-Min size
-    → constrains final geometry; does not automatically narrow intrinsic
-      measurement proposal
-
-Auto
-    → no local explicit size; intrinsic measurement / parent layout decides
-
-Padding/border
-    → translate between outer box and content measurement
-```
-
-This distinction is required for width-dependent content such as wrapped
-text.
-
-### Client contract
-
-The client configures framework-owned components. Framework components may
-provide internal content measurement, but layout scheduling, invalidation and
-sibling/parent placement remain framework responsibilities.
-
 ### Legacy source policy
 
-```text
-src/components/*
-```
+Old layout/component implementations are historical material only and must
+not be treated as active architecture.
 
-is obsolete and must not be modified as part of the Phase 2 architecture. Its
-old Label/Button implementations may be inspected only as historical evidence.
+### Validation policy
 
-`GridNode` and `ControlNode` are deferred/legacy concerns unless a concrete
-later-phase requirement requires revisiting them.
-
-### Phase 2 exit criteria
-
-The following source-level criteria are complete:
-
-- effective measurement proposal semantics are stable;
-- final size constraint semantics are stable;
-- content-box / border-box semantics are stable;
-- framework-owned one-dimensional layout is stable;
-- width-dependent text measurement is integrated;
-- compound content measurement follows the framework pipeline;
-- alignment/gap semantics are stable;
-- nested containers use the same framework pipeline;
-- visibility participation is defined;
-- absolute positioning semantics are defined for the retained scope;
-- invalidation is framework-owned;
-- clients do not implement layout algorithms;
-- clients do not call layout invalidation APIs;
-- runtime ownership/lifecycle invariants remain intact;
-- numerical acceptance cases are documented.
-
-Build and runtime validation are intentionally deferred until Phase 6.
+Compilation, runtime tests and full build validation remain intentionally
+deferred until Phase 6.
 
 ---
 
@@ -266,46 +177,21 @@ Build and runtime validation are intentionally deferred until Phase 6.
 - EventDispatcher
 - keyboard
 
-### Goal
-
-Establish a predictable input and event system on top of the stabilized runtime
-and layout systems.
-
-### Dependencies
-
-- Phase 1
-- Phase 2
-
 ### Completed source-level scope
 
-The Phase 3 source implementation currently includes:
+The current implementation includes mouse input, hover, click generation,
+pointer capture, drag state, focus, keyboard targeting, NodeId-based event
+propagation, tunneling/target/bubbling and mutation-safe dispatch behavior.
 
-- InputManager;
-- hit-test integration;
-- mouse move/down/up/wheel events;
-- mouse enter/leave;
-- click generation;
-- pointer capture;
-- drag begin/update/end;
-- focus acquisition and clearing;
-- FocusGainedEvent / FocusLostEvent;
-- modal input boundary enforcement;
-- keyboard key down/up targeting through focus;
-- NodeId-based event propagation;
-- tunneling / target / bubbling;
-- mutation-safe handler snapshots;
-- deferred mutation safety during event dispatch;
-- reentrant focus and pointer-capture handling.
+Modal-root filtering currently present in input routing is retained as Phase 6
+preparation and does not make Modal a Phase 5 implementation.
 
 ### Explicit non-goals
 
-Phase 3 does not introduce:
-
 - tab-order focus navigation;
-- keyboard focus traversal;
 - text input / IME;
 - accelerator or key-chord subsystems;
-- drag-and-drop as a higher-level transfer system;
+- higher-level drag-and-drop transfer semantics;
 - application-specific control semantics.
 
 ---
@@ -317,11 +203,6 @@ Phase 3 does not introduce:
 **Completed at source level.**
 
 ### Architectural result
-
-Phase 4 established the framework's rendering and backend contract without
-introducing unnecessary generic abstractions.
-
-Core result:
 
 ```text
 Layout final geometry
@@ -335,35 +216,12 @@ renderer state isolation / clipping
 SDL3 backend
 ```
 
-Top-level paint order:
+Top-level presentation ordering is coordinated through roots, overlays and
+modal handling. The framework is SDL3-only.
 
-```text
-roots → overlays → top modal
-```
-
-The same top-level priority model is reused by update and reversed for
-hit-testing.
-
-The framework is SDL3-only. The application owns SDL runtime lifetime while
-the framework uses the SDL3 renderer/backend.
-
-Renderer-bound resources remain local to the component/node that owns them;
-no generic resource manager was introduced. Animation is a future state-change
-mechanism, not a Phase 4 subsystem.
-
-### Completed source-level scope
-
-- SDL3 rendering;
-- mutation-safe render traversal;
-- root / overlay / modal presentation ordering;
-- renderer state RAII isolation;
-- nested rectangular `Overflow::HIDDEN` clipping;
-- renderer-state restoration;
-- canonical recursive hit-testing;
-- resource ownership/representation boundary;
-- stable SDL3 backend boundary;
-- geometry → rendering boundary;
-- documented visual-state and future-animation semantics.
+Renderer-bound resources remain local to the node/component that owns them.
+No generic resource manager was introduced. Animation remains a future
+state-change mechanism rather than a separate mandatory subsystem.
 
 ### Explicit non-goals
 
@@ -377,16 +235,10 @@ mechanism, not a Phase 4 subsystem.
 - full offscreen resource system;
 - redesigning layout or input contracts for rendering convenience.
 
-### Documentation checkpoints
-
-- `docs/PHASE4_CHECKPOINT_BCE.md`
-- `docs/PHASE4_IMPLEMENTATION_SCOPE.md`
-- `docs/PHASE4_FINAL_CHECKPOINT.md`
-
 ### Validation status
 
-Phase 4 remains **source-level complete**. Compilation, automated tests,
-runtime validation and full-build validation remain deferred to Phase 6.
+Phase 4 remains source-level complete. Compilation, automated tests, runtime
+validation and full-build validation remain deferred to Phase 6.
 
 ---
 
@@ -394,46 +246,54 @@ runtime validation and full-build validation remain deferred to Phase 6.
 
 ### Status
 
-**Current — architecture checkpoint complete; concrete component implementation pending.**
+**Current — component architecture checkpoint complete; minimal standard component layer implemented in the current branch.**
 
-### Primary architecture document
+### Current architecture references
 
 ```text
-docs/PHASE5_COMPONENT_ARCHITECTURE.md
+docs/COMPONENT_DESIGN_GUIDE.md
+docs/PHASE5_COMPONENT_ARCHITECTURE_CHECKPOINT.md
+docs/PHASE5_COMPONENT_CATALOG.md
 ```
 
-This is the primary Phase 5 architecture checkpoint. It consolidates the
-component responsibility, Node/PanelNode, content/composition, property,
-primitive, abstraction and custom-component-authoring decisions established
-before implementation.
-
-### Scope
-
-Initial concrete work is expected to cover:
+### Active standard component scope
 
 ```text
 Button
 ToggleButton
-TextNode integration where needed
-ImageNode only if concrete requirements justify it
-```
-
-Later component families include:
-
-```text
 Menu / MenuItem
 TabControl / TabItem
-ListBox / ListItem
-Accordion / Section
-Dialog / Modal
 ```
 
-Scrolling remains a separate framework architecture topic and is not assumed
-to require a fundamental `ScrollNode`.
+These are standard framework UI components with distinct generic contracts.
 
-### Architectural constraints
+### Deferred components
 
-Phase 5 components do not redefine:
+```text
+List
+Scroll / ScrollArea
+Modal
+IconButton
+```
+
+`List` is deferred until it has a distinct generic contract beyond a thin
+alias over an existing layout primitive.
+
+`Scroll / ScrollArea` remains a separate framework architecture topic. Its
+final design must account for content extent, viewport extent, offset/range,
+clipping, coordinate conversion, layout integration and input/hit-test
+integration before implementation.
+
+`Modal` is deferred until Phase 6 modality infrastructure is complete. The
+legacy Modal implementation is removed from the active component API; its
+useful behavioral requirements are preserved in `PHASE6_MODALITY_REQUIREMENTS.md`.
+
+`IconButton` is deferred until a stable graphics/icon primitive and resource
+contract exists.
+
+### Component architecture constraints
+
+Components do not redefine:
 
 ```text
 NodeTree ownership/lifecycle
@@ -446,22 +306,17 @@ clipping
 framework-owned scrolling mechanics
 ```
 
-Components own domain semantics, presentation and intentional composition.
+Components own semantic state, presentation and intentional specialized
+composition.
 
 `PanelNode` is a structural/layout primitive, not a universal visual/content
 base. A component becomes a `PanelNode` when child ownership/composition and
 layout flow are actually part of its responsibility.
 
-The framework does not adopt a universal `content` model in which everything
-is content of everything.
-
-Framework-recognized Node properties are not split into a mandatory
-`FrameworkProps`/`ComponentProps` public hierarchy. Props structures are
-introduced only when they represent a genuinely reusable/cohesive semantic
-group.
+The framework does not use a universal arbitrary `content` model.
 
 Shared base classes must emerge from concrete repeated semantics rather than
-from symmetry with WPF, Qt, React/Material UI, or another framework.
+from hierarchy symmetry with another UI toolkit.
 
 ### Dependencies
 
@@ -472,9 +327,8 @@ from symmetry with WPF, Qt, React/Material UI, or another framework.
 
 ### Validation policy
 
-Phase 5 is still source-level architectural/development work. Compilation,
-automated tests, runtime validation and full-build validation remain deferred
-to Phase 6.
+Phase 5 remains source-level development. Compilation, automated tests,
+runtime validation and full-build validation remain deferred to Phase 6.
 
 ---
 
@@ -505,13 +359,9 @@ technical validation intentionally deferred from Phases 1–5.
 
 ### Existing modal infrastructure
 
-`ModalManager` already exists in the source and is not recreated in Phase 6.
-Its current responsibilities include modal sessions, modal stack tracking,
-previous-focus storage, focus entry/restore, pointer-interaction cancellation
-and synchronization with `NodeTree` and `InputManager`.
-
-Phase 6 therefore completes and hardens the higher-level contract around this
-existing infrastructure rather than treating modal support as entirely new.
+`ModalManager` already exists as Phase 6 preparation. Its current source is
+not treated as the final Phase 6 contract until the modality architecture is
+completed.
 
 ### Dependencies
 
@@ -520,8 +370,6 @@ existing infrastructure rather than treating modal support as entirely new.
 - Phase 3
 - Phase 4
 - Phase 5
-
-RenderContext and a second backend remain optional architectural directions.
 
 ---
 
@@ -556,5 +404,5 @@ Legacy, deprecated, experimental, or currently unused code must be verified
 against the source before being treated as an architectural contract.
 
 The current source code remains the source of truth for existing behavior.
-The roadmap defines the intended development direction, not assumed existing
+The roadmap defines intended development direction, not assumed existing
 behavior.
