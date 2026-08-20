@@ -21,7 +21,9 @@ namespace ui
         void activate() override;
 
     protected:
-        void draw(SDL_Renderer *renderer) override;
+        Color presentationBackgroundColor() const noexcept override;
+        Color presentationBorderColor() const noexcept override;
+        Color presentationTextColor() const noexcept override;
 
     private:
         bool selected_ = false;
