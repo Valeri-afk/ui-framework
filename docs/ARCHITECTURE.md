@@ -701,15 +701,6 @@ Hit testing is currently initiated by NodeTree.
 The current NodeTree::hitTest() implementation checks top-level overlays
 and roots in reverse order.
 
-For each candidate, Node::hitTest() is called.
-
-The current Node::hitTest() implementation performs a bounds check
-against the node itself and does not recursively traverse PanelNode
-children.
-
-Therefore the current hit-testing implementation should NOT be described
-as a complete recursive subtree hit-test system.
-
 The current structure is:
 
 InputManager
@@ -724,11 +715,6 @@ NodeTree::hitTest()
              +-- reverse child order
              +-- descendant-first target selection
              +-- ancestor clipping/overflow constraints
-
-Modal input is restricted by passing the active modal root to
-NodeTree::hitTest().
-
-Visibility and enabled state are checked by Node::hitTest().
 
 roots → overlays → modal presentation order
 reverse order for hit-test
