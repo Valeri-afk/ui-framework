@@ -123,16 +123,16 @@ namespace ui
                 static_cast<float>(event.wheel.mouse_x);
             const float mouseY =
                 static_cast<float>(event.wheel.mouse_y);
-
+        
             const float deltaX = -event.wheel.x;
             const float deltaY = -event.wheel.y;
-
+        
             bool wheelHandled = false;
-
+        
             {
                 Node::ScopedCoordinateTransform scrollTransform(
                     makeScrollTransform(scrollManager_.get()));
-
+        
                 wheelHandled = scrollManager_->handleWheel(
                     *nodeTree_,
                     mouseX,
@@ -141,17 +141,22 @@ namespace ui
                     deltaY,
                     topModalNode());
             }
-
+        
             if (wheelHandled)
             {
                 prepareForTreeOperation();
-                
-                inputManager_->refreshHover(
-                    *nodeTree_,
-                    mouseX,
-                    mouseY,
-                    topModalNode());
-                
+        
+                {
+                    Node::ScopedCoordinateTransform scrollTransform(
+                        makeScrollTransform(scrollManager_.get()));
+        
+                    inputManager_->refreshHover(
+                        *nodeTree_,
+                        mouseX,
+                        mouseY,
+                        topModalNode());
+                }
+        
                 return;
             }
         }
