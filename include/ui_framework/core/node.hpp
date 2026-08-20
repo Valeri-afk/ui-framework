@@ -111,13 +111,7 @@ namespace ui
         void setOverflow(Overflow overflow);
         Overflow getOverflow() const noexcept;
 
-        LayoutPosition getActualPosition() const noexcept
-        {
-            const LayoutPosition position = actualPosition_;
-            const CoordinateTransform &transform = coordinateTransform();
-            return transform ? transform(*this, position) : position;
-        }
-
+        LayoutPosition getActualPosition() const noexcept;
         LayoutSize getActualSize() const noexcept;
 
         virtual Node *getVisibleChild(size_t visibleIndex) const noexcept;
@@ -144,8 +138,6 @@ namespace ui
         virtual void update(float dt) {}
         virtual void draw(SDL_Renderer *renderer) {}
 
-        // Framework layout asks a Node for the size of its own visual content.
-        // PanelNode handles structural children separately.
         virtual LayoutSize measureContent(const LayoutSize &availableContent) const
         {
             (void)availableContent;
@@ -192,7 +184,6 @@ namespace ui
 
         Padding padding_;
         Border border_;
-
         Overflow overflow_ = Overflow::VISIBLE;
 
         bool visible_ = true;
