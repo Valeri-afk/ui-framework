@@ -5,6 +5,7 @@
 
 #include "ui_framework/core/node.hpp"
 #include "ui_framework/core/text_primitive.hpp"
+#include "ui_framework/event_types.hpp"
 
 namespace ui
 {
