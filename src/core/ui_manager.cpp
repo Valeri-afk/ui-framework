@@ -224,22 +224,6 @@ namespace ui
         return scrollManager_ && scrollManager_->isRegistered(nodeId);
     }
 
-    bool UIManager::setScrollViewportSize(
-        Node::Id nodeId,
-        const LayoutSize &viewport)
-    {
-        return scrollManager_ &&
-               scrollManager_->setViewportSize(nodeId, viewport);
-    }
-
-    bool UIManager::setScrollContentSize(
-        Node::Id nodeId,
-        const LayoutSize &content)
-    {
-        return scrollManager_ &&
-               scrollManager_->setContentSize(nodeId, content);
-    }
-
     bool UIManager::setScrollOffset(
         Node::Id nodeId,
         const ScrollOffset &offset)
