@@ -149,11 +149,13 @@ The framework should own the mechanisms required to make many UI objects operate
 - layout invalidation;
 - basic layout containers and mechanisms.
 
-### Reusable UI building blocks
+### Component/runtime support
 
-The framework may provide common controls and containers, but components are not its defining purpose.
+- framework-recognized Node state and generic execution semantics;
+- reusable framework primitives where centralized low-level behavior is justified;
+- provided components that implement application-facing UI semantics on top of the runtime.
 
-The client should be able to create custom nodes by composition and inheritance without bypassing runtime ownership and lifecycle rules.
+The framework may provide common controls and containers, but components are not its defining purpose. Custom component authors should be able to build specialized Nodes and PanelNodes while retaining framework-managed ownership, lifecycle, traversal, layout, input, hit-test and rendering behavior.
 
 ---
 
@@ -189,6 +191,8 @@ Client:
     reset chess session
     choose the next screen
 ```
+
+The framework also supports **custom component authors** as a distinct concern from the application client. A custom component may own its own semantic/domain state and presentation, but should use the framework's existing ownership, lifecycle, layout, input, hit-test, event and rendering infrastructure rather than reimplementing those generic systems.
 
 ---
 
@@ -242,6 +246,8 @@ Examples:
 - input/event infrastructure;
 - common interactive controls.
 
+Common controls are provided framework components, not evidence that every control needs a universal base class. Component hierarchy must emerge from concrete responsibilities rather than from a generic `ControlNode`/`InteractiveNode` taxonomy.
+
 ### Optional / later capabilities
 
 Capabilities that may become useful for richer applications but are not required by the current target.
@@ -266,7 +272,12 @@ Examples:
 - PGN/FEN semantics;
 - opening databases;
 - application data models;
-- application-specific business logic.
+- application-specific business logic;
+- a universal "everything is content of everything" composition model;
+- CSS-style declarative interpretation of arbitrary component properties;
+- mandatory generic `Control`, `Interactive`, `Selectable`, or `Composite` base classes;
+- mandatory service objects that every custom component author must create/configure;
+- feature parity with Qt, WPF, Material UI, or other larger UI toolkits.
 
 ---
 
@@ -369,23 +380,26 @@ The framework should follow these principles:
 6. **The source code remains authoritative.**
    Documentation records intended and established behavior but must not describe hypothetical behavior as implemented.
 
+7. **Keep custom component contracts small.**
+   Centralize generic mechanics in the framework when correctness depends on coordinated subsystems, but do not replace simple component APIs with mandatory service/capability machinery.
+
 ---
 
 ## 12. Relationship to Large UI Frameworks
 
-Qt, WPF, and similar systems are useful references for established UI concepts, but their feature sets should not be treated as the specification for this project.
+Qt, WPF, Material UI and similar systems are useful references for established UI concepts, but their feature sets should not be treated as the specification for this project.
 
 Large frameworks serve broad application classes and therefore support many capabilities that may be unnecessary here.
 
 The appropriate question for this project is not:
 
-> "Does Qt/WPF have this feature?"
+> "Does Qt/WPF/Material UI have this feature?"
 
 It is:
 
-> "Does the application class supported by this framework require this capability, and is providing it a responsibility of the framework runtime?"
+> "Does the application class supported by this framework require this capability, is providing it a responsibility of the framework runtime, and does the resulting developer contract remain appropriately small?"
 
-Existing frameworks are useful as design references and sources of proven patterns, not as feature checklists.
+Existing frameworks are useful as design references and sources of proven patterns, not as feature checklists or hierarchy templates.
 
 ---
 
@@ -422,10 +436,6 @@ Defines development phases and high-level exit criteria.
 
 Describes the architecture that is actually implemented in the main source tree.
 
-`docs/PHASE1_RUNTIME.md`
-
-Records Phase 1 runtime analysis and stabilization work.
-
 `docs/PHASE1_FINAL_DECISIONS.md`
 
 Provides the concise final architecture snapshot for Phase 1 and future development contexts.
@@ -433,5 +443,9 @@ Provides the concise final architecture snapshot for Phase 1 and future developm
 `docs/INSTRUCTIONS.md`
 
 Defines the workflow for analyzing and modifying the repository.
+
+`docs/PHASE5_COMPONENT_ARCHITECTURE.md`
+
+Defines the current Phase 5 component architecture and is the primary design reference for new component work. Focused Phase 5 notes may preserve supporting discussion, but they must not compete with this consolidated checkpoint as an architecture source.
 
 When a new development context is opened, `FRAMEWORK_SCOPE.md` should be read early so that implementation decisions are evaluated against the project's actual purpose rather than against assumptions about a generic UI toolkit.
