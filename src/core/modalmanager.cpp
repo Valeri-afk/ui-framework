@@ -85,6 +85,23 @@ namespace ui
         return true;
     }
 
+    bool ModalManager::handleKeyDown(
+        NodeTree &nodeTree,
+        InputManager &input,
+        KeyCode key)
+    {
+        if (key != KeyCode::ESCAPE || modals_.empty())
+            return false;
+
+        if (!topModalNode(nodeTree))
+        {
+            sync(nodeTree, input);
+            return false;
+        }
+
+        return closeModal(nodeTree, input);
+    }
+
     bool ModalManager::isModal(
         const Node *node) const noexcept
     {
@@ -300,6 +317,7 @@ namespace ui
         const Node *liveNode = nodeTree.findNode(node.id());
 
         return liveNode &&
+               nodeTree.isOverlay(liveNode) &&
                liveNode->isVisible() &&
                liveNode->isEnabled();
     }
@@ -316,7 +334,8 @@ namespace ui
 
         const bool wasTop = index + 1 == modals_.size();
 
-        if (modalNode && modalNode->isVisible())
+        if (modalNode &&
+            isLiveVisibleEnabledModal(nodeTree, *modalNode))
             return false;
 
         const ModalSession removedSession = session;
@@ -327,6 +346,7 @@ namespace ui
 
         if (wasTop)
         {
+            input.cancelPointerInteraction(nodeTree);
             input.syncState(nodeTree);
             restoreFocusAfterClose(
                 nodeTree,
