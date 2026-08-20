@@ -109,9 +109,7 @@ namespace ui
         nodeTree_->update(dt);
 
         if (layoutManager_)
-        {
             layoutManager_->processLayoutQueue(*nodeTree_);
-        }
 
         syncState();
     }
@@ -151,29 +149,9 @@ namespace ui
             nodeTree_->removeOverlay(node);
     }
 
-    void UIManager::setViewportSize(const LayoutSize &size) noexcept
-    {
-        layoutManager_->setViewportSize({
-            std::max(0.0f, size.width),
-            std::max(0.0f, size.height)});
-
-        if (modalManager_)
-            modalManager_->setViewportSize(size);
-
-        if (nodeTree_)
-            nodeTree_->requestFullLayout();
-    }
-
-    LayoutSize UIManager::getViewportSize() const noexcept
-    {
-        return layoutManager_->getViewportSize();
-    }
-
     bool UIManager::showModal(Node &node)
     {
-        return showModal(
-            node,
-            BackdropClickBehavior::Consume);
+        return showModal(node, BackdropClickBehavior::Consume);
     }
 
     bool UIManager::showModal(
@@ -230,13 +208,36 @@ namespace ui
         return modalManager_->topModalNode(*nodeTree_);
     }
 
+    void UIManager::setBackdropColor(const Color &color) noexcept
+    {
+        if (modalManager_)
+            modalManager_->setBackdropColor(color);
+    }
+
+    Color UIManager::getBackdropColor() const noexcept
+    {
+        return modalManager_ ? modalManager_->getBackdropColor() : Color{};
+    }
+
+    void UIManager::setBackdropFadeDuration(float seconds) noexcept
+    {
+        if (modalManager_)
+            modalManager_->setBackdropFadeDuration(seconds);
+    }
+
+    float UIManager::getBackdropFadeDuration() const noexcept
+    {
+        return modalManager_ ? modalManager_->getBackdropFadeDuration() : 0.0f;
+    }
+
     void UIManager::prepareForTreeOperation()
     {
         if (!nodeTree_)
             return;
 
         applyMutationQueue();
-        layoutManager_->processLayoutQueue(*nodeTree_);
+        if (layoutManager_)
+            layoutManager_->processLayoutQueue(*nodeTree_);
         syncState();
     }
 
@@ -276,11 +277,7 @@ namespace ui
             return;
 
         if (modalManager_)
-        {
-            modalManager_->sync(
-                *nodeTree_,
-                *inputManager_);
-        }
+            modalManager_->sync(*nodeTree_, *inputManager_);
 
         inputManager_->syncState(*nodeTree_);
         syncModalInputState();
