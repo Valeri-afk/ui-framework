@@ -185,7 +185,7 @@ The framework should be able to support applications with:
 - settings interfaces;
 - lists and scrollable content when the corresponding framework capability is implemented;
 - interactive controls;
-- overlays and modal UI when the modality subsystem is complete;
+- overlays and modal UI through the framework's modality service;
 - continuously updated information such as clocks;
 - dynamic content;
 - custom drawing;
@@ -213,9 +213,13 @@ Button
 ToggleButton
 Menu / MenuItem
 TabControl / TabItem
+Checkbox
+RadioButton
+Slider
+Dropdown
 ```
 
-The active foundation contains:
+The active framework foundation contains:
 
 ```text
 Node
@@ -227,8 +231,12 @@ InputManager
 EventDispatcher
 LayoutManager
 RenderingState
+ScrollManager
+ModalManager
 primitives
 ```
+
+Framework-level scrolling and modality are services/infrastructure, not mandatory standalone `Scroll`, `ScrollArea` or `Modal` components.
 
 ### Deferred capabilities
 
@@ -236,18 +244,25 @@ These remain deliberately unresolved or deferred:
 
 ```text
 List
-Scroll / ScrollArea
-Modal
+TextField / Input
+Image / resource ownership
 IconButton
+Scrollbar presentation
+Standalone Scroll / ScrollArea component
+Standalone Modal component
 ```
 
 `List` is deferred until it has a distinct generic contract beyond a semantic alias of an existing layout node.
 
-`Scroll / ScrollArea` is a separate framework architecture topic covering offset, content extent, viewport extent, clipping, coordinate conversion, layout integration and input/hit-test integration.
+Scrolling is already implemented as framework-level infrastructure through `ScrollManager`. A standalone `Scroll` / `ScrollArea` component remains deferred until repeated application usage demonstrates a useful component-level contract beyond the service and existing Node/PanelNode composition.
 
-`Modal` is deferred until Phase 6 modality infrastructure is complete. The old legacy Modal implementation is not part of the active component API.
+Modality is already implemented through `ModalManager` as a framework service. A separate public Modal component is not currently required.
+
+`TextField / Input` and `Image / resource ownership` remain dependent on framework infrastructure that is not yet complete.
 
 `IconButton` is deferred until a stable graphics/icon primitive and resource contract exists.
+
+Scrollbar visuals are deferred until scroll behavior is runtime-validated and a concrete reusable visual contract exists.
 
 ### Future / optional capabilities
 
@@ -328,7 +343,7 @@ NodeTree
     +-- lifecycle
 ```
 
-Other subsystems such as layout, input, events, modal handling and rendering build on that runtime instead of independently controlling component lifetime and traversal.
+Other subsystems such as layout, input, events, modal handling, scrolling and rendering build on that runtime instead of independently controlling component lifetime and traversal.
 
 ---
 
@@ -372,7 +387,7 @@ The current process is:
 1. establish architecture and runtime contracts;
 2. stabilize the framework core;
 3. implement the minimal standard component layer;
-4. complete Phase 6 modality/navigation and deferred validation;
+4. complete Phase 6 modality/scroll integration and deferred infrastructure;
 5. verify the framework through the chess client;
 6. extend the framework only when a future application provides a real generic requirement.
 ```
