@@ -166,9 +166,6 @@ namespace ui
         ScrollOffset result{};
         const Node *current = node.parent();
 
-        // A node's own scroll state moves its content, not the node itself.
-        // Therefore presentation of this node is affected only by registered
-        // scroll ancestors.
         while (current)
         {
             const auto it = states_.find(current->id());
@@ -208,20 +205,35 @@ namespace ui
         const Node *modalRoot)
     {
         Node *target = nodeTree.hitTest(x, y, modalRoot);
-        Node *scrollNode = findNearestScrollableAncestor(nodeTree, target);
-        if (!scrollNode)
+        if (!target)
             return false;
 
-        auto it = states_.find(scrollNode->id());
-        if (it == states_.end())
-            return false;
+        for (Node *current = target; current; current = current->parent())
+        {
+            if (nodeTree.findNode(current->id()) != current)
+                return false;
 
-        const ScrollOffset before = it->second.offset;
-        it->second.offset.x += deltaX;
-        it->second.offset.y += deltaY;
-        it->second.clampOffset();
+            auto it = states_.find(current->id());
+            if (it == states_.end())
+                continue;
 
-        return it->second.offset != before;
+            const ScrollOffset before = it->second.offset;
+            const ScrollOffset maximum = it->second.maxOffset();
+
+            it->second.offset.x = std::clamp(
+                it->second.offset.x + deltaX,
+                0.0f,
+                maximum.x);
+            it->second.offset.y = std::clamp(
+                it->second.offset.y + deltaY,
+                0.0f,
+                maximum.y);
+
+            if (it->second.offset != before)
+                return true;
+        }
+
+        return false;
     }
 
     void ScrollManager::sync(NodeTree &nodeTree)
@@ -236,12 +248,10 @@ namespace ui
             }
 
             ScrollState &state = it->second;
-
             state.viewport = getClientSize(*scrollNode);
             state.content = state.viewport;
 
-            const LayoutPosition contentOrigin =
-                getContentOrigin(*scrollNode);
+            const LayoutPosition contentOrigin = getContentOrigin(*scrollNode);
 
             std::function<void(const Node &, bool)> measureSubtree;
             measureSubtree =
@@ -259,13 +269,10 @@ namespace ui
                         state.content.width = std::max(
                             state.content.width,
                             std::max(0.0f, position.x + size.width - contentOrigin.x));
-
                         state.content.height = std::max(
                             state.content.height,
                             std::max(0.0f, position.y + size.height - contentOrigin.y));
 
-                        // A nested scroll container contributes its viewport to
-                        // the outer content extent, not its own scrollable content.
                         if (isRegistered(node.id()))
                             return;
                     }
