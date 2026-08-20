@@ -2,196 +2,105 @@
 
 namespace ui
 {
-
-    TextNode::~TextNode()
-    {
-        releaseTextObject();
-    }
-
     const std::string &TextNode::getText() const noexcept
     {
-        return text_;
+        return text_.getText();
     }
 
     void TextNode::setText(std::string text)
     {
-        if (text_ == text)
+        if (text_.getText() == text)
             return;
 
         deferLayoutMutation(
             [text = std::move(text)](Node &node)
             {
                 auto &textNode = static_cast<TextNode &>(node);
-                textNode.text_ = text;
-
-                if (textNode.textObject_)
-                    TTF_SetTextString(
-                        textNode.textObject_,
-                        textNode.text_.c_str(),
-                        textNode.text_.size());
+                textNode.text_.setText(text);
             });
     }
 
     TTF_Font *TextNode::getFont() const noexcept
     {
-        return font_;
+        return text_.getFont();
     }
 
     void TextNode::setFont(TTF_Font *font)
     {
-        if (font_ == font)
+        if (text_.getFont() == font)
             return;
 
         deferLayoutMutation(
             [font](Node &node)
             {
-                auto &textNode = static_cast<TextNode &>(node);
-                textNode.font_ = font;
-                textNode.releaseTextObject();
+                static_cast<TextNode &>(node).text_.setFont(font);
             });
     }
 
     TextAlignment TextNode::getHorizontalAlignment() const noexcept
     {
-        return horizontalAlignment_;
+        return text_.getHorizontalAlignment();
     }
 
     void TextNode::setHorizontalAlignment(TextAlignment alignment)
     {
-        if (horizontalAlignment_ == alignment)
+        if (getHorizontalAlignment() == alignment)
             return;
 
         deferLayoutMutation(
             [alignment](Node &node)
             {
-                static_cast<TextNode &>(node).horizontalAlignment_ = alignment;
+                static_cast<TextNode &>(node).text_.setHorizontalAlignment(alignment);
             });
     }
 
     TextAlignment TextNode::getVerticalAlignment() const noexcept
     {
-        return verticalAlignment_;
+        return text_.getVerticalAlignment();
     }
 
     void TextNode::setVerticalAlignment(TextAlignment alignment)
     {
-        if (verticalAlignment_ == alignment)
+        if (getVerticalAlignment() == alignment)
             return;
 
         deferLayoutMutation(
             [alignment](Node &node)
             {
-                static_cast<TextNode &>(node).verticalAlignment_ = alignment;
+                static_cast<TextNode &>(node).text_.setVerticalAlignment(alignment);
             });
+    }
+
+    Color TextNode::getColor() const noexcept
+    {
+        return text_.getColor();
+    }
+
+    void TextNode::setColor(const Color &color)
+    {
+        text_.setColor(color);
+    }
+
+    LayoutSize TextNode::measureContent(const LayoutSize &availableContent) const
+    {
+        return text_.measure(availableContent.width);
     }
 
     void TextNode::draw(SDL_Renderer *renderer)
     {
-        if (!renderer || !font_ || text_.empty())
-            return;
-
-        ensureTextObject(renderer);
-
-        if (!textObject_)
-            return;
-
-        const Padding padding = getPadding();
-        const Border border = getBorder();
         const LayoutPosition position = getActualPosition();
         const LayoutSize size = getActualSize();
+        const Padding padding = getPadding();
+        const Border border = getBorder();
 
-        const float contentX =
-            position.x + border.left + padding.left;
-        const float contentY =
-            position.y + border.top + padding.top;
+        const LayoutPosition contentPosition{
+            position.x + border.left + padding.left,
+            position.y + border.top + padding.top};
 
-        const float contentWidth = std::max(
-            0.0f,
-            size.width -
-                border.left - border.right -
-                padding.left - padding.right);
+        const LayoutSize contentSize{
+            std::max(0.0f, size.width - border.left - border.right - padding.left - padding.right),
+            std::max(0.0f, size.height - border.top - border.bottom - padding.top - padding.bottom)};
 
-        const float contentHeight = std::max(
-            0.0f,
-            size.height -
-                border.top - border.bottom -
-                padding.top - padding.bottom);
-
-        TTF_SetTextWrapWidth(
-            textObject_,
-            static_cast<int>(std::round(contentWidth)));
-
-        int textWidth = 0;
-        int textHeight = 0;
-        TTF_GetTextSize(textObject_, &textWidth, &textHeight);
-
-        float x = contentX;
-        float y = contentY;
-
-        switch (horizontalAlignment_)
-        {
-        case TextAlignment::CENTER:
-            x += (contentWidth - static_cast<float>(textWidth)) * 0.5f;
-            break;
-        case TextAlignment::END:
-            x += contentWidth - static_cast<float>(textWidth);
-            break;
-        case TextAlignment::START:
-            break;
-        }
-
-        switch (verticalAlignment_)
-        {
-        case TextAlignment::CENTER:
-            y += (contentHeight - static_cast<float>(textHeight)) * 0.5f;
-            break;
-        case TextAlignment::END:
-            y += contentHeight - static_cast<float>(textHeight);
-            break;
-        case TextAlignment::START:
-            break;
-        }
-
-        TTF_DrawRendererText(textObject_, x, y);
+        text_.draw(renderer, contentPosition, contentSize);
     }
-
-    void TextNode::releaseTextObject() noexcept
-    {
-        if (textObject_)
-        {
-            TTF_DestroyText(textObject_);
-            textObject_ = nullptr;
-        }
-
-        if (textEngine_)
-        {
-            TTF_DestroyRendererTextEngine(textEngine_);
-            textEngine_ = nullptr;
-        }
-
-        cachedRenderer_ = nullptr;
-    }
-
-    void TextNode::ensureTextObject(SDL_Renderer *renderer)
-    {
-        if (!renderer || !font_ || text_.empty())
-            return;
-
-        if (!textEngine_ || cachedRenderer_ != renderer)
-        {
-            releaseTextObject();
-            textEngine_ = TTF_CreateRendererTextEngine(renderer);
-            cachedRenderer_ = renderer;
-        }
-
-        if (!textEngine_ || textObject_)
-            return;
-
-        textObject_ = TTF_CreateText(
-            textEngine_,
-            font_,
-            text_.c_str(),
-            text_.size());
-    }
-
 }
