@@ -1,6 +1,49 @@
 #include "scrollmanager.hpp"
 
+#include "ui_framework/core/panelnode.hpp"
+
 #include <algorithm>
+#include <functional>
+
+namespace
+{
+    float sanitizeNonNegative(float value) noexcept
+    {
+        return std::max(0.0f, value);
+    }
+
+    ui::LayoutSize getClientSize(const ui::Node &node)
+    {
+        const ui::LayoutSize size = node.getActualSize();
+        const ui::Padding padding = node.getPadding();
+        const ui::Border border = node.getBorder();
+
+        return {
+            sanitizeNonNegative(
+                size.width -
+                std::max(0.0f, padding.left) -
+                std::max(0.0f, padding.right) -
+                std::max(0.0f, border.left) -
+                std::max(0.0f, border.right)),
+            sanitizeNonNegative(
+                size.height -
+                std::max(0.0f, padding.top) -
+                std::max(0.0f, padding.bottom) -
+                std::max(0.0f, border.top) -
+                std::max(0.0f, border.bottom))};
+    }
+
+    ui::LayoutPosition getContentOrigin(const ui::Node &node)
+    {
+        const ui::LayoutPosition position = node.getActualPosition();
+        const ui::Padding padding = node.getPadding();
+        const ui::Border border = node.getBorder();
+
+        return {
+            position.x + std::max(0.0f, border.left) + std::max(0.0f, padding.left),
+            position.y + std::max(0.0f, border.top) + std::max(0.0f, padding.top)};
+    }
+}
 
 namespace ui
 {
@@ -185,13 +228,62 @@ namespace ui
     {
         for (auto it = states_.begin(); it != states_.end();)
         {
-            if (!nodeTree.findNode(it->first))
+            Node *scrollNode = nodeTree.findNode(it->first);
+            if (!scrollNode)
             {
                 it = states_.erase(it);
                 continue;
             }
 
-            it->second.clampOffset();
+            ScrollState &state = it->second;
+
+            state.viewport = getClientSize(*scrollNode);
+            state.content = state.viewport;
+
+            const LayoutPosition contentOrigin =
+                getContentOrigin(*scrollNode);
+
+            std::function<void(const Node &, bool)> measureSubtree;
+            measureSubtree =
+                [this, &measureSubtree, &state, &contentOrigin]
+                (const Node &node, bool isRoot)
+                {
+                    if (!node.isVisible())
+                        return;
+
+                    if (!isRoot)
+                    {
+                        const LayoutPosition position = node.getActualPosition();
+                        const LayoutSize size = node.getActualSize();
+
+                        state.content.width = std::max(
+                            state.content.width,
+                            std::max(0.0f, position.x + size.width - contentOrigin.x));
+
+                        state.content.height = std::max(
+                            state.content.height,
+                            std::max(0.0f, position.y + size.height - contentOrigin.y));
+
+                        // A nested scroll container contributes its viewport to
+                        // the outer content extent, not its own scrollable content.
+                        if (isRegistered(node.id()))
+                            return;
+                    }
+
+                    const auto *panel = dynamic_cast<const PanelNode *>(&node);
+                    if (!panel)
+                        return;
+
+                    for (size_t i = 0; i < panel->childCount(); ++i)
+                    {
+                        const Node *child = panel->getChildAt(i);
+                        if (child)
+                            measureSubtree(*child, false);
+                    }
+                };
+
+            measureSubtree(*scrollNode, true);
+            state.clampOffset();
             ++it;
         }
     }
