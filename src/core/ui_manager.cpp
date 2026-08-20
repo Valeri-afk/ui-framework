@@ -6,6 +6,7 @@
 #include "inputmanager.hpp"
 #include "modalmanager.hpp"
 #include "layoutmanager.hpp"
+#include "scrollmanager.hpp"
 #include "ui_framework/core/ui_manager.hpp"
 
 namespace ui
@@ -15,7 +16,8 @@ namespace ui
         : nodeTree_(std::make_unique<NodeTree>()),
           inputManager_(std::make_unique<InputManager>()),
           modalManager_(std::make_unique<ModalManager>()),
-          layoutManager_(std::make_unique<LayoutManager>())
+          layoutManager_(std::make_unique<LayoutManager>()),
+          scrollManager_(std::make_unique<ScrollManager>())
     {
     }
 
@@ -66,6 +68,31 @@ namespace ui
             }
         }
 
+        if (scrollManager_ &&
+            sdlEvent.type == SDL_EVENT_MOUSE_WHEEL)
+        {
+            const float mouseX = static_cast<float>(sdlEvent.wheel.mouse_x);
+            const float mouseY = static_cast<float>(sdlEvent.wheel.mouse_y);
+
+            // SDL reports positive wheel Y as upward scrolling. The scroll
+            // offset grows toward the end of the content, so invert the
+            // input delta before applying it to the scroll state.
+            const float deltaX = -sdlEvent.wheel.x;
+            const float deltaY = -sdlEvent.wheel.y;
+
+            if (scrollManager_->handleWheel(
+                    *nodeTree_,
+                    mouseX,
+                    mouseY,
+                    deltaX,
+                    deltaY,
+                    topModalNode()))
+            {
+                prepareForTreeOperation();
+                return;
+            }
+        }
+
         if (inputManager_)
         {
             inputManager_->setModalRoot(topModalNode());
@@ -109,14 +136,78 @@ namespace ui
 
     void UIManager::removeRoot(Node *node)
     {
+        if (nodeTree_ && scrollManager_ && node)
+            scrollManager_->unregisterScrollNode(*nodeTree_, node->id());
+
         if (nodeTree_)
             nodeTree_->removeRoot(node);
     }
 
     void UIManager::removeOverlay(Node *node)
     {
+        if (nodeTree_ && scrollManager_ && node)
+            scrollManager_->unregisterScrollNode(*nodeTree_, node->id());
+
         if (nodeTree_)
             nodeTree_->removeOverlay(node);
+    }
+
+    bool UIManager::registerScrollNode(Node &node)
+    {
+        if (!nodeTree_ || !scrollManager_)
+            return false;
+
+        if (nodeTree_->findNode(node.id()) != &node)
+            return false;
+
+        return scrollManager_->registerScrollNode(node);
+    }
+
+    bool UIManager::unregisterScrollNode(Node::Id nodeId)
+    {
+        if (!nodeTree_ || !scrollManager_)
+            return false;
+
+        return scrollManager_->unregisterScrollNode(*nodeTree_, nodeId);
+    }
+
+    bool UIManager::isScrollNodeRegistered(Node::Id nodeId) const noexcept
+    {
+        return scrollManager_ && scrollManager_->isRegistered(nodeId);
+    }
+
+    bool UIManager::setScrollViewportSize(
+        Node::Id nodeId,
+        const LayoutSize &viewport)
+    {
+        return scrollManager_ &&
+               scrollManager_->setViewportSize(nodeId, viewport);
+    }
+
+    bool UIManager::setScrollContentSize(
+        Node::Id nodeId,
+        const LayoutSize &content)
+    {
+        return scrollManager_ &&
+               scrollManager_->setContentSize(nodeId, content);
+    }
+
+    bool UIManager::setScrollOffset(
+        Node::Id nodeId,
+        const ScrollOffset &offset)
+    {
+        return scrollManager_ &&
+               scrollManager_->setOffset(nodeId, offset);
+    }
+
+    ScrollOffset UIManager::getScrollOffset(Node::Id nodeId) const noexcept
+    {
+        return scrollManager_ ? scrollManager_->getOffset(nodeId) : ScrollOffset{};
+    }
+
+    ScrollOffset UIManager::getScrollMaxOffset(Node::Id nodeId) const noexcept
+    {
+        return scrollManager_ ? scrollManager_->getMaxOffset(nodeId) : ScrollOffset{};
     }
 
     bool UIManager::showModal(Node &node)
@@ -246,6 +337,9 @@ namespace ui
 
             modalManager_->sync(*nodeTree_, *inputManager_);
         }
+
+        if (scrollManager_)
+            scrollManager_->sync(*nodeTree_);
 
         inputManager_->syncState(*nodeTree_);
         syncModalInputState();
