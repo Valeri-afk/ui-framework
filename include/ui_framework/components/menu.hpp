@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <memory>
 
 #include "ui_framework/components/menu_item.hpp"
 #include "ui_framework/core/stackpanelnode.hpp"
@@ -16,7 +17,9 @@ namespace ui
         Menu();
         ~Menu() override = default;
 
-        MenuItem *addItem(std::unique_ptr<MenuItem> item, size_t index = static_cast<size_t>(-1));
+        MenuItem *addItem(
+            std::unique_ptr<MenuItem> item,
+            size_t index = static_cast<size_t>(-1));
         void removeItem(MenuItem &item);
 
         void setActiveItem(MenuItem *item) noexcept;
@@ -31,11 +34,9 @@ namespace ui
         void setOnItemActivate(ItemActivationCallback callback);
 
     private:
-        void handleMouseEnter(MouseEnterEvent &event);
-        void handleMouseLeave(MouseLeaveEvent &event);
-        void handleMouseClick(MouseClickEvent &event);
-
-        MenuItem *asMenuItem(Node *node) const noexcept;
+        void syncActiveItem(MenuItem *item) noexcept;
+        void syncSelectedItem(MenuItem *item) noexcept;
+        void handleItemActivation(MenuItem &item);
 
         MenuItem *activeItem_ = nullptr;
         MenuItem *selectedItem_ = nullptr;
