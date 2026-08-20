@@ -1,134 +1,127 @@
 # Phase 5 — Component Architecture Checkpoint
 
-## Purpose
-
-This checkpoint records the current component architecture that should guide further framework component development. It is intentionally separate from the large architecture document.
+This document is the practical checkpoint for further component development. It complements the consolidated architecture document without replacing it.
 
 ## Framework layers
 
 ```text
 Framework infrastructure
     ↓
-Base visual/layout nodes and low-level behavior
+Base nodes / layout / rendering primitives
     ↓
 Standard UI components
     ↓
-Application-specific components
+Application-specific composition
 ```
 
-The framework is not a complete widget library. It provides a minimal set of generic UI concepts and the infrastructure required to implement them.
-
-An application such as the chess application is a validation target, not a source of application-specific framework components.
+The framework is intentionally minimal. A chess application is a validation target, not a source of chess-specific framework components.
 
 ## Base types
 
 ### `Node`
 
-`Node` is the default base for visual components.
-
-A component should inherit from `Node` unless it actually needs structural child ownership and child layout.
-
-`Node` may contain framework-wide properties and use internal visual primitives without becoming a `PanelNode`.
+Default base for visual components. Use it unless the component genuinely requires structural child ownership and child layout.
 
 ### `PanelNode`
 
-`PanelNode` is the structural base for components that own children.
+Structural/layout base for components that own children and manage their geometry/composition.
 
-The existence of text, icons/images, borders, or multiple visual primitives does not by itself require `PanelNode`.
+Text, icons, images, borders, or multiple visual primitives do not by themselves justify `PanelNode`.
 
 ### `StackPanelNode`
 
-`StackPanelNode` provides reusable child layout flow. Composite components should reuse it when the required flow matches its semantics instead of duplicating measurement/arrangement code.
+Reusable child-flow layout primitive. Composite components should reuse it when its layout policy matches their semantics instead of reimplementing measurement/arrangement.
 
-## Component responsibilities
+## Component responsibility
 
-A standard visual component normally owns:
+Components own:
 
 ```text
 component-specific semantic state
 component-specific visual properties
-presentation of that state
+presentation
 semantic actions/callbacks
 coordination of intentionally owned specialized children
 ```
 
-The component should not normally own:
+Framework infrastructure owns coordinated generic mechanisms such as:
 
 ```text
-NodeTree traversal
-layout engine implementation
-hit-test implementation
-global event dispatch
-framework input routing
-modality routing
-other generic low-level infrastructure
+NodeTree lifecycle/traversal
+layout/geometry processing
+hit-testing
+input/event dispatch
+focus/capture
+render traversal
+clipping
+mutation/update scheduling
+modality
+scroll mechanics when implemented
 ```
 
-A useful boundary test is: if a component cannot reasonably implement the property or behavior with the tools exposed by its base/framework APIs, that behavior is a strong candidate for framework infrastructure.
+Boundary rule: if a component cannot reasonably implement a behavior with the tools exposed by its framework APIs, that behavior is a strong infrastructure candidate.
 
-## Visual primitives
+## Primitives
 
-A visual primitive does not have to be a `Node`.
+A visual primitive does not have to be a Node.
 
-`TextPrimitive` is an internal framework primitive that centralizes text measurement and rendering. This allows text-bearing components to reuse correct text behavior without creating a client-facing text service or forcing every component into a child-node content model.
+`TextPrimitive` is an internal reusable text measurement/rendering implementation. `TextNode` adapts that implementation to the NodeTree.
 
-A primitive should become a child component only when independent structure, lifecycle, hit-testing, or semantic behavior makes a `Node` useful.
+```text
+TextPrimitive
+    ↓
+TextNode / text-bearing components
+```
 
-## Content and children
+A primitive becomes a Node/component only when independent lifecycle, layout participation, hit-testing, or semantic behavior makes that useful.
 
-The framework does not use a universal `content` model.
+## Children and content
 
-Not every component can contain every other component. A specialized component may define an explicit child contract:
+There is no universal `content` model.
+
+Specialized components may define explicit semantic child contracts:
 
 ```text
 Menu       → MenuItem
 TabControl → TabItem
 ```
 
-A specialized component may itself be used as a child of a suitable `PanelNode`. Child capability and accepted-content semantics are separate questions.
-
-The fact that a primitive can be placed in a panel does not mean that every component should expose arbitrary children.
+Structural child ownership and semantic content are separate concepts.
 
 ## State ownership
 
-A composite component may coordinate state of its specialized children when that relationship is intrinsic to the component.
-
-Examples:
+Composite components may coordinate their intentionally specialized children:
 
 ```text
 Menu       → active/selected MenuItem
 TabControl → selected/active TabItem
 ```
 
-This does not justify generic `Node::selected`, `Node::active`, or `SelectableNode` abstractions yet. Similar names do not establish a shared semantic contract.
+This does not justify generic `Node::selected`, `Node::active`, or `SelectableNode` abstractions. Similar property names are not sufficient evidence of a shared semantic contract.
 
 ## Inheritance
 
-Inheritance is used when a specialized component genuinely extends the semantic and visual contract of its base.
+Use inheritance only when the specialized component genuinely extends a stable parent contract.
 
-Current example:
+Current justified example:
 
 ```text
 ToggleButton : Button
 ```
 
-`ToggleButton` reuses Button interaction, activation, layout, text handling, press animation and presentation pipeline, while adding persistent selected state.
-
-Do not create a generic `ButtonBase` until multiple concrete components prove the abstraction independently useful.
+Do not introduce `ButtonBase`, `ActionNode`, `SelectableNode`, or similar abstractions until concrete components prove a stable reusable contract.
 
 ## Layout rule
 
-A component should not become a `PanelNode` merely because it contains more than one visual primitive.
+Ask:
 
-The deciding question is:
+> Does this component require structural child ownership/layout as part of its semantics?
 
-> Does this component require structural child layout/ownership that is part of its semantics?
+If no → `Node`.
 
-If no, prefer `Node`.
+If yes → `PanelNode` or an existing specialized panel such as `StackPanelNode`.
 
-If yes, use `PanelNode` or an existing specialized panel such as `StackPanelNode`.
-
-## Standard component catalog at this checkpoint
+## Current standard components
 
 ```text
 Button
@@ -139,9 +132,9 @@ TabControl
 TabItem
 ```
 
-These have a distinct generic contract and have been actively validated.
+These have a distinct generic contract and are the current Phase 5 component set.
 
-### Deferred standard components
+## Deferred components
 
 ```text
 List
@@ -150,17 +143,17 @@ Modal
 IconButton
 ```
 
-`List` remains deferred because the current implementation is only a thin semantic alias over `StackPanelNode` and does not yet provide sufficiently distinct generic behavior.
+`List` is deferred because a thin `StackPanelNode` alias does not justify a separate abstraction.
 
-`Scroll / ScrollArea` remains deferred until the framework-level scroll architecture is settled.
+`Scroll / ScrollArea` is deferred until the framework-level scroll contract is finalized.
 
-`Modal` remains deferred until Phase 6 modality infrastructure is complete. The current/future Modal component is therefore considered **deprecated/inactive for implementation purposes until Phase 6**, while the `components` layer itself is not deprecated.
+`Modal` is deferred until Phase 6 modality infrastructure is complete. The current Modal implementation is deprecated/inactive and retained only as a reference. The `components` layer itself is **not deprecated**.
 
-`IconButton` remains deferred until a stable graphics/icon primitive and resource contract exists.
+`IconButton` is deferred until a stable graphics/icon primitive and resource contract exists.
 
-## Framework component versus application component
+## Application boundary
 
-The framework should provide generic components such as:
+Framework:
 
 ```text
 Button
@@ -170,7 +163,7 @@ Dialog
 Scroll
 ```
 
-The application should compose these into application-specific concepts such as:
+Application:
 
 ```text
 ChessBoard
@@ -181,25 +174,23 @@ PromotionDialog
 AnalysisPanel
 ```
 
-The chess application is used to test whether the generic framework set is sufficient. It does not determine the framework API directly.
+The application validates framework sufficiency; it does not define framework-specific domain components.
 
-## Component creation checklist
+## New component checklist
 
-Before adding a new standard component:
+Before implementation:
 
-1. Is it a generic UI concept?
-2. Does it add a distinct contract rather than rename an existing node?
-3. Can its responsibilities be expressed using current framework infrastructure?
-4. Does it actually require child ownership/layout?
+1. Is this a generic UI concept?
+2. Does it have an independent contract?
+3. Is it more than a renamed existing node/layout primitive?
+4. Does it actually require structural children?
 5. Which state belongs to the component?
 6. Which state belongs to specialized children?
-7. Can an existing standard component be reused instead?
-8. Is inheritance genuinely sharing a stable contract?
-9. Does the component avoid duplicating framework low-level behavior?
-10. Does it keep the framework minimal?
+7. Can an existing component be reused?
+8. Is inheritance sharing a stable contract?
+9. Is framework infrastructure being duplicated?
+10. Does the abstraction preserve the minimal framework goal?
 
-## Phase 5 boundary
+## Phase boundary
 
-Phase 5 should establish component architecture and implement the standard components whose contracts do not depend on later framework subsystems.
-
-Components that depend on unresolved framework systems should have their requirements documented and implementation deferred rather than forcing an incomplete architecture into Phase 5.
+If a component depends on an unfinished framework subsystem, document its requirements and defer implementation rather than forcing an incomplete architecture into the current phase.
