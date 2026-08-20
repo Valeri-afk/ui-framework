@@ -234,6 +234,13 @@ rendering hook
 
 This is the current implementation boundary.
 
+Node is the base runtime/component object. Its framework-recognized state is
+not intended to encode every component-specific semantic property.
+
+Generic properties such as visibility, enabled state, geometry, padding,
+border and overflow are interpreted by framework subsystems. Concrete
+components keep their domain state in the component itself.
+
 3.1 Node Ownership
 
 A Node does not own itself.
@@ -306,9 +313,14 @@ Its current role is:
 
 Node
   +
-child ownership
+structural child ownership
   +
-container behavior
+child/layout composition capability
+
+PanelNode is selected when a concrete component genuinely requires
+owned child Nodes, child geometry management, layout flow or structural
+composition. The presence of text, icons or multiple visual primitives
+alone does not require PanelNode.
 
 4.1 Hierarchy Invariants
 
@@ -705,20 +717,23 @@ InputManager
       v
 NodeTree::hitTest()
       |
-      +-- reverse overlays
+      +-- reverse effective top-level paint order
       |
-      +-- reverse roots
+      +-- recursive subtree hit-test
              |
-             v
-        Node::hitTest()
+             +-- reverse child order
+             +-- descendant-first target selection
+             +-- ancestor clipping/overflow constraints
 
 Modal input is restricted by passing the active modal root to
 NodeTree::hitTest().
 
 Visibility and enabled state are checked by Node::hitTest().
 
-Recursive child hit-testing and clipping-aware hit-testing are not yet
-established as a complete current architectural contract.
+roots → overlays → modal presentation order
+reverse order for hit-test
+recursive subtree hit-test
+Overflow::HIDDEN acts as an ancestor clipping boundary
 
 17. Focus
 
@@ -987,7 +1002,10 @@ Invalid modal sessions are removed during synchronization.
 
 25. Rendering
 
-Rendering is currently SDL3-specific.
+SDL3 is the current and only concrete backend.
+The application owns SDL runtime lifetime.
+The framework consumes SDL3 types and the supplied renderer.
+No generic RenderContext/backend interface exists as a current layer.
 
 The primary rendering traversal is owned by NodeTree.
 
@@ -1012,6 +1030,11 @@ recursively renders panel children.
 
 Renderer state is temporarily saved/restored around subtree rendering.
 
+25.1 Animation
+
+Animation is not a current global rendering subsystem. It is a mechanism
+for changing semantic/visual state through normal framework semantics.
+
 26. Clipping
 
 Overflow::HIDDEN causes NodeTree to establish an SDL render clip
@@ -1023,6 +1046,11 @@ Clipping is therefore currently implemented inside the SDL rendering traversal
 rather than through an independent rendering abstraction.
 
 27. ControlNode
+
+ControlNode is a historical WPF-inspired experiment.
+It is not an accepted universal base class for framework components.
+Current component architecture derives from concrete responsibilities and
+may use Node or PanelNode without requiring ControlNode.
 
 Source:
 
@@ -1294,6 +1322,12 @@ LayoutManager owns the framework-level measurement and arrangement pipeline.
 Individual layout containers provide layout-specific behavior through that
 pipeline. They do not own or expose the Measure / Arrange lifecycle.
 
+Resource boundary
+Renderer-bound resources are owned by the Node/component that needs them.
+There is no generic ResourceManager in the current architecture.
+Semantic resources and backend-bound representations remain conceptually
+separate, but no additional generic resource subsystem is required yet.
+
 Input
 
 InputManager owns interaction state and converts SDL input into framework
@@ -1392,3 +1426,13 @@ and the active development phase rather than introduced solely for architectural
 symmetry.
 
 The current source code remains the authoritative definition of all behavior.
+
+Component architecture cross-reference
+
+Phase 5 component architecture is documented separately in
+`docs/PHASE5_COMPONENT_ARCHITECTURE.md`.
+
+That document defines the current component-design rules, including the
+Node/PanelNode boundary, semantic content vs structural children, component
+state ownership, primitive-node criteria and the rule that new abstractions
+must emerge from concrete requirements.
