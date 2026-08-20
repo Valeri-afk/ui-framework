@@ -13,7 +13,7 @@ namespace ui
     {
         setFocusable(true);
         setCapturable(true);
-        setSize({160.0f, 24.0f});
+        setSize(LayoutSizeValue::fixed(160.0f, 24.0f));
 
         addHandler<MouseDownEvent>([this](MouseDownEvent &event, Node &) { handleMouseDown(event); });
         addHandler<MouseMoveEvent>([this](MouseMoveEvent &event, Node &) { handleMouseMove(event); });
@@ -72,7 +72,7 @@ namespace ui
 
     LayoutSize Slider::measureContent(const LayoutSize &) const
     {
-        return getSize().resolve({160.0f, 24.0f});
+        return {160.0f, 24.0f};
     }
 
     void Slider::updateFromPointer(float x)
