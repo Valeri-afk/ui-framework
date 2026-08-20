@@ -2,9 +2,9 @@
 
 This document is the current Phase 6 scope derived from Phase 5 component requirements. It is a living scope/status document, not a replacement for `ARCHITECTURE.md`.
 
-## 1. Modality — implemented
+## 1. Modality — implemented at source level
 
-`ModalManager` now provides framework-level modality infrastructure.
+`ModalManager` provides framework-level modality infrastructure.
 
 Current responsibilities include:
 
@@ -32,14 +32,17 @@ Reference: `PHASE6_MODALITY_REQUIREMENTS.md`.
 Current source-level responsibilities include:
 
 ```text
-viewport/content extent
+viewport/content extent derived from layout
 scroll offset/range
 clamping
 wheel routing
 nested residual-delta chaining
 coordinate transformation
 layout-derived content extent
+hover refresh after handled scroll
 ```
+
+Pointer input is normalized into renderer/logical coordinates before entering the framework input pipeline. Scroll presentation is then applied separately through the framework coordinate transform.
 
 The implementation still requires build/runtime validation. A standalone `Scroll` / `ScrollArea` component is not currently required.
 
@@ -102,9 +105,11 @@ outside-click dismissal across unrelated subtrees
 popup collision/placement policy
 ```
 
-## 6. Validation and stabilization — pending
+## 6. Validation and stabilization — current boundary
 
-Phase 6 must eventually include:
+The currently implemented Phase 6 infrastructure is at the validation/stabilization boundary.
+
+The validation set is:
 
 ```text
 full compilation
@@ -115,7 +120,10 @@ scroll interaction tests
 NodeTree/input/layout/render integration tests
 lifetime/memory checks
 source/include consistency checks
+documentation consistency checks
 ```
+
+No additional scrolling or modality subsystem should be introduced before this boundary is validated.
 
 ## 7. Explicit non-goals unless new evidence appears
 
