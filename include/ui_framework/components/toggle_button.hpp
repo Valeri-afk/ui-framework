@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "ui_framework/components/button.hpp"
 
 namespace ui
@@ -16,6 +18,7 @@ namespace ui
         void setOnToggle(std::function<void(ToggleButton &, bool)> callback);
 
         void toggle();
+        void activate() override;
 
     protected:
         void draw(SDL_Renderer *renderer) override;
