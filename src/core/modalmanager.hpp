@@ -23,10 +23,7 @@ namespace ui
         ModalManager(const ModalManager &) = delete;
         ModalManager &operator=(const ModalManager &) = delete;
 
-        bool showModal(
-            NodeTree &nodeTree,
-            InputManager &input,
-            Node &node);
+        bool showModal(NodeTree &nodeTree, InputManager &input, Node &node);
 
         bool showModal(
             NodeTree &nodeTree,
@@ -34,9 +31,7 @@ namespace ui
             Node &node,
             BackdropClickBehavior backdropClickBehavior);
 
-        bool closeModal(
-            NodeTree &nodeTree,
-            InputManager &input);
+        bool closeModal(NodeTree &nodeTree, InputManager &input);
 
         bool handleKeyDown(
             NodeTree &nodeTree,
@@ -49,34 +44,14 @@ namespace ui
             const MousePosition &position,
             MouseButton button);
 
-        void update(
-            NodeTree &nodeTree,
-            float dt) noexcept;
-
-        void setViewportSize(const LayoutSize &size) noexcept;
-
-        void setBackdropColor(const Color &color) noexcept;
-        Color getBackdropColor() const noexcept;
-
-        void setBackdropFadeDuration(float seconds) noexcept;
-        float getBackdropFadeDuration() const noexcept;
-
-        void clear(
-            NodeTree &nodeTree,
-            InputManager &input) noexcept;
-
         bool isModal(const Node *node) const noexcept;
 
         Node *topModalNode(NodeTree &nodeTree) const noexcept;
         const Node *topModalNode(const NodeTree &nodeTree) const noexcept;
 
-        void sync(
-            NodeTree &nodeTree,
-            InputManager &input);
+        void sync(NodeTree &nodeTree, InputManager &input);
 
     private:
-        class BackdropNode;
-
         struct ModalSession
         {
             Node::Id modalId{};
@@ -86,14 +61,6 @@ namespace ui
         };
 
         std::vector<ModalSession> modals_;
-        BackdropNode *backdropNode_ = nullptr;
-        std::optional<Node::Id> backdropId_;
-
-        LayoutSize viewportSize_{};
-        Color backdropColor_{0, 0, 0, 160};
-        float backdropOpacity_ = 0.0f;
-        float backdropTargetOpacity_ = 0.0f;
-        float backdropFadeDuration_ = 0.15f;
 
         Node *findFirstFocusable(Node &node) const;
         Node *findFirstFocusableInTree(NodeTree &nodeTree) const;
@@ -128,10 +95,6 @@ namespace ui
             NodeTree &nodeTree,
             InputManager &input,
             Node *focus) const;
-
-        void ensureBackdrop(NodeTree &nodeTree);
-        void removeBackdrop(NodeTree &nodeTree) noexcept;
-        void updateBackdropState() noexcept;
     };
 
 }
