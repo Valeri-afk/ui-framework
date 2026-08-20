@@ -9,6 +9,11 @@
 
 namespace ui
 {
+    enum class BackdropClickBehavior
+    {
+        Consume,
+        Close
+    };
 
     class ModalManager
     {
@@ -21,7 +26,9 @@ namespace ui
         bool showModal(
             NodeTree &nodeTree,
             InputManager &input,
-            Node &node);
+            Node &node,
+            BackdropClickBehavior backdropClickBehavior =
+                BackdropClickBehavior::Consume);
 
         bool closeModal(
             NodeTree &nodeTree,
@@ -31,6 +38,26 @@ namespace ui
             NodeTree &nodeTree,
             InputManager &input,
             KeyCode key);
+
+        bool handlePointerDown(
+            NodeTree &nodeTree,
+            InputManager &input,
+            const MousePosition &position,
+            MouseButton button);
+
+        void update(float dt) noexcept;
+
+        void drawBackdrop(
+            SDL_Renderer *renderer,
+            const LayoutSize &viewport) const noexcept;
+
+        void setBackdropColor(const Color &color) noexcept;
+        Color getBackdropColor() const noexcept;
+
+        void setBackdropFadeDuration(float seconds) noexcept;
+        float getBackdropFadeDuration() const noexcept;
+
+        void clear(NodeTree &nodeTree, InputManager &input) noexcept;
 
         bool isModal(const Node *node) const noexcept;
 
@@ -46,9 +73,15 @@ namespace ui
         {
             Node::Id modalId{};
             std::optional<Node::Id> previousFocusId;
+            BackdropClickBehavior backdropClickBehavior =
+                BackdropClickBehavior::Consume;
         };
 
         std::vector<ModalSession> modals_;
+        Color backdropColor_{0, 0, 0, 160};
+        float backdropOpacity_ = 0.0f;
+        float backdropTargetOpacity_ = 0.0f;
+        float backdropFadeDuration_ = 0.15f;
 
         Node *findFirstFocusable(Node &node) const;
         Node *findFirstFocusableInTree(NodeTree &nodeTree) const;
