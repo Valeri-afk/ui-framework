@@ -14,6 +14,7 @@ namespace ui
     class InputManager;
     class ModalManager;
     class LayoutManager;
+    class ScrollManager;
 
     enum class BackdropClickBehavior;
 
@@ -34,6 +35,25 @@ namespace ui
 
         void removeRoot(Node *node);
         void removeOverlay(Node *node);
+
+        bool registerScrollNode(Node &node);
+        bool unregisterScrollNode(Node::Id nodeId);
+        bool isScrollNodeRegistered(Node::Id nodeId) const noexcept;
+
+        bool setScrollViewportSize(
+            Node::Id nodeId,
+            const LayoutSize &viewport);
+
+        bool setScrollContentSize(
+            Node::Id nodeId,
+            const LayoutSize &content);
+
+        bool setScrollOffset(
+            Node::Id nodeId,
+            const ScrollOffset &offset);
+
+        ScrollOffset getScrollOffset(Node::Id nodeId) const noexcept;
+        ScrollOffset getScrollMaxOffset(Node::Id nodeId) const noexcept;
 
         bool showModal(Node &node);
         bool showModal(Node &node, BackdropClickBehavior behavior);
@@ -64,6 +84,7 @@ namespace ui
         std::unique_ptr<InputManager> inputManager_;
         std::unique_ptr<ModalManager> modalManager_;
         std::unique_ptr<LayoutManager> layoutManager_;
+        std::unique_ptr<ScrollManager> scrollManager_;
     };
 
 }
