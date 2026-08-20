@@ -59,9 +59,11 @@ namespace ui
         bool isHovered() const noexcept;
 
         void setOnActivate(ActivateCallback callback);
-        void activate();
+        virtual void activate();
 
     protected:
+        virtual void onActivate();
+
         void update(float dt) override;
         LayoutSize measureContent(const LayoutSize &availableContent) const override;
         void draw(SDL_Renderer *renderer) override;
