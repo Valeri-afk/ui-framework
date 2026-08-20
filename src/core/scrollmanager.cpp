@@ -121,8 +121,11 @@ namespace ui
     ScrollOffset ScrollManager::getAccumulatedOffset(const Node &node) const noexcept
     {
         ScrollOffset result{};
-        const Node *current = &node;
+        const Node *current = node.parent();
 
+        // A node's own scroll state moves its content, not the node itself.
+        // Therefore presentation of this node is affected only by registered
+        // scroll ancestors.
         while (current)
         {
             const auto it = states_.find(current->id());
