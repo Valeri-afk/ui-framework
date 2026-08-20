@@ -1,17 +1,19 @@
 # Phase 5 — Minimal Standard UI Component Catalog
 
-## Scope
+## Purpose
 
-Phase 5 does not attempt to implement a complete UI component library.
+Phase 5 builds only the minimum reusable UI catalog needed to validate the framework against a real application.
 
-The chess application is used only as a validation target: it tells us whether the framework's generic UI capabilities are sufficient to build a real application. Chess-specific components remain application code.
+The chess application is a validation target, not a source of chess-specific framework components.
 
-The framework should contain only:
+The framework provides:
 
-1. base framework nodes and layout primitives;
-2. a small set of standard, reusable UI components.
+1. generic base nodes and framework infrastructure;
+2. a small set of standard UI components.
 
-## Base layer
+Application-specific components remain client code.
+
+## Base framework layer
 
 ```text
 Node
@@ -20,7 +22,7 @@ StackPanelNode
 TextPrimitive / TextNode
 ```
 
-These are framework infrastructure and are not application-specific widgets.
+The base layer owns reusable infrastructure such as layout, event dispatch, hit-testing, common state and framework-level properties.
 
 ## Standard UI components
 
@@ -33,20 +35,20 @@ Menu
 MenuItem
 TabControl
 TabItem
-```
-
-### Strong candidates for the minimal standard set
-
-```text
 List
 ListItem
-Dialog / Modal
+```
+
+### Deferred by phase dependency
+
+```text
+Modal / Dialog
 Scroll / ScrollArea
 ```
 
-These should be added only after their contracts are checked against the existing framework infrastructure and legacy implementations.
+These are standard UI concepts, but their final implementation must wait for the corresponding framework infrastructure. Modal depends on Phase 6 modality; Scroll must wait for the final framework-level scroll design.
 
-### Deferred
+### Not currently required
 
 ```text
 IconButton
@@ -56,13 +58,11 @@ Select
 Accordion / Section
 ```
 
-These are not part of the mandatory catalog yet.
+They remain possible future components, not Phase 5 requirements. A later application may justify adding them.
 
-A control should be promoted into the framework when there is a clear generic contract and more than a superficial visual reason to have it as a separate component. Existing components should be preferred for simple variants where possible.
+## Application-level examples
 
-## Explicitly application-level
-
-The following are examples of application components, not framework components:
+These belong to the client application, not the framework:
 
 ```text
 ChessBoard
@@ -75,17 +75,27 @@ AnalysisPanel
 GameScreen
 ```
 
-A framework `List` may be used to implement `MoveList`; a framework `Dialog` may be used to implement `PromotionDialog`. The framework does not own the chess semantics.
-
-## Design rule
+The application may build these from standard framework components. For example:
 
 ```text
-Application requirement
-        ↓
-Does the framework already provide the infrastructure?
-        ↓
-yes → compose a client component
-no  → extend generic framework infrastructure/component
+MoveList        → List + ListItem
+PromotionDialog → Modal + application content
 ```
 
-Do not add a framework component merely because an application contains a visually similar element.
+The framework does not own chess semantics.
+
+## Promotion rule
+
+A new component enters the framework only when all of the following are true:
+
+- it represents a generic reusable UI concept;
+- it has a clear framework-level contract;
+- existing nodes/components cannot express the concept cleanly;
+- the required low-level behavior belongs to an already available or explicitly planned framework subsystem;
+- the component does not introduce unnecessary framework complexity.
+
+The existence of a visually similar element in an application is not sufficient.
+
+## Design reference
+
+Use `docs/COMPONENT_DESIGN_GUIDE.md` for the detailed rules governing Node vs PanelNode, primitives, content, inheritance, state ownership, shared properties, composite components, validation and phase boundaries.
