@@ -40,14 +40,6 @@ namespace ui
         bool unregisterScrollNode(Node::Id nodeId);
         bool isScrollNodeRegistered(Node::Id nodeId) const noexcept;
 
-        bool setScrollViewportSize(
-            Node::Id nodeId,
-            const LayoutSize &viewport);
-
-        bool setScrollContentSize(
-            Node::Id nodeId,
-            const LayoutSize &content);
-
         bool setScrollOffset(
             Node::Id nodeId,
             const ScrollOffset &offset);
