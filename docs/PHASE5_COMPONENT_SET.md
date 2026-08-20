@@ -1,8 +1,8 @@
 # Phase 5 — Standard Component Set
 
-This is the current working inventory of standard UI components considered for the framework. It intentionally covers the small generic set needed to support the target application class without turning the framework into a full widget toolkit.
+This document records the final standard component set established during Phase 5. Phase 5 is complete as a component-development phase; current framework subsystem work is Phase 6.
 
-## Already implemented
+## Implemented standard components
 
 ```text
 Button
@@ -17,54 +17,63 @@ Slider
 Dropdown
 ```
 
-These are the active standard Phase 5 components.
+These components have distinct generic contracts and are active framework components.
+
+The `components` layer is active and supported. It is **not deprecated**.
 
 ## Deferred components
 
 ### TextField / Input
 
-Deferred. The current framework exposes keyboard events (`KeyDown` / `KeyUp`) but does not yet provide a proper text-input event, composition/IME handling, selection/caret model, or clipboard/editing contract. A key-only text field would be incomplete.
+Deferred. The framework still needs a proper text-input/editing contract beyond `KeyDown` / `KeyUp`, including text input, composition/IME, caret/selection and editing/clipboard behavior.
 
 ### Image
 
 Deferred. A proper image component requires a stable renderer/resource/texture ownership contract. Do not expose ad-hoc `SDL_Texture*` ownership through the component API.
 
-### Scroll
-
-Deferred until scroll mechanics are designed at framework level:
-
-```text
-viewport
-content extent
-offset/range
-coordinate conversion
-clipping
-hit-test integration
-input routing
-layout integration
-```
-
-### Modal
-
-Deferred until Phase 6 modality infrastructure is complete. The legacy implementation has been removed from the active source tree; its behavior is retained only as historical reference and in `PHASE6_MODALITY_REQUIREMENTS.md`.
-
 ### List
 
-Deferred because its current design does not yet provide a sufficiently distinct generic contract over existing panel/layout primitives.
+Deferred because its current design does not provide a sufficiently distinct generic contract over existing panel/layout primitives.
 
 ### IconButton
 
 Deferred until a stable graphics/icon primitive and resource contract exists.
 
+## Framework-level behavior, not standalone components
+
+### Scroll
+
+Scrolling is now implemented as framework-level behavior through `ScrollManager` and its `UIManager`/NodeTree integration.
+
+The current implementation covers:
+
+```text
+viewport/content extent
+scroll offset/range
+clamping
+wheel routing
+nested scroll chaining
+coordinate transformation
+layout-derived extent calculation
+```
+
+The behavior is source-level only until full build/runtime validation. A standalone `Scroll` / `ScrollArea` component is not currently required.
+
+### Modal
+
+Modality is implemented through `ModalManager` as framework infrastructure.
+
+The current service owns the framework-level modal behavior; the old Modal component is deprecated/inactive and is retained only as historical reference. A standalone public Modal component is not currently required.
+
 ## Do not add as framework components
 
 ### Paper
 
-Cancel as a framework component. It is primarily a visual surface/elevation styling pattern, not an independently semantic control.
+Cancel as a framework component. It is primarily a visual surface/elevation styling pattern.
 
 ### Label
 
-Cancel as a dedicated framework component. Text presentation is already represented by `TextNode` and `TextPrimitive`.
+Cancel as a dedicated framework component. Text presentation is already represented by `TextNode` / `TextPrimitive`.
 
 ### Card
 
@@ -76,6 +85,6 @@ Cancel as a dedicated framework component. A Card is a composition/style pattern
 2. A component must provide a generic semantic contract broader than one application screen.
 3. A component should remain `Node` unless structural child ownership/layout is central to its semantics.
 4. Reuse existing framework input, layout, rendering and event infrastructure instead of recreating it inside a component.
-5. Defer components whose correct implementation depends on an unresolved framework subsystem.
-6. Cancel visual/style-only concepts that can be expressed by existing generic Nodes and properties without losing reusable behavior.
-7. The `components` layer is active and supported; it is not deprecated.
+5. Defer components whose correct implementation depends on unresolved framework infrastructure.
+6. Cancel visual/style-only concepts that can be expressed by existing generic Nodes and properties.
+7. Keep framework-level behavior in framework services/subsystems when it crosses component boundaries.
