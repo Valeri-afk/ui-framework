@@ -249,7 +249,7 @@ namespace ui
             {
                 node.positionMode_ = positionMode;
             });
-    };
+    }
 
     PositionMode Node::getPositionMode() const noexcept
     {
@@ -510,7 +510,9 @@ namespace ui
 
     LayoutPosition Node::getActualPosition() const noexcept
     {
-        return actualPosition_;
+        const LayoutPosition position = actualPosition_;
+        const CoordinateTransform &transform = coordinateTransform();
+        return transform ? transform(*this, position) : position;
     }
 
     LayoutSize Node::getActualSize() const noexcept
@@ -532,8 +534,9 @@ namespace ui
         const float safeX = finiteOrZero(x);
         const float safeY = finiteOrZero(y);
 
-        const float posX = finiteOrZero(actualPosition_.x);
-        const float posY = finiteOrZero(actualPosition_.y);
+        const LayoutPosition position = getActualPosition();
+        const float posX = finiteOrZero(position.x);
+        const float posY = finiteOrZero(position.y);
         const float width = finiteOrZero(actualSize_.width);
         const float height = finiteOrZero(actualSize_.height);
 
