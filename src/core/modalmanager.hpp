@@ -27,6 +27,11 @@ namespace ui
             NodeTree &nodeTree,
             InputManager &input);
 
+        bool handleKeyDown(
+            NodeTree &nodeTree,
+            InputManager &input,
+            KeyCode key);
+
         bool isModal(const Node *node) const noexcept;
 
         Node *topModalNode(NodeTree &nodeTree) const noexcept;
