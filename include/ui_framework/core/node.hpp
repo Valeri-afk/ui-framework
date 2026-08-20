@@ -115,6 +115,22 @@ namespace ui
         virtual void update(float dt) {}
         virtual void draw(SDL_Renderer *renderer) {}
 
+        // Framework layout asks a Node for the size of its own visual content.
+        // PanelNode handles structural children separately.
+        virtual LayoutSize measureContent(const LayoutSize &availableContent) const
+        {
+            (void)availableContent;
+            return {};
+        }
+
+        virtual void arrangeContent(
+            const LayoutPosition &contentPosition,
+            const LayoutSize &contentSize)
+        {
+            (void)contentPosition;
+            (void)contentSize;
+        }
+
         virtual void onMount() {}
         virtual void onUnmount() {}
 
@@ -164,10 +180,10 @@ namespace ui
             LayoutSize maxSize) const;
 
         template <typename Event>
-        void Node::dispatchEvent(Event &event, NodeTree &nodeTree)
+        void dispatchEvent(Event &event, NodeTree &nodeTree)
         {
             (void)nodeTree;
-        
+
             eventHandlers_.forEachHandler<Event>(
                 [this, &event](auto &handler)
                 {
@@ -180,5 +196,4 @@ namespace ui
         friend class LayoutManager;
         friend class EventDispatcher;
     };
-
 }
