@@ -28,7 +28,9 @@ namespace ui
         UIManager &operator=(const UIManager &) = delete;
 
         void runFrame(float dt, SDL_Renderer *renderer);
-        void processEvent(const SDL_Event &sdlEvent);
+        void processEvent(
+            const SDL_Event &sdlEvent,
+            SDL_Renderer *renderer);
 
         Node *attachRoot(size_t index, std::unique_ptr<Node> node);
         Node *attachOverlay(size_t index, std::unique_ptr<Node> node);
