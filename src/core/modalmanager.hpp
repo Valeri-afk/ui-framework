@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -47,9 +48,7 @@ namespace ui
 
         void update(float dt) noexcept;
 
-        void drawBackdrop(
-            SDL_Renderer *renderer,
-            const LayoutSize &viewport) const noexcept;
+        void setViewportSize(const LayoutSize &size);
 
         void setBackdropColor(const Color &color) noexcept;
         Color getBackdropColor() const noexcept;
@@ -69,6 +68,8 @@ namespace ui
             InputManager &input);
 
     private:
+        class BackdropNode;
+
         struct ModalSession
         {
             Node::Id modalId{};
@@ -78,6 +79,8 @@ namespace ui
         };
 
         std::vector<ModalSession> modals_;
+        std::unique_ptr<BackdropNode> backdropNode_;
+        LayoutSize viewportSize_{};
         Color backdropColor_{0, 0, 0, 160};
         float backdropOpacity_ = 0.0f;
         float backdropTargetOpacity_ = 0.0f;
@@ -116,6 +119,9 @@ namespace ui
             NodeTree &nodeTree,
             InputManager &input,
             Node *focus) const;
+
+        bool ensureBackdrop(NodeTree &nodeTree);
+        void updateBackdropState();
     };
 
 }
