@@ -208,10 +208,13 @@ namespace ui
         if (!target)
             return false;
 
+        ScrollOffset remaining{deltaX, deltaY};
+        bool consumed = false;
+
         for (Node *current = target; current; current = current->parent())
         {
             if (nodeTree.findNode(current->id()) != current)
-                return false;
+                return consumed;
 
             auto it = states_.find(current->id());
             if (it == states_.end())
@@ -221,19 +224,29 @@ namespace ui
             const ScrollOffset maximum = it->second.maxOffset();
 
             it->second.offset.x = std::clamp(
-                it->second.offset.x + deltaX,
+                it->second.offset.x + remaining.x,
                 0.0f,
                 maximum.x);
             it->second.offset.y = std::clamp(
-                it->second.offset.y + deltaY,
+                it->second.offset.y + remaining.y,
                 0.0f,
                 maximum.y);
 
-            if (it->second.offset != before)
+            const ScrollOffset applied{
+                it->second.offset.x - before.x,
+                it->second.offset.y - before.y};
+
+            remaining.x -= applied.x;
+            remaining.y -= applied.y;
+
+            if (applied.x != 0.0f || applied.y != 0.0f)
+                consumed = true;
+
+            if (remaining.x == 0.0f && remaining.y == 0.0f)
                 return true;
         }
 
-        return false;
+        return consumed;
     }
 
     void ScrollManager::sync(NodeTree &nodeTree)
