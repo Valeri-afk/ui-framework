@@ -11,60 +11,42 @@ Menu
 MenuItem
 TabControl
 TabItem
-Checkbox
-RadioButton
-Slider
 Dropdown
 ```
 
-These components have an active Phase 5 implementation. Their contracts should continue to be checked against `COMPONENT_DESIGN_GUIDE.md`.
-
 ## Implement now
+
+The next immediately implementable controls are:
+
+```text
+Checkbox
+RadioButton
+Slider
+```
 
 ### Checkbox
 
-A generic binary state control:
-
-```text
-checked / unchecked
-```
-
-It is a `Node` component. Its state and presentation are local; it uses existing event and rendering infrastructure.
+A generic binary state control (`checked` / `unchecked`). It can use existing Node, event and rendering infrastructure without introducing a new framework subsystem.
 
 ### RadioButton
 
-A generic mutually-exclusive-choice control. The component owns its checked state and activation semantics. Group coordination remains explicit and is not hidden in a global registry.
+A generic mutually-exclusive-choice control. The component owns its checked state and activation semantics. Group coordination remains explicit and should not be hidden in a global registry unless concrete reuse later proves that a reusable group abstraction is necessary.
 
 ### Slider
 
-A generic scalar input control:
-
-```text
-minimum
-maximum
-value
-step
-```
-
-Pointer dragging uses existing input/capture infrastructure. The component maps pointer position to its value and renders its track/thumb.
-
-### Dropdown
-
-A composite standard control built from the existing `Button` and `Menu/MenuItem` concepts. Its open state belongs to the Dropdown; item selection updates the trigger and closes the menu.
-
-The current Phase 5 implementation deliberately does **not** introduce modal or global overlay behavior. Its menu remains a child of the Dropdown and uses the existing absolute-position layout capability.
-
-This is sufficient as a generic component contract for now. If later applications require menus to escape parent clipping or participate in global overlay ordering, that belongs to the future overlay/modality architecture rather than a Dropdown-specific workaround.
+A generic scalar input control with `minimum`, `maximum`, `value` and `step`. Existing pointer input/capture infrastructure is sufficient for the basic interaction model.
 
 ## Analyze before implementation
 
 ### TextField / Input
 
-Standard UI component, but deferred until text input infrastructure is explicitly designed. Keyboard key events alone are not sufficient for a correct text-entry API; text editing, input composition/IME, selection/caret behavior and clipboard semantics may require framework support.
+**Deferred.** The current framework exposes keyboard events (`KeyDown` / `KeyUp`) but does not yet provide a text-input event, composition/IME handling, selection/caret model, or clipboard/editing contract. Implementing a key-only text field now would create an incomplete component and likely force framework changes later.
+
+When text input infrastructure is designed, TextField should be reconsidered as a standard component.
 
 ### Image
 
-Keep as a standard visual component candidate, but defer implementation until the framework's renderer-bound image/resource contract is explicitly established. The framework should not smuggle an ad-hoc `SDL_Texture*` ownership model into a public component API.
+**Deferred.** A proper image component requires a stable renderer/resource/texture ownership contract. Do not expose ad-hoc `SDL_Texture*` ownership through the component API.
 
 ## Defer to later framework subsystems
 
@@ -85,13 +67,13 @@ layout integration
 
 ### Modal
 
-Deferred until Phase 6 modality infrastructure is complete. The old Modal implementation is legacy reference material only. Requirements are recorded in `PHASE6_MODALITY_REQUIREMENTS.md`.
+Deferred until Phase 6 modality infrastructure is complete. The legacy implementation has been removed from the active source tree; its behavior is retained only as historical reference and in `PHASE6_MODALITY_REQUIREMENTS.md`.
 
 ## Do not add as framework components
 
 ### Paper
 
-Cancel as a framework component. `Paper` is primarily a visual surface/elevation styling concept, not an independently semantic UI control.
+Cancel as a framework component. It is primarily a visual surface/elevation styling pattern, not an independently semantic control.
 
 ### Label
 
@@ -99,7 +81,16 @@ Cancel as a dedicated framework component. Text presentation is already represen
 
 ### Card
 
-Cancel as a dedicated framework component. A Card is a composition/style pattern rather than a fundamentally distinct runtime or interaction model. It should be built by the client from `PanelNode`/layout primitives and standard visual properties.
+Cancel as a dedicated framework component. A Card is a composition/style pattern that can be built from `PanelNode`, layout primitives and visual properties.
+
+## Not currently required
+
+```text
+List
+IconButton
+```
+
+These remain outside the current implementation set. They can be reconsidered when a concrete generic contract appears.
 
 ## Decision rules
 
@@ -108,4 +99,4 @@ Cancel as a dedicated framework component. A Card is a composition/style pattern
 3. A component should remain `Node` unless structural child ownership/layout is central to its semantics.
 4. Reuse existing framework input, layout, rendering and event infrastructure instead of recreating it inside a component.
 5. Defer components whose correct implementation depends on an unresolved framework subsystem.
-6. Cancel visual/style-only names that can be expressed through existing generic Nodes and properties without losing reusable behavior.
+6. Cancel visual/style-only names that can be expressed by existing generic Nodes and properties without losing reusable behavior.
