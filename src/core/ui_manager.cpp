@@ -21,26 +21,21 @@ namespace ui
 
     UIManager::~UIManager() = default;
 
-    void UIManager::runFrame(
-        float dt,
-        SDL_Renderer *renderer)
+    void UIManager::runFrame(float dt, SDL_Renderer *renderer)
     {
         if (!nodeTree_)
             return;
 
-        if (layoutManager_ &&
-            layoutManager_->syncViewportFromRenderer(renderer))
-        {
+        if (layoutManager_ && layoutManager_->syncViewportFromRenderer(renderer))
             nodeTree_->requestFullLayout();
-        }
 
+        syncState();
         prepareForTreeOperation();
         update(dt);
         draw(renderer);
     }
 
-    void UIManager::processEvent(
-        const SDL_Event &sdlEvent)
+    void UIManager::processEvent(const SDL_Event &sdlEvent)
     {
         if (!nodeTree_)
             return;
@@ -51,10 +46,7 @@ namespace ui
             sdlEvent.type == SDL_EVENT_KEY_DOWN &&
             convertSDLKeyCodeToKeyCode(sdlEvent.key.key) == KeyCode::ESCAPE)
         {
-            if (modalManager_->handleKeyDown(
-                    *nodeTree_,
-                    *inputManager_,
-                    KeyCode::ESCAPE))
+            if (modalManager_->handleKeyDown(*nodeTree_, *inputManager_, KeyCode::ESCAPE))
             {
                 prepareForTreeOperation();
                 return;
@@ -62,21 +54,12 @@ namespace ui
         }
 
         if (inputManager_ && modalManager_ &&
-            sdlEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
-            topModalNode())
+            sdlEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN && topModalNode())
         {
-            const MousePosition position{
-                sdlEvent.button.x,
-                sdlEvent.button.y};
+            const MousePosition position{sdlEvent.button.x, sdlEvent.button.y};
+            const MouseButton button = static_cast<MouseButton>(sdlEvent.button.button);
 
-            const MouseButton button =
-                static_cast<MouseButton>(sdlEvent.button.button);
-
-            if (modalManager_->handlePointerDown(
-                    *nodeTree_,
-                    *inputManager_,
-                    position,
-                    button))
+            if (modalManager_->handlePointerDown(*nodeTree_, *inputManager_, position, button))
             {
                 prepareForTreeOperation();
                 return;
@@ -86,12 +69,7 @@ namespace ui
         if (inputManager_)
         {
             inputManager_->setModalRoot(topModalNode());
-
-            inputManager_->processEvent(
-                sdlEvent,
-                *nodeTree_,
-                topModalNode());
-
+            inputManager_->processEvent(sdlEvent, *nodeTree_, topModalNode());
             inputManager_->setModalRoot(topModalNode());
         }
 
@@ -119,22 +97,14 @@ namespace ui
         drawNodesForFrame(renderer);
     }
 
-    Node *UIManager::attachRoot(
-        size_t index,
-        std::unique_ptr<Node> node)
+    Node *UIManager::attachRoot(size_t index, std::unique_ptr<Node> node)
     {
-        return nodeTree_
-                   ? nodeTree_->attachRoot(index, std::move(node))
-                   : nullptr;
+        return nodeTree_ ? nodeTree_->attachRoot(index, std::move(node)) : nullptr;
     }
 
-    Node *UIManager::attachOverlay(
-        size_t index,
-        std::unique_ptr<Node> node)
+    Node *UIManager::attachOverlay(size_t index, std::unique_ptr<Node> node)
     {
-        return nodeTree_
-                   ? nodeTree_->attachOverlay(index, std::move(node))
-                   : nullptr;
+        return nodeTree_ ? nodeTree_->attachOverlay(index, std::move(node)) : nullptr;
     }
 
     void UIManager::removeRoot(Node *node)
@@ -154,20 +124,14 @@ namespace ui
         return showModal(node, BackdropClickBehavior::Consume);
     }
 
-    bool UIManager::showModal(
-        Node &node,
-        BackdropClickBehavior behavior)
+    bool UIManager::showModal(Node &node, BackdropClickBehavior behavior)
     {
         if (!nodeTree_ || !modalManager_ || !inputManager_)
             return false;
 
         prepareForTreeOperation();
 
-        const bool shown = modalManager_->showModal(
-            *nodeTree_,
-            *inputManager_,
-            node,
-            behavior);
+        const bool shown = modalManager_->showModal(*nodeTree_, *inputManager_, node, behavior);
 
         if (shown)
             prepareForTreeOperation();
@@ -182,9 +146,7 @@ namespace ui
 
         prepareForTreeOperation();
 
-        const bool closed = modalManager_->closeModal(
-            *nodeTree_,
-            *inputManager_);
+        const bool closed = modalManager_->closeModal(*nodeTree_, *inputManager_);
 
         if (closed)
             prepareForTreeOperation();
@@ -236,8 +198,10 @@ namespace ui
             return;
 
         applyMutationQueue();
+
         if (layoutManager_)
             layoutManager_->processLayoutQueue(*nodeTree_);
+
         syncState();
     }
 
@@ -247,8 +211,7 @@ namespace ui
             inputManager_->setModalRoot(topModalNode());
     }
 
-    void UIManager::drawNodesForFrame(
-        SDL_Renderer *renderer)
+    void UIManager::drawNodesForFrame(SDL_Renderer *renderer)
     {
         if (!renderer || !nodeTree_)
             return;
@@ -277,7 +240,12 @@ namespace ui
             return;
 
         if (modalManager_)
+        {
+            if (layoutManager_)
+                modalManager_->setViewportSize(layoutManager_->getViewportSize());
+
             modalManager_->sync(*nodeTree_, *inputManager_);
+        }
 
         inputManager_->syncState(*nodeTree_);
         syncModalInputState();
