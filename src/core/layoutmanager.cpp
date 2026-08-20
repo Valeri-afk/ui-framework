@@ -88,6 +88,17 @@ namespace
         return {std::max(0.0f, finiteOrZero(size.width) - insets.width), std::max(0.0f, finiteOrZero(size.height) - insets.height)};
     }
 
+    bool getLogicalPresentationSize(SDL_Renderer *renderer, int *width, int *height)
+    {
+        if (SDL_GetRenderLogicalPresentation(renderer, width, height, nullptr) == 0 &&
+            *width > 0 && *height > 0)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     bool getRenderOutputSize(SDL_Renderer *renderer, int *width, int *height)
     {
         return SDL_GetCurrentRenderOutputSize(renderer, width, height) == 0;
@@ -104,11 +115,26 @@ namespace ui
     bool LayoutManager::syncViewportFromRenderer(SDL_Renderer *renderer)
     {
         if (!renderer) return false;
+
         int width = 0;
         int height = 0;
-        if (!getRenderOutputSize(renderer, &width, &height)) return false;
-        const LayoutSize newSize{static_cast<float>(width), static_cast<float>(height)};
-        if (newSize == viewportSize_) return false;
+
+        // Logical presentation is the framework UI coordinate space.
+        // If the application has not configured logical presentation, use
+        // the current render output size as a compatibility fallback.
+        if (!getLogicalPresentationSize(renderer, &width, &height) &&
+            !getRenderOutputSize(renderer, &width, &height))
+        {
+            return false;
+        }
+
+        const LayoutSize newSize{
+            static_cast<float>(width),
+            static_cast<float>(height)};
+
+        if (newSize == viewportSize_)
+            return false;
+
         viewportSize_ = sanitizeSize(newSize);
         return true;
     }
