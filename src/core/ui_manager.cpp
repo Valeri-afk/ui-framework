@@ -12,6 +12,28 @@
 namespace ui
 {
 
+    namespace
+    {
+        Node::CoordinateTransform makeScrollTransform(
+            const ScrollManager *scrollManager)
+        {
+            return [scrollManager](
+                       const Node &node,
+                       const LayoutPosition &position)
+            {
+                if (!scrollManager)
+                    return position;
+
+                const ScrollOffset offset =
+                    scrollManager->getAccumulatedOffset(node);
+
+                return LayoutPosition{
+                    position.x - offset.x,
+                    position.y - offset.y};
+            };
+        }
+    }
+
     UIManager::UIManager()
         : nodeTree_(std::make_unique<NodeTree>()),
           inputManager_(std::make_unique<InputManager>()),
@@ -55,6 +77,9 @@ namespace ui
             }
         }
 
+        Node::ScopedCoordinateTransform scrollTransform(
+            makeScrollTransform(scrollManager_.get()));
+
         if (inputManager_ && modalManager_ &&
             sdlEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN && topModalNode())
         {
@@ -74,9 +99,6 @@ namespace ui
             const float mouseX = static_cast<float>(sdlEvent.wheel.mouse_x);
             const float mouseY = static_cast<float>(sdlEvent.wheel.mouse_y);
 
-            // SDL reports positive wheel Y as upward scrolling. The scroll
-            // offset grows toward the end of the content, so invert the
-            // input delta before applying it to the scroll state.
             const float deltaX = -sdlEvent.wheel.x;
             const float deltaY = -sdlEvent.wheel.y;
 
@@ -314,6 +336,9 @@ namespace ui
             if (Node *topModal = modalManager_->topModalNode(*nodeTree_))
                 topModalId = topModal->id();
         }
+
+        Node::ScopedCoordinateTransform scrollTransform(
+            makeScrollTransform(scrollManager_.get()));
 
         nodeTree_->draw(renderer, topModalId);
         syncState();
