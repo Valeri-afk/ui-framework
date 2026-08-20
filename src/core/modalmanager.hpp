@@ -84,6 +84,7 @@ namespace ui
         {
             Node::Id modalId{};
             std::optional<Node::Id> previousFocusId;
+            std::optional<Node::Id> previousModalId;
             BackdropClickBehavior backdropClickBehavior =
                 BackdropClickBehavior::Consume;
         };
@@ -104,6 +105,10 @@ namespace ui
         Node *findValidFocus(
             NodeTree &nodeTree,
             std::optional<Node::Id> preferredFocusId) const;
+
+        Node *findFirstFocusableInModal(
+            NodeTree &nodeTree,
+            std::optional<Node::Id> modalId) const;
 
         bool isNodeUnder(
             const Node *node,
