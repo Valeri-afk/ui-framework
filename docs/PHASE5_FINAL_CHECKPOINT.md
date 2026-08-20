@@ -1,8 +1,8 @@
 # Phase 5 — Final Checkpoint
 
-Phase 5 is the component-development phase. Its purpose is to establish a small, reusable standard UI layer without expanding into unresolved framework subsystems.
+Phase 5 was the component-development phase. Its purpose was to establish a small, reusable standard UI layer without forcing unresolved framework subsystems into component classes.
 
-## Active component set
+## Active component set established in Phase 5
 
 ```text
 Button
@@ -17,27 +17,46 @@ Slider
 Dropdown
 ```
 
-These components have distinct generic contracts and may be used independently of any application-specific semantics.
+These components have distinct generic contracts and remain active framework components.
 
-## Deferred components
+## Deferred component work
 
 ```text
 TextField / Input
 Image
 List
 IconButton
-Scroll / ScrollArea
-Modal
 ```
 
 Reasons:
 
-- `TextField / Input` requires text-input/editing infrastructure beyond key events, including a proper text-input event path and eventually composition/IME, caret, selection and clipboard semantics.
-- `Image` requires a resource/texture ownership and lifetime contract. The current framework has drawing primitives and renderer-state helpers, but intentionally does not expose an ad-hoc texture ownership API from components.
-- `List` currently has no sufficiently distinct generic contract over existing panel/layout infrastructure.
-- `IconButton` depends on a stable graphics/icon resource contract.
-- `Scroll / ScrollArea` depends on framework-level viewport, extent, offset, clipping, coordinate conversion, hit-test, input-routing and layout decisions.
-- `Modal` depends on Phase 6 modality infrastructure and is not part of the active Phase 5 API.
+- `TextField / Input` requires framework text-input/editing infrastructure beyond key events.
+- `Image` requires a stable resource/texture ownership and lifetime contract.
+- `List` has not yet demonstrated a sufficiently distinct generic contract over existing panel/layout primitives.
+- `IconButton` depends on a stable graphics/icon/resource contract.
+
+## Framework-level requirements extracted from Phase 5
+
+Two concerns were deliberately moved below the component layer during subsequent Phase 6 work:
+
+```text
+Modality → ModalManager
+Scrolling → ScrollManager + UIManager/NodeTree integration
+```
+
+### Modality
+
+`ModalManager` now provides the framework-level modality behavior. The legacy Modal component is deprecated/inactive and remains only as historical reference.
+
+A standalone public Modal component is not currently required.
+
+### Scrolling
+
+`ScrollManager` now provides framework-level scrolling behavior, including scroll state, viewport/content extents, offset/range clamping, wheel routing, nested chaining and coordinate transformation.
+
+The implementation is still source-level only until full build/runtime validation.
+
+A standalone `Scroll` / `ScrollArea` component and scrollbar visuals remain deferred.
 
 ## Cancelled standalone framework components
 
@@ -63,7 +82,7 @@ Node
            └── composite standard components when the child structure is semantic
 ```
 
-Components own semantic state and presentation. Framework subsystems own generic traversal, input routing, event propagation, layout processing, renderer state and resource infrastructure.
+Components own semantic state and presentation. Framework subsystems own generic traversal, input routing, event propagation, layout processing, renderer state, modality and scrolling.
 
 A component must not reimplement framework-level behavior merely to simplify its own implementation.
 
@@ -71,7 +90,7 @@ A component must not reimplement framework-level behavior merely to simplify its
 
 Simple geometric presentation is drawn through `primitives`.
 
-Complex texture-based presentation should use a future `Image`/resource layer rather than forcing component-specific SDL texture ownership into Phase 5.
+Complex texture-based presentation should use a future Image/resource layer rather than forcing component-specific SDL texture ownership into the component layer.
 
 A component may eventually combine both approaches.
 
@@ -81,29 +100,8 @@ Legacy `Widget` / `ControlNode` component infrastructure has been removed from t
 
 `components/` is an active framework layer and is not deprecated.
 
-The old Modal implementation is removed from the active source tree and retained only through its documented requirements/history for Phase 6.
+## Completion status
 
-## Phase 5 completion procedure
+Phase 5 is considered complete as a component-development phase.
 
-Before declaring Phase 5 complete:
-
-1. Verify the active component set against `COMPONENT_DESIGN_GUIDE.md`.
-2. Verify no removed legacy abstractions remain referenced by active source.
-3. Verify every retained source file has a current architectural role.
-4. Review the architecture-related Phase 5 documents.
-5. Review `ARCHITECTURE.md` manually; do not rewrite it automatically.
-6. Extract only the genuinely new framework-level requirements into the Phase 6 scope.
-
-## Phase 6 candidates discovered during Phase 5
-
-The final Phase 6 scope must be decided after the Phase 5 document review. Current evidence suggests these candidate subsystem areas:
-
-```text
-Modality
-Scrolling
-Text input / editing
-Image/resource management
-Overlay/popup infrastructure, if Dropdown requirements prove global overlays are necessary
-```
-
-This list is a candidate set, not a commitment that every item belongs in Phase 6.
+The project is now in Phase 6 framework-core/subsystem development. Remaining work is infrastructure completion plus build/runtime validation, not expansion of the Phase 5 component catalog.
