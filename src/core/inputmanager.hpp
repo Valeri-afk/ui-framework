@@ -28,6 +28,12 @@ namespace ui
         void syncState(NodeTree &nodeTree);
         void resetState();
 
+        void refreshHover(
+            NodeTree &nodeTree,
+            float x,
+            float y,
+            const Node *modalRoot);
+
         bool focus(NodeTree &nodeTree, Node &node);
 
         void clearFocus(NodeTree &nodeTree);
@@ -67,6 +73,8 @@ namespace ui
             std::optional<Node::Id> focusedNodeId;
             std::optional<Node::Id> capturedNodeId;
             std::optional<Node::Id> pressedNodeId;
+
+            std::optional<MousePosition> pointerPosition_;
 
             bool isDragging = false;
 
