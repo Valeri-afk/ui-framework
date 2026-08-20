@@ -84,36 +84,6 @@ namespace ui
         return states_.find(nodeId) != states_.end();
     }
 
-    bool ScrollManager::setViewportSize(
-        Node::Id nodeId,
-        const LayoutSize &viewport)
-    {
-        auto it = states_.find(nodeId);
-        if (it == states_.end())
-            return false;
-
-        it->second.viewport = {
-            std::max(0.0f, viewport.width),
-            std::max(0.0f, viewport.height)};
-        it->second.clampOffset();
-        return true;
-    }
-
-    bool ScrollManager::setContentSize(
-        Node::Id nodeId,
-        const LayoutSize &content)
-    {
-        auto it = states_.find(nodeId);
-        if (it == states_.end())
-            return false;
-
-        it->second.content = {
-            std::max(0.0f, content.width),
-            std::max(0.0f, content.height)};
-        it->second.clampOffset();
-        return true;
-    }
-
     bool ScrollManager::setOffset(
         Node::Id nodeId,
         const ScrollOffset &offset)
