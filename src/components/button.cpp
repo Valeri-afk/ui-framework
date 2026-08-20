@@ -103,6 +103,11 @@ namespace ui
         if (!isVisible() || !isEnabled())
             return;
 
+        onActivate();
+    }
+
+    void Button::onActivate()
+    {
         if (onActivate_)
             onActivate_(*this);
     }
