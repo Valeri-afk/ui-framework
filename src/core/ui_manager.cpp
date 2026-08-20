@@ -50,6 +50,20 @@ namespace ui
 
         prepareForTreeOperation();
 
+        if (inputManager_ && modalManager_ &&
+            sdlEvent.type == SDL_EVENT_KEY_DOWN &&
+            convertSDLKeyCodeToKeyCode(sdlEvent.key.key) == KeyCode::ESCAPE)
+        {
+            if (modalManager_->handleKeyDown(
+                    *nodeTree_,
+                    *inputManager_,
+                    KeyCode::ESCAPE))
+            {
+                prepareForTreeOperation();
+                return;
+            }
+        }
+
         if (inputManager_)
         {
             inputManager_->setModalRoot(
