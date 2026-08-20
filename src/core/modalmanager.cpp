@@ -42,6 +42,10 @@ namespace ui
         const Node::Id modalId = node.id();
         const std::optional<Node::Id> previousFocusId =
             input.focusedNodeId();
+        const std::optional<Node::Id> previousModalId =
+            modals_.empty()
+                ? std::nullopt
+                : std::optional<Node::Id>(modals_.back().modalId);
 
         input.cancelPointerInteraction(nodeTree);
 
@@ -59,6 +63,7 @@ namespace ui
             ModalSession{
                 modalId,
                 previousFocusId,
+                previousModalId,
                 backdropClickBehavior});
 
         ensureBackdrop(nodeTree);
@@ -138,7 +143,6 @@ namespace ui
             position.y,
             modalRoot);
 
-        // A hit inside the modal must continue through the normal input path.
         if (target)
             return false;
 
@@ -154,7 +158,6 @@ namespace ui
             closeModal(nodeTree, input);
         }
 
-        // The modal barrier consumed the outside interaction.
         return true;
     }
 
@@ -258,6 +261,26 @@ namespace ui
         return result;
     }
 
+    Node *ModalManager::findFirstFocusableInModal(
+        NodeTree &nodeTree,
+        std::optional<Node::Id> modalId) const
+    {
+        if (!modalId)
+            return nullptr;
+
+        Node *modal = nodeTree.findNode(*modalId);
+
+        if (!modal ||
+            !nodeTree.isOverlay(modal) ||
+            !modal->isVisible() ||
+            !modal->isEnabled())
+        {
+            return nullptr;
+        }
+
+        return findFirstFocusable(*modal);
+    }
+
     Node *ModalManager::findValidFocus(
         NodeTree &nodeTree,
         std::optional<Node::Id> preferredFocusId) const
@@ -301,6 +324,21 @@ namespace ui
         InputManager &input,
         const ModalSession &session) const
     {
+        // Nested modality must restore focus inside the modal that was
+        // underneath the one being closed. Only the outermost close may
+        // restore focus to the ordinary UI.
+        if (Node *previousModalFocus =
+                findFirstFocusableInModal(
+                    nodeTree,
+                    session.previousModalId))
+        {
+            focusOrClear(
+                nodeTree,
+                input,
+                previousModalFocus);
+            return;
+        }
+
         focusOrClear(
             nodeTree,
             input,
