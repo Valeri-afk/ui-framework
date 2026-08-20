@@ -1,8 +1,8 @@
 # Phase 6 — Modality Requirements from Legacy Modal
 
-This document records requirements extracted from the legacy `Modal` implementation. It is a design input for Phase 6, not a Phase 5 implementation plan.
+This document records requirements extracted from the legacy `Modal` implementation and how they were translated into the current framework-level modality service.
 
-## 1. What the legacy Modal actually contained
+## 1. What the legacy Modal contained
 
 The old component combined several responsibilities:
 
@@ -24,54 +24,69 @@ framework behavior
     potential scroll-lock behavior
 ```
 
-These responsibilities should not remain mixed in the new architecture.
+These responsibilities are no longer expected to live inside a standalone Modal component.
 
-## 2. Component responsibilities
+## 2. Current framework ownership
 
-The future `Modal` component may own:
+The current source implements modality through `ModalManager`.
 
-```text
-visible/open presentation state
-background and border visual properties
-backdrop visual configuration
-transition enabled/disabled
-transition duration/progress
-close callback / semantic close action
-```
-
-The component should render its visual state and expose semantic operations such as `open`, `close`, or equivalent public state.
-
-It should not implement its own hit-testing or input routing.
-
-## 3. Phase 6 framework responsibilities
-
-The modality subsystem must provide the low-level behavior required by an active modal:
+The service owns framework-level behavior such as:
 
 ```text
-active modal root registration
-modal stack/order if multiple modals are supported
-exclusive hit-testing against the active modal root
-input routing / event dispatch restrictions
-focus/capture policy for modal interaction
-Escape routing policy
-background interaction blocking
-scroll-lock policy, if supported
+modal registration
+modal stack/order
+active modal root
+exclusive input boundary
+focus restriction
+pointer/capture restriction
+Escape routing
+outside/backdrop interaction
+backdrop behavior policy
+backdrop visual overlay state
+fade state
+nested focus restoration
+modal-session cleanup
 ```
 
-The exact API is intentionally unresolved until Phase 6 design work.
+The current backdrop policy is:
 
-## 4. Legacy behavior that must not be copied literally
+```text
+BackdropClickBehavior
+    Consume
+    Close
+```
 
-The old Modal handled `MouseClickEvent` and `KeyDownEvent` directly in the component. This should not be treated as the target architecture.
+The backdrop is an internal framework overlay node, not a public standard UI component.
 
-The component should declare the relevant semantic behavior; framework modality infrastructure should determine where those events can go.
+## 3. Current component decision
 
-The old implementation also mixed backdrop alpha animation into `backgroundColor`. The new implementation should keep visual transition state separate from generic framework state where practical.
+A standalone public `Modal` component is **not currently required**.
 
-## 5. Phase boundary
+Client code may compose modal content from ordinary framework nodes while `ModalManager` provides the modality behavior.
 
-Phase 5 should not attempt to provide a final `Modal` implementation.
+The legacy Modal implementation is therefore deprecated/inactive and is retained only as historical/design reference.
 
-Phase 5 may keep a future Modal contract/reference, but final implementation depends on Phase 6 modality infrastructure.
+## 4. What should not be copied literally
 
-The legacy implementation remains useful as a source of visual requirements and behavioral cases, not as the architectural base.
+The old Modal handled `MouseClickEvent` and `KeyDownEvent` directly in the component. That is not the target architecture.
+
+The current design keeps event routing and interaction boundaries in framework infrastructure.
+
+The old implementation also mixed backdrop alpha animation into component background state. Current modality keeps backdrop/fade state in the modality subsystem instead.
+
+## 5. Remaining validation
+
+The modality subsystem is considered source-level implemented, but it still requires:
+
+```text
+full compilation
+runtime modal interaction tests
+outside-click tests
+Escape tests
+focus restoration tests
+nested modal tests
+backdrop fade/lifecycle tests
+mutation/lifetime tests
+```
+
+Any architectural changes should be driven by failures found during this validation rather than by recreating the legacy Modal component.
