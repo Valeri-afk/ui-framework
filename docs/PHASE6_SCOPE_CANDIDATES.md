@@ -1,66 +1,55 @@
-# Phase 6 — Scope Candidates from Phase 5
+# Phase 6 — Scope and Status
 
-This document is the handoff from component development to framework-subsystem development. It records requirements discovered while designing the Phase 5 standard component layer.
+This document is the current Phase 6 scope derived from Phase 5 component requirements. It is a living scope/status document, not a replacement for `ARCHITECTURE.md`.
 
-It is a candidate scope, not the final Phase 6 architecture.
+## 1. Modality — implemented
 
-## 1. Modality
+`ModalManager` now provides framework-level modality infrastructure.
 
-### Evidence
-
-`Modal` could not be finalized without framework-level control over active modal roots and input routing.
-
-### Candidate responsibilities
+Current responsibilities include:
 
 ```text
 active modal registration
 modal stack/order
-exclusive hit-testing
+modal-root hit-testing restrictions
 input routing restrictions
 focus/capture policy
 Escape routing
 background interaction blocking
 focus restoration after close
-optional scroll-lock policy
-modal/overlay rendering order
+backdrop interaction policy
+modal rendering/presentation order
 ```
 
-The final Modal component should remain a semantic/presentation component. It should not implement these low-level rules itself.
+The old standalone `Modal` component is deprecated/inactive. A public Modal component remains deferred unless the service-level API later proves insufficient.
 
 Reference: `PHASE6_MODALITY_REQUIREMENTS.md`.
 
-## 2. Scrolling
+## 2. Scrolling — implemented at source level
 
-### Evidence
+`ScrollManager` is active framework infrastructure.
 
-`Scroll / ScrollArea` crosses component and framework boundaries.
-
-### Candidate responsibilities
+Current source-level responsibilities include:
 
 ```text
-viewport bounds
-content extent
+viewport/content extent
 scroll offset/range
-coordinate conversion
-clipping
-wheel/gesture/drag input routing
-hit-test through transformed/clipped content
-layout integration
-nested scrolling policy
-scrollbar interaction/presentation hooks
+clamping
+wheel routing
+nested residual-delta chaining
+coordinate transformation
+layout-derived content extent
 ```
 
-The final `Scroll` component API should be derived from this infrastructure rather than defining it prematurely.
+The implementation still requires build/runtime validation. A standalone `Scroll` / `ScrollArea` component is not currently required.
 
 Reference: `SCROLL_ARCHITECTURE.md`.
 
-## 3. Text input / editing
+## 3. Text input / editing — pending
 
-### Evidence
+`TextField / Input` remains blocked on a proper framework text-input/editing contract.
 
-`TextField / Input` cannot be implemented correctly from the current `KeyDown/KeyUp` event path alone.
-
-### Candidate responsibilities
+Candidate requirements:
 
 ```text
 text input events
@@ -69,47 +58,41 @@ caret position
 selection range
 editing commands
 clipboard interaction
-keyboard navigation inside text
+keyboard navigation
 repeat/backspace/delete behavior
 focus integration
-text input lifecycle
+text-input lifecycle
 ```
 
-A future `TextField` should sit on top of this infrastructure and own field semantics/presentation, not platform text-input routing.
+Do not implement a full TextField component by extending the existing `KeyDown/KeyUp` path alone.
 
-## 4. Image / resource management
+## 4. Image / resource infrastructure — pending
 
-### Evidence
+`Image` remains blocked on a stable resource/texture ownership model.
 
-`Image` requires a stable texture/resource ownership model. The current framework intentionally has rendering primitives and renderer-state helpers but no generic texture/resource API.
-
-### Candidate responsibilities
+Candidate requirements:
 
 ```text
 resource ownership/lifetime
 shared texture references
-texture loading/import boundary
+loading/import boundary
 safe renderer/resource relationship
-TextureHandle or equivalent resource abstraction
+resource handle abstraction
 source rectangle
 fit/crop/scale modes
 opacity/tint/flip/rotation
-image presentation lifecycle
+presentation lifecycle
 ```
 
-The exact resource architecture must remain separate from `primitives`.
+Keep this separate from `primitives`.
 
 Reference: `PRIMITIVES_ROLE.md`.
 
-## 5. Overlay / popup infrastructure
+## 5. Overlay / popup infrastructure — conditional
 
-### Evidence
+`Dropdown` currently works as a local composite using existing tree/layout mechanisms.
 
-The current `Dropdown` implementation is deliberately local: it owns its `Menu` child and uses existing absolute positioning. This is sufficient only while the menu can remain inside its parent tree/clip context.
-
-### Candidate trigger
-
-Introduce a framework overlay subsystem only when a concrete requirement appears for:
+Do not introduce a global overlay subsystem unless concrete requirements appear for:
 
 ```text
 escaping parent clipping
@@ -119,23 +102,20 @@ outside-click dismissal across unrelated subtrees
 popup collision/placement policy
 ```
 
-Do not add overlay infrastructure merely because `Dropdown` exists.
+## 6. Validation and stabilization — pending
 
-This candidate may become part of modality work if the final interaction model proves they are the same framework concern.
-
-## 6. Validation and stabilization
-
-Phase 6 should also absorb the technical validation intentionally deferred from earlier phases:
+Phase 6 must eventually include:
 
 ```text
-compile validation
+full compilation
+runtime smoke tests
 automated component tests
-runtime interaction tests
+modal interaction tests
+scroll interaction tests
 NodeTree/input/layout/render integration tests
-full accumulated build validation
+lifetime/memory checks
+source/include consistency checks
 ```
-
-Validation is a phase responsibility, not a component-specific concern.
 
 ## 7. Explicit non-goals unless new evidence appears
 
@@ -149,20 +129,18 @@ large widget catalog
 application-specific chess components
 ```
 
-## 8. Final scope decision rule
+## 8. Scope decision rule
 
-Before Phase 6 implementation begins, review these candidates against the large architecture document and current source. Promote only the responsibilities that have a concrete framework-level justification.
-
-A candidate should enter Phase 6 only when:
+Phase 6 infrastructure should be promoted only when there is:
 
 ```text
-Phase 5 component requirements
+concrete component requirement
         +
 framework-level responsibility
         +
-concrete reusable contract
+reusable contract
         +
 clear ownership boundary
 ```
 
-The purpose of Phase 6 is to build the missing infrastructure, not to retroactively absorb every deferred component into the framework.
+The purpose of Phase 6 is to implement missing reusable infrastructure and validate it in the real framework, not to absorb every deferred component automatically.
