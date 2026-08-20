@@ -2,9 +2,9 @@
 
 This document tracks source-level cleanup and architectural review. It is not a build-system specification.
 
-## Removed
+## Removed / obsolete
 
-The following obsolete abstractions have been removed from the current architecture:
+The following obsolete abstractions and orphan implementations no longer belong to the current source tree:
 
 ```text
 components/component.hpp
@@ -16,16 +16,22 @@ components/flex_panel.hpp
 components/flex_panel.cpp
 core/controlnode.hpp
 core/controlnode.cpp
+src/components/flex_panel.cpp
+src/components/label.cpp
+src/core/controlnode.cpp
 src/core/gridnode.cpp
+include/ui_framework/components/modal.hpp
 ```
 
-The legacy implementations are removed when their corresponding public contracts are gone. A historical algorithm is not a reason to keep an orphan `.cpp` in the active source tree.
+The legacy implementations are removed when their corresponding public contracts are gone. A historical algorithm is not a reason to keep an orphan `.cpp` or an incompatible legacy header in the active source tree.
+
+The old Modal behavior remains documented in `PHASE6_MODALITY_REQUIREMENTS.md`; the new Modal component will be implemented only after Phase 6 modality infrastructure is complete.
 
 ## Deferred, not obsolete
 
-`components/modal.*` is retained only as a deprecated/inactive implementation reference until Phase 6. It is not the final Modal architecture.
+`modalmanager.*` is retained as Phase 6 preparation. Its final responsibilities remain subject to the modality architecture.
 
-`modalmanager.*` is retained because Phase 6 modality work will determine which responsibilities remain valid.
+`Scroll / ScrollArea` remains deferred until framework-level scroll ownership, clipping, coordinate conversion, hit-test integration and input routing are finalized.
 
 ## Retained foundation
 
@@ -55,23 +61,55 @@ Its role is documented in `PRIMITIVES_ROLE.md`.
 
 ### Layout infrastructure
 
-Retain only layout nodes and helpers that have a complete current contract and are referenced by the active architecture, including `PanelNode`, `StackPanelNode`, `LinearLayout`, and the layout constraint machinery.
+Retain layout nodes and helpers that have a complete current contract and are referenced by the active architecture, including `PanelNode`, `StackPanelNode`, `LinearLayout`, and layout constraint machinery.
 
 Do not preserve historical layout implementations merely because their algorithms may be useful in the future. A future layout primitive can be reintroduced from a documented requirement.
 
-## Input and event infrastructure
+### Runtime/input/event infrastructure
 
-`InputManager`, `EventDispatcher`, `EventHandlerStorage`, `NodeTree`, and the event types remain framework infrastructure. Their responsibilities must not migrate into individual standard components merely to simplify a component implementation.
+The following remain framework infrastructure with separate responsibilities:
 
-The unresolved Phase 6 modality behavior should be implemented at this infrastructure boundary rather than inside `Modal`.
+```text
+UIManager
+NodeTree
+InputManager
+EventDispatcher
+EventHandlerStorage
+LayoutManager
+RenderingState
+```
 
-## Rendering infrastructure
+`UIManager` orchestrates frame/event flow. `NodeTree` owns structural registration, traversal and mutation safety. `InputManager` owns transient input state and SDL-to-framework input processing. `EventDispatcher` owns event propagation. `LayoutManager` owns measure/arrange processing. `RenderingState` owns renderer-state preservation. None should absorb component-specific semantics merely for convenience.
 
-`RenderingState` remains separate from drawing primitives. Rendering state coordinates the current rendering context; `primitives` performs low-level drawing operations.
+### Phase 6 preparation
 
-Standard components may use both through the existing framework APIs, but should not duplicate their responsibilities.
+Modal-related input/tree hooks remain only where they are useful as preparation for Phase 6 modality. They should not be interpreted as a requirement for the Phase 5 `Modal` component to own input routing.
 
-## Current source structure target
+## Current component source target
+
+The active standard UI component layer currently contains:
+
+```text
+Button
+ToggleButton
+Menu
+MenuItem
+TabControl
+TabItem
+```
+
+Deferred standard components are intentionally not required in the active source tree:
+
+```text
+List
+Scroll / ScrollArea
+Modal
+IconButton
+```
+
+`List` is deferred because the previous draft did not have a sufficiently distinct generic contract. `Modal` is deferred because its implementation depends on Phase 6 modality infrastructure.
+
+## Source structure target
 
 ```text
 core/
@@ -89,17 +127,6 @@ application/
 
 Every retained source file should have a current architectural role. Historical implementations should remain only when they are explicitly useful as references for an unresolved future phase.
 
-## Remaining audit targets
+## Audit conclusion
 
-The next source-level review should focus on:
-
-```text
-rendering_state
-ui_manager
-inputmanager
-nodetree
-layoutmanager / linear_layout
-modalmanager
-```
-
-The question is not whether these files are old, but whether each responsibility belongs to the current framework architecture and whether any responsibilities are duplicated.
+The current source foundation has no known remaining references to the removed `Widget` / `ControlNode` model or the removed active Modal header. The remaining legacy material is either removed or intentionally retained as Phase 6 preparation/documented history.
