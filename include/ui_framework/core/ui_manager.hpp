@@ -10,11 +10,12 @@
 
 namespace ui
 {
-
     class NodeTree;
     class InputManager;
     class ModalManager;
     class LayoutManager;
+
+    enum class BackdropClickBehavior;
 
     class UIManager
     {
@@ -38,10 +39,17 @@ namespace ui
         LayoutSize getViewportSize() const noexcept;
 
         bool showModal(Node &node);
+        bool showModal(Node &node, BackdropClickBehavior behavior);
         bool closeModal();
 
         bool isModal(const Node *node) const noexcept;
         Node *topModalNode() const noexcept;
+
+        void setBackdropColor(const Color &color) noexcept;
+        Color getBackdropColor() const noexcept;
+
+        void setBackdropFadeDuration(float seconds) noexcept;
+        float getBackdropFadeDuration() const noexcept;
 
     private:
         void update(float dt);
