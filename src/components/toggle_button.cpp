@@ -1,5 +1,7 @@
 #include "ui_framework/components/toggle_button.hpp"
 
+#include <utility>
+
 namespace ui
 {
     ToggleButton::ToggleButton() = default;
