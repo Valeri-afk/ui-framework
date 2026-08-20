@@ -26,14 +26,7 @@ namespace ui
         bool showModal(
             NodeTree &nodeTree,
             InputManager &input,
-            Node &node)
-        {
-            return showModal(
-                nodeTree,
-                input,
-                node,
-                BackdropClickBehavior::Consume);
-        }
+            Node &node);
 
         bool showModal(
             NodeTree &nodeTree,
