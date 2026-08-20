@@ -1,7 +1,6 @@
 #include "ui_framework/core/linear_layout.hpp"
 #include "ui_framework/core/layout_constraints.hpp"
 #include "ui_framework/core/stackpanelnode.hpp"
-#include "ui_framework/core/textnode.hpp"
 #include "layoutmanager.hpp"
 
 #include <algorithm>
@@ -59,7 +58,7 @@ namespace
         return {subtractInset(borderBoxSize.width, insets.width), subtractInset(borderBoxSize.height, insets.height)};
     }
 
-    ui::LayoutSize toContentSize(ui::Node &node, ui::LayoutSize borderBoxSize) noexcept
+    ui::LayoutSize toContentSize(const ui::Node &node, ui::LayoutSize borderBoxSize) noexcept
     {
         return subtractPaddingBorder(borderBoxSize, sanitizePadding(node.getPadding()), sanitizeBorder(node.getBorder()));
     }
@@ -136,20 +135,6 @@ namespace ui
         nodeTree.flushMutationQueue();
     }
 
-    LayoutSize LayoutManager::measureTextNode(TextNode &node, const LayoutSize &availableContent) const
-    {
-        if (!node.font_ || node.text_.empty()) return {};
-        const float availableWidth = finiteOrInfinity(availableContent.width);
-        int width = 0;
-        int height = 0;
-        const bool measured = availableWidth < kInfinity
-            ? TTF_GetStringSizeWrapped(node.font_, node.text_.c_str(), node.text_.size(),
-                  static_cast<int>(std::round(std::max(0.0f, availableWidth))), &width, &height)
-            : TTF_GetStringSize(node.font_, node.text_.c_str(), node.text_.size(), &width, &height);
-        if (!measured) return {};
-        return {static_cast<float>(width), static_cast<float>(height)};
-    }
-
     void LayoutManager::measureRecursive(Node &node, const LayoutSize &availableBorderBoxSize, NodeTree &nodeTree)
     {
         if (!node.isVisible()) return;
@@ -181,13 +166,9 @@ namespace ui
                 measureRecursive(*child, toBorderBoxSize(*child, availableContent), nodeTree);
             }
         }
-        else if (auto *textNode = dynamic_cast<TextNode *>(&node))
-        {
-            desiredContent = sanitizeSize(measureTextNode(*textNode, availableContent));
-        }
         else
         {
-            desiredContent = {};
+            desiredContent = sanitizeSize(node.measureContent(availableContent));
         }
 
         Node *liveNode = nodeTree.findNode(nodeId);
@@ -229,9 +210,8 @@ namespace ui
                 arrangeRecursive(*child, nodeTree);
             }
         }
-        else if (node.getVisibleChild(0))
-        {
-        }
+
+        node.arrangeContent(ctx.contentPosition, ctx.contentSize);
     }
 
     LayoutSize LayoutManager::makeRootAvailableSize(const Node &root) const
