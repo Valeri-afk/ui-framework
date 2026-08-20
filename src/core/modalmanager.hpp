@@ -70,6 +70,9 @@ namespace ui
         Node *topModalNode(NodeTree &nodeTree) const noexcept;
         const Node *topModalNode(const NodeTree &nodeTree) const noexcept;
 
+        Node *backdropNode(NodeTree &nodeTree) const noexcept;
+        const Node *backdropNode(const NodeTree &nodeTree) const noexcept;
+
         void sync(
             NodeTree &nodeTree,
             InputManager &input);
