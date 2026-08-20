@@ -62,7 +62,7 @@ Offsets are clamped to:
 0 ≤ offsetY ≤ maxOffsetY
 ```
 
-The current implementation also derives the initial viewport/content relationship from layout geometry. Client code may explicitly set scroll viewport/content sizes through the current UIManager scroll API when needed.
+Viewport and content extent are derived from the framework's layout geometry during `ScrollManager::sync()`. They are not configured through a second public viewport/content-size API. The public scroll state that client code may change directly is the scroll offset.
 
 ## Border and padding
 
@@ -108,31 +108,37 @@ The implementation allows remaining wheel delta to propagate to outer scroll con
 
 If no scroll container consumes the wheel event, normal input processing continues.
 
+Pointer events are converted by SDL to the renderer/logical coordinate space before they enter the framework input pipeline. Scroll presentation is then applied separately through the framework coordinate transform.
+
 ## Rendering and clipping
 
 Scroll should reuse the existing NodeTree clipping semantics based on `Overflow::HIDDEN` rather than creating a second clipping architecture.
 
-The current `UIManager` already applies the scroll coordinate transform during the render traversal.
+The current `UIManager` applies the scroll coordinate transform during the render traversal.
 
 The remaining validation work is to verify that the resulting transform and the existing clipping/hit-test traversal produce correct behavior for nested scroll containers and clipped content.
 
 ## Hit testing
 
-Input traversal already runs under the same scroll coordinate transform used by the framework input path.
+Input traversal runs under the same scroll coordinate transform used by the framework input path.
 
-The next validation target is therefore not a new independent hit-test system, but verification that:
+After a wheel operation changes scroll offset, `InputManager::refreshHover()` re-evaluates the node under the current pointer position using the same transformed coordinate space. This refresh generates only the required hover transitions; it does not synthesize a mouse-move event or alter pointer capture/drag state.
+
+The validation target is therefore:
 
 ```text
 pointer coordinates
+      ↓
+SDL render/logical coordinate conversion
       ↓
 scroll transform
       ↓
 existing NodeTree hit-test
       ↓
 viewport clipping
+      ↓
+hover transition / event target
 ```
-
-produces the expected target for scrolled content.
 
 ## Content extent
 
@@ -161,7 +167,7 @@ Only introduce a public component if repeated application-level usage demonstrat
 ## Remaining work
 
 ```text
-source integration
+source integration review
     ↓
 full build
     ↓
@@ -169,7 +175,7 @@ runtime wheel tests
     ↓
 render/clipping validation
     ↓
-hit-test validation
+hit-test / hover validation
     ↓
 nested scroll validation
     ↓
