@@ -6,6 +6,7 @@
 #include <SDL3/SDL.h>
 
 #include "ui_framework/core/panelnode.hpp"
+#include "ui_framework/core/scrollmanager.hpp"
 #include "ui_framework/types.hpp"
 
 namespace ui
@@ -14,7 +15,6 @@ namespace ui
     class InputManager;
     class ModalManager;
     class LayoutManager;
-    class ScrollManager;
 
     enum class BackdropClickBehavior;
 
