@@ -11,9 +11,13 @@ Menu
 MenuItem
 TabControl
 TabItem
+Checkbox
+RadioButton
+Slider
+Dropdown
 ```
 
-These components have an established generic contract and are retained as active Phase 5 components.
+These components have an active Phase 5 implementation. Their contracts should continue to be checked against `COMPONENT_DESIGN_GUIDE.md`.
 
 ## Implement now
 
@@ -25,17 +29,15 @@ A generic binary state control:
 checked / unchecked
 ```
 
-It is a `Node` component. Its state and presentation are local; it does not require a new framework subsystem.
+It is a `Node` component. Its state and presentation are local; it uses existing event and rendering infrastructure.
 
 ### RadioButton
 
-A generic mutually-exclusive-choice control candidate. The base component owns its checked state and activation semantics. Group coordination should remain explicit and should not be hidden in a global registry.
-
-For the current minimal framework, the component does not introduce a universal `RadioGroup` abstraction unless concrete reuse proves that group coordination requires one.
+A generic mutually-exclusive-choice control. The component owns its checked state and activation semantics. Group coordination remains explicit and is not hidden in a global registry.
 
 ### Slider
 
-A generic continuous/discrete scalar input control:
+A generic scalar input control:
 
 ```text
 minimum
@@ -44,29 +46,21 @@ value
 step
 ```
 
-Pointer dragging uses existing input/capture infrastructure. The component maps pointer position to its value and renders its own track/thumb.
-
-## Analyze before implementation
+Pointer dragging uses existing input/capture infrastructure. The component maps pointer position to its value and renders its track/thumb.
 
 ### Dropdown
 
-Keep as a standard UI candidate, but first define the contract relative to the existing `Menu/MenuItem` and overlay system. A dropdown should not become a hidden modal implementation.
+A composite standard control built from the existing `Button` and `Menu/MenuItem` concepts. Its open state belongs to the Dropdown; item selection updates the trigger and closes the menu.
 
-The likely generic composition is:
+The current Phase 5 implementation deliberately does **not** introduce modal or global overlay behavior. Its menu remains a child of the Dropdown and uses the existing absolute-position layout capability.
 
-```text
-Dropdown
-    closed → selected-value presentation
-    open   → Menu/MenuItem presentation
-```
+This is sufficient as a generic component contract for now. If later applications require menus to escape parent clipping or participate in global overlay ordering, that belongs to the future overlay/modality architecture rather than a Dropdown-specific workaround.
 
-The final popup placement and ownership rules should be defined before implementation.
+## Analyze before implementation
 
 ### TextField / Input
 
-Standard UI component, but deferred until text input infrastructure is explicitly designed. Keyboard key events alone are not sufficient for a correct text-entry API; text editing, input composition/IME, selection/caret behavior and clipboard semantics may eventually require framework support.
-
-Do not force a partial text-entry implementation into Phase 5 merely to create the class.
+Standard UI component, but deferred until text input infrastructure is explicitly designed. Keyboard key events alone are not sufficient for a correct text-entry API; text editing, input composition/IME, selection/caret behavior and clipboard semantics may require framework support.
 
 ### Image
 
@@ -97,22 +91,20 @@ Deferred until Phase 6 modality infrastructure is complete. The old Modal implem
 
 ### Paper
 
-Cancel as a framework component. `Paper` is primarily a visual surface/elevation styling concept, not an independently semantic UI control. The generic framework should provide the underlying Node box/background/border/rendering mechanisms instead of a Paper abstraction.
+Cancel as a framework component. `Paper` is primarily a visual surface/elevation styling concept, not an independently semantic UI control.
 
 ### Label
 
-Cancel as a dedicated framework component. Text presentation is already represented by `TextNode` and `TextPrimitive`. A separate `Label` abstraction would duplicate a generic text node without adding a sufficiently distinct contract.
+Cancel as a dedicated framework component. Text presentation is already represented by `TextNode` and `TextPrimitive`.
 
 ### Card
 
 Cancel as a dedicated framework component. A Card is a composition/style pattern rather than a fundamentally distinct runtime or interaction model. It should be built by the client from `PanelNode`/layout primitives and standard visual properties.
 
-This does not prevent the framework from later adding a genuinely reusable surface/container primitive if concrete generic behavior appears that cannot be expressed by existing infrastructure.
-
 ## Decision rules
 
 1. A listed UI element is not automatically a framework component.
-2. A component must provide a generic semantic contract that is broader than one application screen.
+2. A component must provide a generic semantic contract broader than one application screen.
 3. A component should remain `Node` unless structural child ownership/layout is central to its semantics.
 4. Reuse existing framework input, layout, rendering and event infrastructure instead of recreating it inside a component.
 5. Defer components whose correct implementation depends on an unresolved framework subsystem.
