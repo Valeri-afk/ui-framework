@@ -8,11 +8,6 @@ The chess application is used only as a validation target: it tells us whether t
 
 The `components` layer is an active, supported framework layer. It is **not deprecated**.
 
-The framework should contain only:
-
-1. base framework nodes and layout primitives;
-2. a small set of standard, reusable UI components.
-
 ## Base layer
 
 ```text
@@ -21,8 +16,6 @@ PanelNode
 StackPanelNode
 TextPrimitive / TextNode
 ```
-
-These are framework infrastructure and are not application-specific widgets.
 
 ## Standard UI components
 
@@ -35,37 +28,62 @@ Menu
 MenuItem
 TabControl
 TabItem
+Checkbox
+RadioButton
+Slider
 ```
 
-These components have a distinct generic contract and have been reviewed against the component design guide.
+These components have a distinct generic contract and are intended to be reusable independently of the chess application.
 
-### Deferred
+### Analyze before implementation
 
 ```text
-List
-Scroll / ScrollArea
-Modal
-IconButton
+Dropdown
+TextField / Input
+Image
 ```
 
-`List` is deferred because the current design is only a semantic alias over `StackPanelNode` and does not yet provide sufficiently distinct generic behavior.
+`Dropdown` should reuse `Menu/MenuItem` semantics but its popup ownership and placement must be defined without turning it into an implicit Modal. Implement after that contract is settled.
 
-`Scroll / ScrollArea` is deferred while the framework-level scroll architecture is unresolved. See `SCROLL_ARCHITECTURE.md`.
+`TextField / Input` requires a proper text-input contract, including text editing and potentially composition/IME handling. Do not create a partial key-only text field.
 
-`Modal` is deferred until Phase 6 modality infrastructure exists. The existing Modal component implementation is currently **deprecated/inactive** and must not be treated as the final Phase 5 component. See `PHASE6_MODALITY_REQUIREMENTS.md`.
+`Image` requires a stable framework resource/texture ownership contract. Do not expose ad-hoc `SDL_Texture*` ownership from the component.
 
-`IconButton` is deferred until the framework has a stable graphics/icon primitive and resource contract.
+### Deferred to later framework phases
+
+```text
+Scroll / ScrollArea
+Modal
+```
+
+`Scroll / ScrollArea` is deferred while viewport/content bounds, offset/range, clipping, coordinate conversion, hit-test integration and input routing remain unresolved. See `SCROLL_ARCHITECTURE.md`.
+
+`Modal` is deferred until Phase 6 modality infrastructure exists. The old implementation is legacy reference material only; the final Modal component is not part of the active Phase 5 API. See `PHASE6_MODALITY_REQUIREMENTS.md`.
+
+### Cancelled as standalone framework components
+
+```text
+Paper
+Label
+Card
+```
+
+`Paper` is a visual surface/elevation styling pattern, not an independent semantic control.
+
+`Label` duplicates the generic text role already provided by `TextNode` / `TextPrimitive` without adding a sufficiently distinct contract.
+
+`Card` is a composition/style pattern that can be built from `PanelNode`, layout primitives and visual properties. It should remain client-level unless a future generic contract proves otherwise.
 
 ### Not currently required
 
 ```text
-Checkbox
-Switch
-Select
-Accordion / Section
+List
+IconButton
 ```
 
-These remain candidates for future framework extensions, but are not part of the current minimal catalog. They should only be added when a clear generic contract is established independently of an application-specific need.
+`List` remains deferred because its current design does not yet provide a sufficiently distinct generic contract over existing panel/layout primitives.
+
+`IconButton` remains deferred until a stable graphics/icon primitive and resource contract exists.
 
 ## Explicitly application-level
 
@@ -82,7 +100,7 @@ AnalysisPanel
 GameScreen
 ```
 
-A future framework `List` may be used to implement `MoveList`; a future framework `Modal` may be used to implement `PromotionDialog`. The framework does not own the chess semantics.
+The framework provides generic building blocks; the application owns chess semantics.
 
 ## Promotion rule
 
