@@ -5,6 +5,7 @@
 
 #include "ui_framework/core/node.hpp"
 #include "ui_framework/core/text_primitive.hpp"
+#include "ui_framework/event_types.hpp"
 
 namespace ui
 {
@@ -25,6 +26,9 @@ namespace ui
         void setTextColor(Color color) noexcept;
         Color getTextColor() const noexcept;
 
+        void setBackgroundColor(Color color) noexcept;
+        Color getBackgroundColor() const noexcept;
+
         void setActive(bool active) noexcept;
         bool isActive() const noexcept;
 
@@ -36,8 +40,11 @@ namespace ui
         void draw(SDL_Renderer *renderer) override;
 
     private:
+        void handleMouseClick(MouseClickEvent &event);
+
         TextPrimitive text_;
         Color textColor_ = Colors::white;
+        Color backgroundColor_ = Colors::transparent;
         bool active_ = false;
         ActivateCallback onActivate_;
     };
