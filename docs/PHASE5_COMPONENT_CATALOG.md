@@ -4,7 +4,9 @@
 
 Phase 5 does not attempt to implement a complete UI component library.
 
-The chess application is used only as a validation target: it tells us whether the framework's generic UI capabilities are sufficient to build a real application. Chess-specific components remain application code.
+The chess application is used only as a validation target: it tells us whether the framework's generic UI capabilities are sufficient to build a real application. Chess-specific components remain client code.
+
+The `components` layer is an active, supported framework layer. It is **not deprecated**.
 
 The framework should contain only:
 
@@ -35,7 +37,7 @@ TabControl
 TabItem
 ```
 
-These components have an independent generic contract and have been reviewed against the component design guide.
+These components have a distinct generic contract and have been reviewed against the component design guide.
 
 ### Deferred
 
@@ -46,11 +48,11 @@ Modal
 IconButton
 ```
 
-`List` is deferred because the current implementation is only a semantic alias over `StackPanelNode` and does not yet provide sufficiently distinct generic behavior.
+`List` is deferred because the current design is only a semantic alias over `StackPanelNode` and does not yet provide sufficiently distinct generic behavior.
 
-`Scroll / ScrollArea` is deferred while the framework-level scroll architecture is unresolved.
+`Scroll / ScrollArea` is deferred while the framework-level scroll architecture is unresolved. See `SCROLL_ARCHITECTURE.md`.
 
-`Modal` is deferred until Phase 6 modality infrastructure exists. See `PHASE6_MODALITY_REQUIREMENTS.md`.
+`Modal` is deferred until Phase 6 modality infrastructure exists. The existing Modal component implementation is currently **deprecated/inactive** and must not be treated as the final Phase 5 component. See `PHASE6_MODALITY_REQUIREMENTS.md`.
 
 `IconButton` is deferred until the framework has a stable graphics/icon primitive and resource contract.
 
@@ -100,4 +102,4 @@ Do not add a framework component merely because an application contains a visual
 
 ## Design guide
 
-Use `COMPONENT_DESIGN_GUIDE.md` as the practical design and review checklist for every new component.
+Use `COMPONENT_DESIGN_GUIDE.md` and `PHASE5_COMPONENT_ARCHITECTURE_CHECKPOINT.md` as the practical design and review references for every new component.
