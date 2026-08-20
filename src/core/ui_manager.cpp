@@ -103,6 +103,9 @@ namespace ui
         if (!nodeTree_)
             return;
 
+        if (modalManager_)
+            modalManager_->update(*nodeTree_, dt);
+
         nodeTree_->update(dt);
 
         if (layoutManager_)
@@ -153,6 +156,9 @@ namespace ui
         layoutManager_->setViewportSize({
             std::max(0.0f, size.width),
             std::max(0.0f, size.height)});
+
+        if (modalManager_)
+            modalManager_->setViewportSize(size);
 
         if (nodeTree_)
             nodeTree_->requestFullLayout();
