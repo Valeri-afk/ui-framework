@@ -6,6 +6,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <utility>
 
 #include <SDL3/SDL.h>
 
@@ -24,6 +25,28 @@ namespace ui
     public:
         using Id = std::uint64_t;
         using HandlerToken = EventHandlerStorage::HandlerToken;
+        using CoordinateTransform = std::function<LayoutPosition(const Node &, const LayoutPosition &)>;
+
+        class ScopedCoordinateTransform
+        {
+        public:
+            explicit ScopedCoordinateTransform(CoordinateTransform transform)
+                : previous_(coordinateTransform())
+            {
+                coordinateTransform() = std::move(transform);
+            }
+
+            ~ScopedCoordinateTransform()
+            {
+                coordinateTransform() = std::move(previous_);
+            }
+
+            ScopedCoordinateTransform(const ScopedCoordinateTransform &) = delete;
+            ScopedCoordinateTransform &operator=(const ScopedCoordinateTransform &) = delete;
+
+        private:
+            CoordinateTransform previous_;
+        };
 
         Node();
         virtual ~Node();
@@ -88,7 +111,13 @@ namespace ui
         void setOverflow(Overflow overflow);
         Overflow getOverflow() const noexcept;
 
-        LayoutPosition getActualPosition() const noexcept;
+        LayoutPosition getActualPosition() const noexcept
+        {
+            const LayoutPosition position = actualPosition_;
+            const CoordinateTransform &transform = coordinateTransform();
+            return transform ? transform(*this, position) : position;
+        }
+
         LayoutSize getActualSize() const noexcept;
 
         virtual Node *getVisibleChild(size_t visibleIndex) const noexcept;
@@ -139,6 +168,12 @@ namespace ui
         void deferLayoutMutation(std::function<void(Node &)> fn);
 
     private:
+        static CoordinateTransform &coordinateTransform()
+        {
+            static thread_local CoordinateTransform transform;
+            return transform;
+        }
+
         Node *parent_ = nullptr;
         NodeTree *owner_ = nullptr;
 
@@ -157,6 +192,7 @@ namespace ui
 
         Padding padding_;
         Border border_;
+
         Overflow overflow_ = Overflow::VISIBLE;
 
         bool visible_ = true;
