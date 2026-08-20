@@ -96,15 +96,29 @@ namespace ui
 
     void ModalManager::ensureBackdrop(NodeTree &nodeTree)
     {
-        if (backdropNode_ && backdropId_ &&
-            nodeTree.findNode(*backdropId_) == backdropNode_)
+        if (backdropId_)
         {
-            backdropNode_->setViewport(viewportSize_);
-            backdropNode_->setBackdrop(
-                backdropColor_,
-                backdropOpacity_);
-            return;
+            Node *liveBackdrop =
+                nodeTree.findNode(*backdropId_);
+
+            if (liveBackdrop &&
+                nodeTree.isOverlay(liveBackdrop))
+            {
+                backdropNode_ =
+                    dynamic_cast<BackdropNode *>(liveBackdrop);
+
+                if (backdropNode_)
+                {
+                    backdropNode_->setViewport(viewportSize_);
+                    backdropNode_->setBackdrop(
+                        backdropColor_,
+                        backdropOpacity_);
+                    return;
+                }
+            }
         }
+
+        backdropNode_ = nullptr;
 
         auto backdrop = std::make_unique<BackdropNode>();
         backdrop->setFocusable(false);
@@ -114,9 +128,13 @@ namespace ui
             backdropColor_,
             backdropOpacity_);
 
-        // The backdrop must be after every normal overlay and before the
-        // separately-rendered top modal. This lets it cover lower overlays
-        // while leaving the active modal visible above it.
+        const Node::Id newBackdropId = backdrop->id();
+
+        // Keep the ID even when attachOverlay is deferred by NodeTree's
+        // mutation guard. The next synchronized frame will resolve it into
+        // backdropNode_ after the queued mutation has been applied.
+        backdropId_ = newBackdropId;
+
         Node *raw = nodeTree.attachOverlay(
             nodeTree.overlaysCount(),
             std::move(backdrop));
@@ -124,21 +142,24 @@ namespace ui
         if (!raw)
             return;
 
-        backdropNode_ = static_cast<BackdropNode *>(raw);
-        backdropId_ = raw->id();
+        backdropNode_ =
+            static_cast<BackdropNode *>(raw);
     }
 
     void ModalManager::removeBackdrop(NodeTree &nodeTree) noexcept
     {
-        if (!backdropNode_)
-            return;
+        Node *node = nullptr;
 
-        Node *node = backdropNode_;
+        if (backdropId_)
+            node = nodeTree.findNode(*backdropId_);
+        else
+            node = backdropNode_;
 
         backdropNode_ = nullptr;
         backdropId_.reset();
 
-        nodeTree.removeOverlay(node);
+        if (node && nodeTree.isOverlay(node))
+            nodeTree.removeOverlay(node);
     }
 
     void ModalManager::updateBackdropState() noexcept
