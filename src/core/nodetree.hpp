@@ -4,12 +4,12 @@
 #include <deque>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <optional>
 
 #include "ui_framework/core/node.hpp"
 #include "ui_framework/core/panelnode.hpp"
@@ -235,7 +235,8 @@ namespace ui
         void update(float dt);
         void draw(
             SDL_Renderer *renderer,
-            std::optional<NodeId> topModalId = std::nullopt);
+            std::optional<NodeId> topModalId = std::nullopt,
+            std::optional<NodeId> backdropId = std::nullopt);
 
         bool isDescendant(
             const Node *node,
@@ -350,8 +351,6 @@ namespace ui
         void unregisterNode(Node &node);
         void mountSubtree(Node &root);
         void unmountSubtree(Node &root);
-        void attachOwnedSubtree(Node &root, NodeId rootId);
-        void detachOwnedSubtree(Node &root, NodeId rootId);
         void setSubtreeOwner(Node &root, NodeTree *owner);
 
         bool containsNodeInContainer(
