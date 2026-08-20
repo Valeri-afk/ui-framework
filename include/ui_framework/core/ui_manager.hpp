@@ -45,12 +45,6 @@ namespace ui
         bool isModal(const Node *node) const noexcept;
         Node *topModalNode() const noexcept;
 
-        void setBackdropColor(const Color &color) noexcept;
-        Color getBackdropColor() const noexcept;
-
-        void setBackdropFadeDuration(float seconds) noexcept;
-        float getBackdropFadeDuration() const noexcept;
-
     private:
         void update(float dt);
         void draw(SDL_Renderer *renderer);
