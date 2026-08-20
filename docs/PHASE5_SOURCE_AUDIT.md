@@ -1,10 +1,10 @@
 # Phase 5 — Source Audit
 
-This document tracks source-level cleanup and architectural review. It is not a build-system specification.
+This document records the final Phase 5 source cleanup and the current source-level boundary entering Phase 6.
 
 ## Removed / obsolete
 
-The following obsolete abstractions and orphan implementations no longer belong to the current source tree:
+The following obsolete abstractions and orphan implementations are not part of the active source architecture:
 
 ```text
 components/component.hpp
@@ -23,51 +23,9 @@ src/core/gridnode.cpp
 include/ui_framework/components/modal.hpp
 ```
 
-The legacy implementations are removed when their corresponding public contracts are gone. A historical algorithm is not a reason to keep an orphan `.cpp` or an incompatible legacy header in the active source tree.
+Historical implementations may be kept only when they are explicitly useful as reference material for an unresolved design question.
 
-The old Modal behavior remains documented in `PHASE6_MODALITY_REQUIREMENTS.md`; the new Modal component will be implemented only after Phase 6 modality infrastructure is complete.
-
-## Deferred, not obsolete
-
-`modalmanager.*` is retained as Phase 6 preparation. Its final responsibilities remain subject to the modality architecture.
-
-`Scroll / ScrollArea` remains deferred until framework-level scroll ownership, clipping, coordinate conversion, hit-test integration and input routing are finalized.
-
-## Retained foundation
-
-### `core/text_primitive.*`
-
-Retained as the internal text measurement/rendering primitive. It is not a Node and not a public service.
-
-### `core/textnode.*`
-
-Retained as the Node-level text component. It adapts the reusable text primitive to Node geometry, lifecycle, layout and rendering.
-
-The distinction is intentional:
-
-```text
-TextPrimitive
-    low-level reusable text implementation
-
-TextNode
-    NodeTree-facing visual component
-```
-
-### `core/primitives.*`
-
-Retained as the low-level SDL drawing helper layer. It provides reusable stateless drawing operations and does not own component semantics.
-
-Its role is documented in `PRIMITIVES_ROLE.md`.
-
-### Layout infrastructure
-
-Retain layout nodes and helpers that have a complete current contract and are referenced by the active architecture, including `PanelNode`, `StackPanelNode`, `LinearLayout`, and layout constraint machinery.
-
-Do not preserve historical layout implementations merely because their algorithms may be useful in the future. A future layout primitive can be reintroduced from a documented requirement.
-
-### Runtime/input/event infrastructure
-
-The following remain framework infrastructure with separate responsibilities:
+## Active framework infrastructure
 
 ```text
 UIManager
@@ -77,17 +35,62 @@ EventDispatcher
 EventHandlerStorage
 LayoutManager
 RenderingState
+ModalManager
+ScrollManager
 ```
 
-`UIManager` orchestrates frame/event flow. `NodeTree` owns structural registration, traversal and mutation safety. `InputManager` owns transient input state and SDL-to-framework input processing. `EventDispatcher` owns event propagation. `LayoutManager` owns measure/arrange processing. `RenderingState` owns renderer-state preservation. None should absorb component-specific semantics merely for convenience.
+Current responsibilities remain separated: UIManager coordinates frame/event flow; NodeTree owns live-node structure, traversal and mutation safety; InputManager owns transient input and SDL-to-framework input processing; EventDispatcher owns event propagation; LayoutManager owns measure/arrange; RenderingState owns renderer-state preservation; ModalManager owns modality; ScrollManager owns scroll state and wheel routing.
 
-### Phase 6 preparation
+## Modality
 
-Modal-related input/tree hooks remain only where they are useful as preparation for Phase 6 modality. They should not be interpreted as a requirement for the Phase 5 `Modal` component to own input routing.
+`ModalManager` is active Phase 6 infrastructure, not merely preparation.
 
-## Current component source target
+The active source contains modal stack handling, modal-root filtering, focus/capture restrictions, Escape routing, backdrop interaction, focus restoration and modal-session cleanup.
 
-The active standard UI component layer currently contains:
+The legacy `Modal` component is removed from the active source tree. A standalone public `Modal` component remains intentionally deferred.
+
+## Scrolling
+
+`ScrollManager` is active Phase 6 core infrastructure.
+
+The current source provides:
+
+```text
+scroll state
+viewport/content extent relationship
+offset / maximum offset
+clamping
+accumulated ancestor offsets
+wheel routing
+nested residual-delta chaining
+layout-derived content extent
+```
+
+`UIManager` applies the accumulated scroll offset as a coordinate transform during input and render traversal. Stored layout positions remain unchanged.
+
+The active implementation is still **source-level only** until full compilation and runtime validation are performed.
+
+A standalone `Scroll` / `ScrollArea` component and scrollbar visuals remain deferred.
+
+## Retained primitives
+
+### `core/primitives.*`
+
+Retained as the low-level SDL drawing helper layer. It provides reusable stateless drawing operations and does not own component semantics or resource ownership.
+
+Its role is documented in `PRIMITIVES_ROLE.md`.
+
+### `core/text_primitive.*`
+
+Retained as the internal text measurement/rendering implementation.
+
+### `core/textnode.*`
+
+Retained as the NodeTree-facing text component that adapts text primitives to node geometry and lifecycle.
+
+## Active standard components
+
+The active Phase 5 component layer contains:
 
 ```text
 Button
@@ -96,37 +99,53 @@ Menu
 MenuItem
 TabControl
 TabItem
+Checkbox
+RadioButton
+Slider
+Dropdown
 ```
 
-Deferred standard components are intentionally not required in the active source tree:
+The `components` layer is active and supported. It is not deprecated.
+
+## Deferred components
 
 ```text
+TextField / Input
+Image
 List
-Scroll / ScrollArea
-Modal
 IconButton
 ```
 
-`List` is deferred because the previous draft did not have a sufficiently distinct generic contract. `Modal` is deferred because its implementation depends on Phase 6 modality infrastructure.
+`TextField / Input` remains blocked on framework text-input/editing infrastructure.
 
-## Source structure target
+`Image` remains blocked on a stable resource/texture ownership contract.
+
+`List` remains deferred because no distinct generic contract has yet justified a standalone abstraction.
+
+`IconButton` remains deferred until a stable graphics/icon/resource contract exists.
+
+## Cancelled standalone concepts
 
 ```text
-core/
-    framework runtime/infrastructure
-    layout infrastructure
-    input/event infrastructure
-    internal rendering primitives
-
-components/
-    standard UI components
-
-application/
-    application-specific composition outside this framework
+Paper
+Label
+Card
 ```
 
-Every retained source file should have a current architectural role. Historical implementations should remain only when they are explicitly useful as references for an unresolved future phase.
+These are currently treated as styling/composition patterns rather than independent framework components.
 
-## Audit conclusion
+## Source-audit status
 
-The current source foundation has no known remaining references to the removed `Widget` / `ControlNode` model or the removed active Modal header. The remaining legacy material is either removed or intentionally retained as Phase 6 preparation/documented history.
+There are no currently accepted active references to the removed `Widget` / `ControlNode` model or the removed active Modal header.
+
+The remaining important source-level work is integration validation rather than another Phase 5 component sweep:
+
+```text
+full compilation
+runtime smoke tests
+modal interaction tests
+scroll interaction tests
+render/input/layout integration tests
+memory/lifetime checks
+source/include consistency checks
+```
