@@ -60,80 +60,96 @@ namespace ui
     }
 
     void UIManager::processEvent(const SDL_Event &sdlEvent)
+{
+    if (!nodeTree_)
+        return;
+
+    prepareForTreeOperation();
+
+    if (inputManager_ && modalManager_ &&
+        sdlEvent.type == SDL_EVENT_KEY_DOWN &&
+        convertSDLKeyCodeToKeyCode(sdlEvent.key.key) == KeyCode::ESCAPE)
     {
-        if (!nodeTree_)
+        if (modalManager_->handleKeyDown(*nodeTree_, *inputManager_, KeyCode::ESCAPE))
+        {
+            prepareForTreeOperation();
             return;
-
-        prepareForTreeOperation();
-
-        if (inputManager_ && modalManager_ &&
-            sdlEvent.type == SDL_EVENT_KEY_DOWN &&
-            convertSDLKeyCodeToKeyCode(sdlEvent.key.key) == KeyCode::ESCAPE)
-        {
-            if (modalManager_->handleKeyDown(*nodeTree_, *inputManager_, KeyCode::ESCAPE))
-            {
-                prepareForTreeOperation();
-                return;
-            }
         }
-
-        if (inputManager_ && modalManager_ &&
-            sdlEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN && topModalNode())
-        {
-            const MousePosition position{sdlEvent.button.x, sdlEvent.button.y};
-            const MouseButton button = static_cast<MouseButton>(sdlEvent.button.button);
-
-            Node::ScopedCoordinateTransform scrollTransform(
-                makeScrollTransform(scrollManager_.get()));
-
-            if (modalManager_->handlePointerDown(*nodeTree_, *inputManager_, position, button))
-            {
-                prepareForTreeOperation();
-                return;
-            }
-        }
-
-        if (scrollManager_ &&
-            sdlEvent.type == SDL_EVENT_MOUSE_WHEEL)
-        {
-            const float mouseX = static_cast<float>(sdlEvent.wheel.mouse_x);
-            const float mouseY = static_cast<float>(sdlEvent.wheel.mouse_y);
-
-            const float deltaX = -sdlEvent.wheel.x;
-            const float deltaY = -sdlEvent.wheel.y;
-
-            Node::ScopedCoordinateTransform scrollTransform(
-                makeScrollTransform(scrollManager_.get()));
-
-            if (scrollManager_->handleWheel(
-                    *nodeTree_,
-                    mouseX,
-                    mouseY,
-                    deltaX,
-                    deltaY,
-                    topModalNode()))
-            {
-                prepareForTreeOperation();
-                return;
-            }
-        }
-
-        if (inputManager_)
-        {
-            inputManager_->setModalRoot(topModalNode());
-
-            {
-                Node::ScopedCoordinateTransform scrollTransform(
-                    makeScrollTransform(scrollManager_.get()));
-
-                inputManager_->processEvent(sdlEvent, *nodeTree_, topModalNode());
-            }
-
-            inputManager_->setModalRoot(topModalNode());
-        }
-
-        prepareForTreeOperation();
     }
+
+    if (inputManager_ && modalManager_ &&
+        sdlEvent.type == SDL_EVENT_MOUSE_BUTTON_DOWN && topModalNode())
+    {
+        const MousePosition position{sdlEvent.button.x, sdlEvent.button.y};
+        const MouseButton button = static_cast<MouseButton>(sdlEvent.button.button);
+
+        bool modalHandled = false;
+
+        {
+            Node::ScopedCoordinateTransform scrollTransform(
+                makeScrollTransform(scrollManager_.get()));
+
+            modalHandled = modalManager_->handlePointerDown(
+                *nodeTree_,
+                *inputManager_,
+                position,
+                button);
+        }
+
+        if (modalHandled)
+        {
+            prepareForTreeOperation();
+            return;
+        }
+    }
+
+    if (scrollManager_ &&
+        sdlEvent.type == SDL_EVENT_MOUSE_WHEEL)
+    {
+        const float mouseX = static_cast<float>(sdlEvent.wheel.mouse_x);
+        const float mouseY = static_cast<float>(sdlEvent.wheel.mouse_y);
+
+        const float deltaX = -sdlEvent.wheel.x;
+        const float deltaY = -sdlEvent.wheel.y;
+
+        bool wheelHandled = false;
+
+        {
+            Node::ScopedCoordinateTransform scrollTransform(
+                makeScrollTransform(scrollManager_.get()));
+
+            wheelHandled = scrollManager_->handleWheel(
+                *nodeTree_,
+                mouseX,
+                mouseY,
+                deltaX,
+                deltaY,
+                topModalNode());
+        }
+
+        if (wheelHandled)
+        {
+            prepareForTreeOperation();
+            return;
+        }
+    }
+
+    if (inputManager_)
+    {
+        inputManager_->setModalRoot(topModalNode());
+
+        {
+            Node::ScopedCoordinateTransform scrollTransform(
+                makeScrollTransform(scrollManager_.get()));
+
+            inputManager_->processEvent(sdlEvent, *nodeTree_, topModalNode());
+        }
+
+        inputManager_->setModalRoot(topModalNode());
+    }
+
+    prepareForTreeOperation();
+}
 
     void UIManager::update(float dt)
     {
