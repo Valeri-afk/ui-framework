@@ -48,14 +48,6 @@ namespace ui
 
         bool isRegistered(Node::Id nodeId) const noexcept;
 
-        bool setViewportSize(
-            Node::Id nodeId,
-            const LayoutSize &viewport);
-
-        bool setContentSize(
-            Node::Id nodeId,
-            const LayoutSize &content);
-
         bool setOffset(
             Node::Id nodeId,
             const ScrollOffset &offset);
