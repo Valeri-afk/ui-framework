@@ -88,20 +88,34 @@ namespace
         return {std::max(0.0f, finiteOrZero(size.width) - insets.width), std::max(0.0f, finiteOrZero(size.height) - insets.height)};
     }
 
-    bool getLogicalPresentationSize(SDL_Renderer *renderer, int *width, int *height)
+    bool getLogicalPresentationSize(
+        SDL_Renderer *renderer,
+        int *width,
+        int *height)
     {
-        if (SDL_GetRenderLogicalPresentation(renderer, width, height, nullptr) == 0 &&
-            *width > 0 && *height > 0)
+        if (SDL_GetRenderLogicalPresentation(
+                renderer,
+                width,
+                height,
+                nullptr) &&
+            *width > 0 &&
+            *height > 0)
         {
             return true;
         }
-
+    
         return false;
     }
-
-    bool getRenderOutputSize(SDL_Renderer *renderer, int *width, int *height)
+    
+    bool getRenderOutputSize(
+        SDL_Renderer *renderer,
+        int *width,
+        int *height)
     {
-        return SDL_GetCurrentRenderOutputSize(renderer, width, height) == 0;
+        return SDL_GetCurrentRenderOutputSize(
+            renderer,
+            width,
+            height);
     }
 }
 
