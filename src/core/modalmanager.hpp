@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <optional>
 #include <vector>
 
@@ -27,9 +26,20 @@ namespace ui
         bool showModal(
             NodeTree &nodeTree,
             InputManager &input,
-            Node &node,
-            BackdropClickBehavior backdropClickBehavior =
+            Node &node)
+        {
+            return showModal(
+                nodeTree,
+                input,
+                node,
                 BackdropClickBehavior::Consume);
+        }
+
+        bool showModal(
+            NodeTree &nodeTree,
+            InputManager &input,
+            Node &node,
+            BackdropClickBehavior backdropClickBehavior);
 
         bool closeModal(
             NodeTree &nodeTree,
@@ -46,9 +56,11 @@ namespace ui
             const MousePosition &position,
             MouseButton button);
 
-        void update(float dt) noexcept;
+        void update(
+            NodeTree &nodeTree,
+            float dt) noexcept;
 
-        void setViewportSize(const LayoutSize &size);
+        void setViewportSize(const LayoutSize &size) noexcept;
 
         void setBackdropColor(const Color &color) noexcept;
         Color getBackdropColor() const noexcept;
@@ -56,7 +68,9 @@ namespace ui
         void setBackdropFadeDuration(float seconds) noexcept;
         float getBackdropFadeDuration() const noexcept;
 
-        void clear(NodeTree &nodeTree, InputManager &input) noexcept;
+        void clear(
+            NodeTree &nodeTree,
+            InputManager &input) noexcept;
 
         bool isModal(const Node *node) const noexcept;
 
@@ -79,7 +93,9 @@ namespace ui
         };
 
         std::vector<ModalSession> modals_;
-        std::unique_ptr<BackdropNode> backdropNode_;
+        BackdropNode *backdropNode_ = nullptr;
+        std::optional<Node::Id> backdropId_;
+
         LayoutSize viewportSize_{};
         Color backdropColor_{0, 0, 0, 160};
         float backdropOpacity_ = 0.0f;
@@ -120,8 +136,9 @@ namespace ui
             InputManager &input,
             Node *focus) const;
 
-        bool ensureBackdrop(NodeTree &nodeTree);
-        void updateBackdropState();
+        void ensureBackdrop(NodeTree &nodeTree);
+        void removeBackdrop(NodeTree &nodeTree) noexcept;
+        void updateBackdropState() noexcept;
     };
 
 }
