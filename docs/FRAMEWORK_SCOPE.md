@@ -2,39 +2,13 @@
 
 ## 1. Why This Framework Exists
 
-This project did not begin as an attempt to reproduce Qt, WPF, or another general-purpose UI toolkit.
+This project originated from the development of a chess application, but the framework is not a chess framework and is not intended to become a complete widget library.
 
-It originated from the development of a chess application.
+The framework exists to provide a small retained-mode C++/SDL3 runtime in which independently implemented UI objects can participate in one coherent system with shared ownership, lifecycle, traversal, layout, input, events and rendering.
 
-The application initially had a small amount of UI:
+The chess application is the immediate validation target. It is not the source of application-specific framework components.
 
-- a chess board;
-- chess pieces;
-- highlighted legal moves;
-- check/checkmate indications.
-
-As the application grew, it needed ordinary application UI such as:
-
-- main menus;
-- buttons;
-- dropdowns;
-- modal windows;
-- settings screens;
-- navigation between screens;
-- timers;
-- move history;
-- captured-piece displays;
-- rules screens;
-- opening information/cards;
-- other auxiliary UI.
-
-At first these elements were implemented as independent client-side components. This approach became difficult to maintain because components independently wanted to participate in rendering, updating, input handling, and callbacks.
-
-Synchronous code could still be coordinated by controlling call order. Callback-driven behavior exposed a deeper problem: components did not have a common runtime responsible for ownership, lifecycle, traversal, update order, rendering order, input routing, event dispatch, and safe structural mutation.
-
-The UI framework emerged from that problem.
-
-The framework is therefore not an arbitrary collection of widgets. Its primary purpose is to provide the runtime infrastructure that turns independently implemented UI objects into one coherent interactive UI system.
+The framework should be minimal: provide the generic infrastructure and standard UI concepts that a real application can reasonably reuse, while leaving application-specific composition and semantics to the client.
 
 ---
 
@@ -44,22 +18,22 @@ This project is a **lightweight retained-mode C++ UI framework/runtime** for int
 
 The framework provides infrastructure for:
 
-- a hierarchical UI object tree;
-- node ownership and lifetime;
+- hierarchical UI object ownership and lifetime;
 - lifecycle callbacks;
 - traversal;
-- safe mutation during callbacks;
+- safe structural mutation;
 - update scheduling;
 - rendering traversal;
 - input coordination;
 - event propagation;
 - layout;
-- reusable and user-defined UI nodes;
-- higher-level UI components built on top of the runtime.
+- reusable framework primitives;
+- a small set of standard UI components;
+- user-defined Nodes and PanelNodes built on the runtime.
 
 The framework is intentionally narrower than large general-purpose application frameworks such as Qt or WPF.
 
-It should be designed around the application class it is intended to support rather than around feature parity with larger toolkits.
+It should be designed around the supported application class rather than around feature parity with larger toolkits.
 
 ---
 
@@ -67,7 +41,7 @@ It should be designed around the application class it is intended to support rat
 
 The immediate target application is a chess application using a separate chess engine/domain layer and the UI framework as its presentation/runtime layer.
 
-The intended application may contain screens and UI such as:
+The application may contain:
 
 ```text
 Application
@@ -95,9 +69,11 @@ Application
     └── Other application screens
 ```
 
+These are examples of application composition, not a framework component catalog.
+
 The framework does not implement chess rules or chess-domain behavior.
 
-A conceptual system boundary is:
+The boundary is:
 
 ```text
 Chess Engine / Domain
@@ -109,13 +85,13 @@ Chess Client / Application
 UI Framework
 ```
 
-The chess engine remains responsible for chess state and rules. The client is responsible for application-specific meaning and behavior. The framework is responsible for the infrastructure needed to present and interact with that application state.
+The chess engine owns chess state and rules. The client owns application-specific meaning and behavior. The framework owns reusable UI runtime mechanisms and standard UI concepts.
 
 ---
 
 ## 4. Framework Responsibilities
 
-The framework should own the mechanisms required to make many UI objects operate as one runtime.
+The framework should own mechanisms required to make many UI objects operate as one runtime.
 
 ### Runtime structure
 
@@ -137,7 +113,7 @@ The framework should own the mechanisms required to make many UI objects operate
 ### Interaction infrastructure
 
 - input routing;
-- focus/capture behavior where required;
+- focus/capture where required;
 - hit testing;
 - event propagation;
 - event dispatch ordering.
@@ -146,22 +122,23 @@ The framework should own the mechanisms required to make many UI objects operate
 
 - measurement;
 - arrangement;
-- layout invalidation;
-- basic layout containers and mechanisms.
+- layout invalidation/scheduling;
+- reusable layout primitives.
 
 ### Component/runtime support
 
 - framework-recognized Node state and generic execution semantics;
-- reusable framework primitives where centralized low-level behavior is justified;
-- provided components that implement application-facing UI semantics on top of the runtime.
+- reusable low-level primitives where centralization is justified;
+- a small set of standard UI components;
+- extension points for custom Nodes and PanelNodes.
 
-The framework may provide common controls and containers, but components are not its defining purpose. Custom component authors should be able to build specialized Nodes and PanelNodes while retaining framework-managed ownership, lifecycle, traversal, layout, input, hit-test and rendering behavior.
+The framework should centralize generic mechanics so custom component authors do not reimplement ownership, lifecycle, traversal, layout, input, hit-testing, events or rendering coordination.
 
 ---
 
 ## 5. Client Responsibilities
 
-The framework client is responsible for application-specific behavior and state.
+The framework client is responsible for application-specific state and meaning.
 
 Examples:
 
@@ -174,9 +151,9 @@ Examples:
 - PGN/FEN/domain data;
 - navigation intent;
 - what a button or menu item means to the application;
-- custom UI behavior implemented through framework extension points.
+- application-specific component behavior.
 
-The framework should provide mechanisms, not application meaning.
+The framework provides mechanisms, not application meaning.
 
 For example:
 
@@ -192,7 +169,7 @@ Client:
     choose the next screen
 ```
 
-The framework also supports **custom component authors** as a distinct concern from the application client. A custom component may own its own semantic/domain state and presentation, but should use the framework's existing ownership, lifecycle, layout, input, hit-test, event and rendering infrastructure rather than reimplementing those generic systems.
+A custom component may own its own semantic state and presentation, but it should use framework infrastructure instead of implementing a competing runtime.
 
 ---
 
@@ -200,22 +177,22 @@ The framework also supports **custom component authors** as a distinct concern f
 
 The intended class of application is larger than a trivial one-screen game but smaller than a universal application platform.
 
-The framework should comfortably support applications with:
+The framework should be able to support applications with:
 
 - multiple screens or views;
 - nested panels and containers;
-- menus and dialogs;
+- menus;
 - settings interfaces;
-- lists and scrollable content;
+- lists and scrollable content when the corresponding framework capability is implemented;
 - interactive controls;
-- overlays and modal UI;
+- overlays and modal UI when the modality subsystem is complete;
 - continuously updated information such as clocks;
 - dynamic content;
 - custom drawing;
 - application-specific node types;
 - callback-driven interaction.
 
-A chess application is the immediate concrete target, but the runtime should remain useful for other interactive desktop-style C++ applications that have similar UI infrastructure needs.
+The chess application is the immediate concrete target, but the runtime should remain useful for other interactive C++ applications with similar infrastructure needs.
 
 ---
 
@@ -223,49 +200,60 @@ A chess application is the immediate concrete target, but the runtime should rem
 
 The framework should not implement a capability merely because another UI toolkit implements it.
 
-The preferred rule is:
+Preferred rule:
 
-> A capability belongs in the framework when it represents a real responsibility of the UI runtime or is repeatedly required by the supported application class.
+> A capability belongs in the framework when it represents a real responsibility of the UI runtime or is repeatedly required by the supported application class, and the resulting developer contract remains appropriately small.
 
-This creates three useful categories.
+### Current framework capabilities
 
-### Required capabilities
+The current active standard component layer contains:
 
-Capabilities that are fundamental to the current application class and to the runtime model.
+```text
+Button
+ToggleButton
+Menu / MenuItem
+TabControl / TabItem
+```
 
-Examples:
+The active foundation contains:
 
-- ownership/lifetime;
-- node tree;
-- lifecycle;
-- traversal;
-- mutation safety;
-- update;
-- layout;
-- rendering coordination;
-- input/event infrastructure;
-- common interactive controls.
+```text
+Node
+PanelNode
+StackPanelNode
+TextNode / TextPrimitive
+NodeTree
+InputManager
+EventDispatcher
+LayoutManager
+RenderingState
+primitives
+```
 
-Common controls are provided framework components, not evidence that every control needs a universal base class. Component hierarchy must emerge from concrete responsibilities rather than from a generic `ControlNode`/`InteractiveNode` taxonomy.
+### Deferred capabilities
 
-### Optional / later capabilities
+These remain deliberately unresolved or deferred:
 
-Capabilities that may become useful for richer applications but are not required by the current target.
+```text
+List
+Scroll / ScrollArea
+Modal
+IconButton
+```
 
-Examples:
+`List` is deferred until it has a distinct generic contract beyond a semantic alias of an existing layout node.
 
-- drag-and-drop;
-- docking systems;
-- richer document/editor behavior;
-- advanced accessibility;
-- sophisticated animation systems;
-- arbitrary node reparenting if a real use case appears.
+`Scroll / ScrollArea` is a separate framework architecture topic covering offset, content extent, viewport extent, clipping, coordinate conversion, layout integration and input/hit-test integration.
+
+`Modal` is deferred until Phase 6 modality infrastructure is complete. The old legacy Modal implementation is not part of the active component API.
+
+`IconButton` is deferred until a stable graphics/icon primitive and resource contract exists.
+
+### Future / optional capabilities
+
+Capabilities such as drag-and-drop, richer document/editor behavior, accessibility, docking, advanced animation, or other broad toolkit features should be introduced only after concrete requirements establish them.
 
 ### Non-goals
-
-Capabilities outside the framework's intended responsibility.
-
-Examples:
 
 - chess rules;
 - chess-engine evaluation;
@@ -273,9 +261,9 @@ Examples:
 - opening databases;
 - application data models;
 - application-specific business logic;
-- a universal "everything is content of everything" composition model;
-- CSS-style declarative interpretation of arbitrary component properties;
-- mandatory generic `Control`, `Interactive`, `Selectable`, or `Composite` base classes;
+- universal arbitrary-content composition;
+- CSS-style declaration/interpreting of arbitrary component properties;
+- mandatory generic `Control`, `Interactive`, `Selectable`, `Composite`, or `Action` base classes;
 - mandatory service objects that every custom component author must create/configure;
 - feature parity with Qt, WPF, Material UI, or other larger UI toolkits.
 
@@ -287,19 +275,9 @@ Reparenting is a legitimate capability in richer retained-mode UI toolkits, but 
 
 For the current chess application, ordinary UI composition usually creates a node directly under the parent that should own it. Typical screens such as menus, settings, rules, opening cards, move history, timers, and dialogs do not inherently require an existing node to move between unrelated parents.
 
-Therefore reparenting is currently a **future capability, not a Phase 1 requirement**.
+Therefore reparenting remains a **future capability**, not a current requirement.
 
-Potential future use cases include:
-
-- drag-and-drop between containers;
-- tab/document transfer;
-- docking/workspace movement;
-- preserving a complex node while moving it between panels;
-- other UI behaviors where destroying and recreating a node would lose meaningful state.
-
-If such a use case becomes a real requirement, the framework should first determine the correct runtime semantics and then expose the smallest API needed for that requirement.
-
-Reparenting must not be introduced merely for API symmetry or because a larger toolkit supports it.
+If drag-and-drop, tab transfer, docking, or another concrete use case establishes the need, the runtime semantics should be designed first and only then should the smallest necessary public API be added.
 
 ---
 
@@ -307,24 +285,22 @@ Reparenting must not be introduced merely for API symmetry or because a larger t
 
 The framework uses `std::unique_ptr` as the fundamental ownership mechanism.
 
-The Phase 1 ownership decision is:
+The runtime contract is centered on framework-owned attachment and removal:
 
 ```text
 add(std::unique_ptr<Node>)
 remove(Node&)
 ```
 
-Live node ownership remains inside the framework. Public ownership-transfer `detach()` is not part of the target runtime contract.
+Public ownership-transfer `detach()` is not part of the target runtime contract.
 
-The reason is to minimize the number of client lifetime models. The current runtime already has a live registry, stable `NodeId`, deferred mutation, nested mutation scopes and explicit lifecycle handling. A second client-owned lifetime domain is not justified by a demonstrated application requirement.
-
-Client-held `Node*` references remain non-owning and may become invalid after deferred removal and destruction. `NodeId` provides identity/liveness resolution; it does not provide ownership.
+Client-held `Node*` references are non-owning. `NodeId` provides identity/liveness resolution; it does not provide ownership.
 
 ---
 
 ## 10. Current Architectural Center
 
-The core architectural problem this framework solves is coordination.
+The central problem solved by the framework is coordination.
 
 Without a runtime, independent components compete for control over:
 
@@ -337,7 +313,7 @@ lifetime
 hierarchy
 ```
 
-The framework centralizes the coordination rules through:
+The framework centralizes coordination through:
 
 ```text
 UIManager
@@ -352,73 +328,56 @@ NodeTree
     +-- lifecycle
 ```
 
-Other subsystems such as layout, input, events, modal handling, and rendering build on that runtime instead of independently controlling the lifetime and traversal of UI components.
-
-This coordination role is the central reason the framework exists.
+Other subsystems such as layout, input, events, modal handling and rendering build on that runtime instead of independently controlling component lifetime and traversal.
 
 ---
 
 ## 11. Design Philosophy
 
-The framework should follow these principles:
+1. **Runtime correctness before component breadth.** A small set of reliable infrastructure primitives is more valuable than many loosely integrated controls.
 
-1. **Runtime correctness before component breadth.**
-   A small set of reliable primitives is more valuable than many loosely integrated controls.
+2. **Client extensibility without loss of runtime control.** Clients can create custom Nodes and components while the framework retains responsibility for generic runtime mechanics.
 
-2. **Client extensibility without loss of runtime control.**
-   Clients can create custom nodes and participate through callbacks, while the framework retains responsibility for ownership, lifecycle, traversal, and mutation safety.
+3. **Minimal sufficient API.** Do not add a capability only because a larger toolkit has it.
 
-3. **Minimal sufficient API.**
-   Do not add a capability only because a larger UI toolkit has it.
-
-4. **Prefer real requirements over symmetry.**
-   The framework should not introduce abstractions solely so that related concepts look symmetrical.
+4. **Concrete requirements before abstractions.** Do not create hierarchy or properties merely for symmetry.
 
 5. **Domain/application logic stays outside the framework.**
-   The framework provides infrastructure, not chess/application semantics.
 
-6. **The source code remains authoritative.**
-   Documentation records intended and established behavior but must not describe hypothetical behavior as implemented.
+6. **The source code remains authoritative.** Documentation must not describe hypothetical behavior as implemented.
 
-7. **Keep custom component contracts small.**
-   Centralize generic mechanics in the framework when correctness depends on coordinated subsystems, but do not replace simple component APIs with mandatory service/capability machinery.
+7. **Keep custom component contracts small.** Generic mechanics should be centralized when coordinated correctness requires it, without introducing unnecessary public service machinery.
 
 ---
 
 ## 12. Relationship to Large UI Frameworks
 
-Qt, WPF, Material UI and similar systems are useful references for established UI concepts, but their feature sets should not be treated as the specification for this project.
+Qt, WPF, Material UI and similar systems are useful references for established UI concepts, component states and composition patterns.
 
-Large frameworks serve broad application classes and therefore support many capabilities that may be unnecessary here.
+They are not the specification for this project.
 
-The appropriate question for this project is not:
+The appropriate question is:
 
-> "Does Qt/WPF/Material UI have this feature?"
+> Does the supported application class require this capability, is providing it a responsibility of the framework, and does the abstraction remain appropriately small?
 
-It is:
-
-> "Does the application class supported by this framework require this capability, is providing it a responsibility of the framework runtime, and does the resulting developer contract remain appropriately small?"
-
-Existing frameworks are useful as design references and sources of proven patterns, not as feature checklists or hierarchy templates.
+Existing frameworks are references, not feature checklists or hierarchy templates.
 
 ---
 
 ## 13. Current Development Strategy
 
-The framework is being stabilized before the chessengine/client integration is used as a verification environment.
-
-The current process is therefore:
+The current process is:
 
 ```text
 1. establish architecture and runtime contracts;
 2. stabilize the framework core;
-3. complete the six architecture phases;
-4. establish the final framework verification path;
-5. integrate with the chess client;
-6. grow higher-level application features from real requirements.
+3. implement the minimal standard component layer;
+4. complete Phase 6 modality/navigation and deferred validation;
+5. verify the framework through the chess client;
+6. extend the framework only when a future application provides a real generic requirement.
 ```
 
-The framework's final scope should be allowed to evolve from actual application needs rather than speculative completeness.
+The framework's scope should evolve from actual reusable requirements rather than speculative completeness.
 
 ---
 
@@ -426,26 +385,38 @@ The framework's final scope should be allowed to evolve from actual application 
 
 `docs/FRAMEWORK_SCOPE.md`
 
-Defines why the framework exists, what class of applications it targets, what responsibilities belong to the framework, and what capabilities should or should not be introduced.
+Defines why the framework exists, what application class it targets, and what belongs or does not belong in the framework.
 
 `docs/ROADMAP.md`
 
-Defines development phases and high-level exit criteria.
+Defines development phases, dependencies and high-level exit criteria.
 
 `docs/ARCHITECTURE.md`
 
-Describes the architecture that is actually implemented in the main source tree.
+Describes the broader architecture and remains the large architecture document requiring manual review before major edits.
 
-`docs/PHASE1_FINAL_DECISIONS.md`
+`docs/COMPONENT_DESIGN_GUIDE.md`
 
-Provides the concise final architecture snapshot for Phase 1 and future development contexts.
+Defines the practical rules for designing and reviewing components.
 
-`docs/INSTRUCTIONS.md`
+`docs/PHASE5_COMPONENT_ARCHITECTURE_CHECKPOINT.md`
 
-Defines the workflow for analyzing and modifying the repository.
+Defines the current Phase 5 component architecture and is the architectural checkpoint for new component work.
 
-`docs/PHASE5_COMPONENT_ARCHITECTURE.md`
+`docs/PHASE5_COMPONENT_CATALOG.md`
 
-Defines the current Phase 5 component architecture and is the primary design reference for new component work. Focused Phase 5 notes may preserve supporting discussion, but they must not compete with this consolidated checkpoint as an architecture source.
+Defines the current minimal standard component scope.
 
-When a new development context is opened, `FRAMEWORK_SCOPE.md` should be read early so that implementation decisions are evaluated against the project's actual purpose rather than against assumptions about a generic UI toolkit.
+`docs/PHASE5_SOURCE_AUDIT.md`
+
+Tracks source cleanup and retained subsystem responsibilities.
+
+`docs/PHASE6_MODALITY_REQUIREMENTS.md`
+
+Records requirements extracted from the legacy Modal implementation for Phase 6.
+
+`docs/PRIMITIVES_ROLE.md`
+
+Defines the role and boundary of the low-level rendering primitives.
+
+When a new development context is opened, `FRAMEWORK_SCOPE.md` should be read early so implementation decisions are evaluated against the project's actual purpose.
