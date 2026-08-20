@@ -1,19 +1,15 @@
 #pragma once
 
 #include "node.hpp"
-
-#include <SDL3_ttf/SDL_ttf.h>
-
-#include <string>
+#include "text_primitive.hpp"
 
 namespace ui
 {
-
     class TextNode : public Node
     {
     public:
         TextNode() = default;
-        ~TextNode() override;
+        ~TextNode() override = default;
 
         const std::string &getText() const noexcept;
         void setText(std::string text);
@@ -27,24 +23,14 @@ namespace ui
         TextAlignment getVerticalAlignment() const noexcept;
         void setVerticalAlignment(TextAlignment alignment);
 
+        Color getColor() const noexcept;
+        void setColor(const Color &color);
+
     protected:
+        LayoutSize measureContent(const LayoutSize &availableContent) const override;
         void draw(SDL_Renderer *renderer) override;
 
     private:
-        void releaseTextObject() noexcept;
-        void ensureTextObject(SDL_Renderer *renderer);
-
-        std::string text_;
-        TTF_Font *font_ = nullptr;
-
-        TextAlignment horizontalAlignment_ = TextAlignment::START;
-        TextAlignment verticalAlignment_ = TextAlignment::START;
-
-        SDL_Renderer *cachedRenderer_ = nullptr;
-        TTF_TextEngine *textEngine_ = nullptr;
-        TTF_Text *textObject_ = nullptr;
-
-        friend class LayoutManager;
+        TextPrimitive text_;
     };
-
 }
