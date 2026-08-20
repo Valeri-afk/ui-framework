@@ -112,6 +112,35 @@ namespace ui
             onActivate_(*this);
     }
 
+    Color Button::presentationBackgroundColor() const noexcept
+    {
+        Color background = backgroundColor_;
+
+        if (hovered_ && !pressed_)
+            background = lighten(background, 0.08f);
+
+        if (!isEnabled())
+            background = multiplyAlpha(background, 0.5f);
+
+        return background;
+    }
+
+    Color Button::presentationBorderColor() const noexcept
+    {
+        Color border = borderColor_;
+        if (!isEnabled())
+            border = multiplyAlpha(border, 0.5f);
+        return border;
+    }
+
+    Color Button::presentationTextColor() const noexcept
+    {
+        Color textColor = text_.getColor();
+        if (!isEnabled())
+            textColor = multiplyAlpha(textColor, 0.5f);
+        return textColor;
+    }
+
     void Button::update(float dt)
     {
         if (!isEnabled())
@@ -152,19 +181,9 @@ namespace ui
         const float right = x + scaledWidth;
         const float bottom = y + scaledHeight;
 
-        Color background = backgroundColor_;
-        Color border = borderColor_;
-        Color textColor = text_.getColor();
-
-        if (hovered_ && !pressed_)
-            background = lighten(background, 0.08f);
-
-        if (!isEnabled())
-        {
-            background = multiplyAlpha(background, 0.5f);
-            border = multiplyAlpha(border, 0.5f);
-            textColor = multiplyAlpha(textColor, 0.5f);
-        }
+        const Color background = presentationBackgroundColor();
+        const Color border = presentationBorderColor();
+        const Color textColor = presentationTextColor();
 
         if (variant_ == Variant::FILLED)
         {
