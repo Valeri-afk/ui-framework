@@ -125,6 +125,8 @@ namespace ui
                 static_cast<float>(sdlEvent.motion.x),
                 static_cast<float>(sdlEvent.motion.y)};
 
+            input_.pointerPosition_ = event.position;
+
             Node *node = input_.capturedNode;
 
             if (!node)
@@ -149,6 +151,8 @@ namespace ui
 
             event.button =
                 static_cast<MouseButton>(sdlEvent.button.button);
+
+            input_.pointerPosition_ = event.position;
 
             Node *node = input_.capturedNode;
 
@@ -180,6 +184,8 @@ namespace ui
             event.button =
                 static_cast<MouseButton>(sdlEvent.button.button);
 
+            input_.pointerPosition_ = event.position;
+
             Node *node = input_.capturedNode;
 
             if (!node)
@@ -209,6 +215,8 @@ namespace ui
 
             event.scrolledX = sdlEvent.wheel.x;
             event.scrolledY = sdlEvent.wheel.y;
+
+            input_.pointerPosition_ = event.position;
 
             Node *node = input_.capturedNode;
 
@@ -424,7 +432,7 @@ namespace ui
         focusTransitionInProgress_ = false;
     }
 
-        bool InputManager::focus(
+    bool InputManager::focus(
         NodeTree &nodeTree,
         Node &node)
     {
@@ -994,6 +1002,8 @@ namespace ui
         NodeTree &nodeTree,
         MouseMoveEvent &event)
     {
+        input_.pointerPosition_ = event.position;
+
         InputState &input = input_;
 
         if (!input.capturedNode)
@@ -1174,6 +1184,8 @@ namespace ui
         MouseDownEvent &event,
         bool modalIsActive)
     {
+        input_.pointerPosition_ = event.position;
+
         InputState &input = input_;
 
         if (!node)
@@ -1240,6 +1252,8 @@ namespace ui
         MouseUpEvent &event,
         bool modalIsActive)
     {
+        input_.pointerPosition_ = event.position;
+
         InputState &input = input_;
 
         const std::optional<Node::Id> initialCaptureId =
@@ -1381,6 +1395,8 @@ namespace ui
         NodeTree &nodeTree,
         MouseWheelEvent &event)
     {
+        input_.pointerPosition_ = event.position;
+
         if (!node)
             return;
 
@@ -1616,4 +1632,4 @@ namespace ui
         }
     }
 
-}
+} 
