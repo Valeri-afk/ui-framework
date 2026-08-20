@@ -1,19 +1,17 @@
 # Phase 5 — Minimal Standard UI Component Catalog
 
-## Purpose
+## Scope
 
-Phase 5 builds only the minimum reusable UI catalog needed to validate the framework against a real application.
+Phase 5 does not attempt to implement a complete UI component library.
 
-The chess application is a validation target, not a source of chess-specific framework components.
+The chess application is used only as a validation target: it tells us whether the framework's generic UI capabilities are sufficient to build a real application. Chess-specific components remain application code.
 
-The framework provides:
+The framework should contain only:
 
-1. generic base nodes and framework infrastructure;
-2. a small set of standard UI components.
+1. base framework nodes and layout primitives;
+2. a small set of standard, reusable UI components.
 
-Application-specific components remain client code.
-
-## Base framework layer
+## Base layer
 
 ```text
 Node
@@ -22,11 +20,11 @@ StackPanelNode
 TextPrimitive / TextNode
 ```
 
-The base layer owns reusable infrastructure such as layout, event dispatch, hit-testing, common state and framework-level properties.
+These are framework infrastructure and are not application-specific widgets.
 
 ## Standard UI components
 
-### Implemented / actively validated
+### Implemented / currently validated
 
 ```text
 Button
@@ -35,34 +33,41 @@ Menu
 MenuItem
 TabControl
 TabItem
-List
-ListItem
 ```
 
-### Deferred by phase dependency
+These components have an independent generic contract and have been reviewed against the component design guide.
+
+### Deferred
 
 ```text
-Modal / Dialog
+List
 Scroll / ScrollArea
+Modal
+IconButton
 ```
 
-These are standard UI concepts, but their final implementation must wait for the corresponding framework infrastructure. Modal depends on Phase 6 modality; Scroll must wait for the final framework-level scroll design.
+`List` is deferred because the current implementation is only a semantic alias over `StackPanelNode` and does not yet provide sufficiently distinct generic behavior.
+
+`Scroll / ScrollArea` is deferred while the framework-level scroll architecture is unresolved.
+
+`Modal` is deferred until Phase 6 modality infrastructure exists. See `PHASE6_MODALITY_REQUIREMENTS.md`.
+
+`IconButton` is deferred until the framework has a stable graphics/icon primitive and resource contract.
 
 ### Not currently required
 
 ```text
-IconButton
 Checkbox
 Switch
 Select
 Accordion / Section
 ```
 
-They remain possible future components, not Phase 5 requirements. A later application may justify adding them.
+These remain candidates for future framework extensions, but are not part of the current minimal catalog. They should only be added when a clear generic contract is established independently of an application-specific need.
 
-## Application-level examples
+## Explicitly application-level
 
-These belong to the client application, not the framework:
+The following are examples of application components, not framework components:
 
 ```text
 ChessBoard
@@ -75,27 +80,24 @@ AnalysisPanel
 GameScreen
 ```
 
-The application may build these from standard framework components. For example:
-
-```text
-MoveList        → List + ListItem
-PromotionDialog → Modal + application content
-```
-
-The framework does not own chess semantics.
+A future framework `List` may be used to implement `MoveList`; a future framework `Modal` may be used to implement `PromotionDialog`. The framework does not own the chess semantics.
 
 ## Promotion rule
 
-A new component enters the framework only when all of the following are true:
+A new component should enter the framework only when all of the following are reasonably true:
 
-- it represents a generic reusable UI concept;
-- it has a clear framework-level contract;
-- existing nodes/components cannot express the concept cleanly;
-- the required low-level behavior belongs to an already available or explicitly planned framework subsystem;
-- the component does not introduce unnecessary framework complexity.
+```text
+standard reusable UI concept
+        +
+independent generic contract
+        +
+not merely a renamed existing Node/layout primitive
+        +
+implementation fits the framework/component responsibility boundary
+```
 
-The existence of a visually similar element in an application is not sufficient.
+Do not add a framework component merely because an application contains a visually similar element.
 
-## Design reference
+## Design guide
 
-Use `docs/COMPONENT_DESIGN_GUIDE.md` for the detailed rules governing Node vs PanelNode, primitives, content, inheritance, state ownership, shared properties, composite components, validation and phase boundaries.
+Use `COMPONENT_DESIGN_GUIDE.md` as the practical design and review checklist for every new component.
