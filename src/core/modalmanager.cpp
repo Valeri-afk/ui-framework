@@ -61,6 +61,9 @@ namespace ui
                 previousFocusId,
                 backdropClickBehavior});
 
+        ensureBackdrop(nodeTree);
+        updateBackdropState();
+
         if (Node *focus = findFirstFocusable(*liveModal))
         {
             if (!input.focus(nodeTree, *focus))
@@ -92,6 +95,7 @@ namespace ui
             input,
             session);
 
+        updateBackdropState();
         return true;
     }
 
@@ -197,6 +201,8 @@ namespace ui
         {
             eraseInvalidModalSession(nodeTree, input, i - 1);
         }
+
+        updateBackdropState();
 
         if (!modals_.empty())
             syncFocusForTopModal(nodeTree, input);
