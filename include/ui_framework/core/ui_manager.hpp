@@ -32,29 +32,55 @@ namespace ui
             const SDL_Event &sdlEvent,
             SDL_Renderer *renderer);
 
-        Node *attachRoot(size_t index, std::unique_ptr<Node> node);
-        Node *attachOverlay(size_t index, std::unique_ptr<Node> node);
+        Node *addRoot(size_t index, std::unique_ptr<Node> node)
+        {
+            return attachRoot(index, std::move(node));
+        }
+
+        Node *addOverlay(size_t index, std::unique_ptr<Node> node)
+        {
+            return attachOverlay(index, std::move(node));
+        }
 
         void removeRoot(Node *node);
         void removeOverlay(Node *node);
 
-        bool registerScrollNode(Node &node);
-        bool unregisterScrollNode(Node::Id nodeId);
-        bool isScrollNodeRegistered(Node::Id nodeId) const noexcept;
+        bool enableScrolling(Node &node)
+        {
+            return registerScrollNode(node);
+        }
+
+        bool disableScrolling(Node &node)
+        {
+            return unregisterScrollNode(node.getId());
+        }
+
+        bool isScrollingEnabled(const Node &node) const noexcept
+        {
+            return isScrollNodeRegistered(node.getId());
+        }
 
         bool setScrollOffset(
             Node::Id nodeId,
             const ScrollOffset &offset);
 
         ScrollOffset getScrollOffset(Node::Id nodeId) const noexcept;
-        ScrollOffset getScrollMaxOffset(Node::Id nodeId) const noexcept;
+
+        ScrollOffset getMaximumScrollOffset(Node::Id nodeId) const noexcept
+        {
+            return getScrollMaxOffset(nodeId);
+        }
 
         bool showModal(Node &node);
         bool showModal(Node &node, BackdropClickBehavior behavior);
         bool closeModal();
 
         bool isModal(const Node *node) const noexcept;
-        Node *topModalNode() const noexcept;
+
+        Node *getActiveModal() const noexcept
+        {
+            return topModalNode();
+        }
 
         void setBackdropColor(const Color &color) noexcept;
         Color getBackdropColor() const noexcept;
@@ -63,6 +89,15 @@ namespace ui
         float getBackdropFadeDuration() const noexcept;
 
     private:
+        Node *attachRoot(size_t index, std::unique_ptr<Node> node);
+        Node *attachOverlay(size_t index, std::unique_ptr<Node> node);
+
+        bool registerScrollNode(Node &node);
+        bool unregisterScrollNode(Node::Id nodeId);
+        bool isScrollNodeRegistered(Node::Id nodeId) const noexcept;
+        ScrollOffset getScrollMaxOffset(Node::Id nodeId) const noexcept;
+        Node *topModalNode() const noexcept;
+
         void update(float dt);
         void draw(SDL_Renderer *renderer);
 
