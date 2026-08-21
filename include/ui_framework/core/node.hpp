@@ -54,8 +54,15 @@ namespace ui
         Node(const Node &) = delete;
         Node &operator=(const Node &) = delete;
 
-        Id id() const noexcept;
-        Node *parent() const noexcept;
+        Id getId() const noexcept
+        {
+            return id_;
+        }
+
+        Node *getParent() const noexcept
+        {
+            return parent_;
+        }
 
         void setVisible(bool visible);
         bool isVisible() const noexcept;
@@ -160,6 +167,9 @@ namespace ui
         void deferLayoutMutation(std::function<void(Node &)> fn);
 
     private:
+        Id id() const noexcept;
+        Node *parent() const noexcept;
+
         static CoordinateTransform &coordinateTransform()
         {
             static thread_local CoordinateTransform transform;
