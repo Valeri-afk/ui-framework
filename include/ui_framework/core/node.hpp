@@ -54,6 +54,10 @@ namespace ui
         Node(const Node &) = delete;
         Node &operator=(const Node &) = delete;
 
+        Id getId() const noexcept;
+        Node *getParent() const noexcept;
+
+        // Legacy internal aliases retained during the API migration.
         Id id() const noexcept;
         Node *parent() const noexcept;
 
